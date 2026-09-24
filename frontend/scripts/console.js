@@ -245,7 +245,7 @@ function goJourney(step) {
   if (productLine) productLine.hidden = !shopOnlyVisible;
   if (journeyPromise) journeyPromise.hidden = !shopOnlyVisible;
 
-  $(".journey-stage").forEach((stage) => {
+  $$(".journey-stage").forEach((stage) => {
     const active = Number(stage.dataset.stage) === journeyStep;
     stage.hidden = !active;
     stage.classList.toggle("active", active);
