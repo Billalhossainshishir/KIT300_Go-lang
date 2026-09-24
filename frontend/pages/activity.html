@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activity · RAMIFY OS</title>
+<link rel="stylesheet" href="/style.css?v=11.0.7-uxfix">
+</head>
+<body>
+
+<main class="human-page">
+  <div class="page-head">
+    <div class="eyebrow">AUDIT TRAIL</div>
+    <h1>Decision history</h1>
+    <p class="lede">
+      A plain-English history of checks, decisions and follow-on actions, newest first. Each entry is linked to the receipt that authorised it.
+    </p>
+  </div>
+
+  <section class="audit-story-key" aria-label="How to read the audit trail">
+    <span><b>What happened</b><small>The action or decision</small></span>
+    <span><b>Who decided</b><small>Agent or human</small></span>
+    <span><b>Why</b><small>Recorded reasons</small></span>
+    <span><b>Proof</b><small>Signed receipt / chained event</small></span>
+  </section>
+  <p class="disclaimer">Synthetic demonstration data. Brands, sellers, issuers, certificates,
+    advisories and prices are fictional and certify nothing in the real world. Every action is
+    simulated. Not for real purchasing, safety, legal or compliance decisions.</p>
+
+  <div class="controls" style="margin-bottom:8px;">
+    <div style="min-width:230px;">
+      <label class="field-label" for="filter">Show</label>
+      <select id="filter">
+        <option value="all">Everything</option>
+        <option value="green">Went ahead</option>
+        <option value="orange">Warnings / human attention</option>
+        <option value="red">Refused</option>
+        <option value="reviewed">Things I decided</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" id="check-all">Verify receipt history</button>
+      <label class="checkbox-row" style="padding-bottom:10px;">
+        <input type="checkbox" id="include-comparisons">
+        <span>Include side-by-side comparisons</span>
+      </label>
+    </div>
+  </div>
+
+  <section class="action-ledger-panel">
+    <div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;">
+      <div>
+        <div class="eyebrow">ACTION GATE LEDGER</div>
+        <h2>Recorded follow-on actions</h2>
+        <p style="margin:0;color:var(--ink-2);">Each recorded action names the receipt that permitted it and is linked to the previous event.</p>
+      </div>
+      <button class="btn btn-ghost" id="verify-actions">Verify action history</button>
+    </div>
+    <div id="action-events"></div>
+  </section>
+
+  <section class="action-ledger-panel transaction-history-panel" aria-labelledby="transaction-history-title">
+    <div>
+      <div class="eyebrow">TRANSACTION RECORDS</div>
+      <h2 id="transaction-history-title">What the permitted action produced</h2>
+      <p style="margin:0;color:var(--ink-2);">Signed simulated orders and procurement requisitions are shown separately from decision receipts and Action Gate events.</p>
+    </div>
+    <div id="transaction-records"></div>
+  </section>
+
+  <div class="terminal" id="terminal" hidden></div>
+  <div id="feed" style="margin-top:18px;"></div>
+</main>
+
+<footer></footer>
+
+<script src="/shell.js?v=11.0.7-uxfix"></script>
+<script src="/activity.js?v=11.0.7-uxfix"></script>
+</body>
+</html>

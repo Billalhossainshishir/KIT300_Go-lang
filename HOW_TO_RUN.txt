@@ -1,0 +1,82 @@
+RAMIFY OS v11.0.7 - RUN WITH WINDOWS CMD
+=========================================
+
+Open Command Prompt in this extracted project folder.
+
+FIRST TIME ONLY
+---------------
+1. Create the virtual environment:
+
+   py -m venv .venv
+
+2. Install the project in editable mode with all runtime dependencies:
+
+   .\.venv\Scripts\python.exe -m pip install --upgrade pip
+   .\.venv\Scripts\python.exe -m pip install -e .
+
+3. Optional live local AI setup. If you want the live Llama path, install Ollama,
+   start it, and pull the local model once:
+
+   ollama pull llama3.1
+   ollama list
+
+START RAMIFY
+------------
+If you previously ran an older RAMIFY v11.0 demo, keep your existing local data.
+This build automatically migrates the local receipt signer by deriving/repairing
+its matching public key. You should not need to delete %LOCALAPPDATA%\ramify-demo.
+
+Run this from the project folder:
+
+   .\.venv\Scripts\python.exe -m uvicorn ramify.api.app:app --app-dir backend --host 127.0.0.1 --port 8000
+
+Then open:
+
+   http://127.0.0.1:8000/
+
+If Ollama is installed but not running, open a second CMD window and run:
+
+   ollama serve
+
+Then keep that second window open while RAMIFY is running.
+
+STOP RAMIFY
+-----------
+Press Ctrl+C in the CMD window running Uvicorn.
+
+OPTIONAL: VERIFY THE LIVE LOCAL AI BEFORE A CLIENT DEMO
+------------------------------------------------------
+After Ollama is running and llama3.1 is installed, run:
+
+   .\.venv\Scripts\python.exe scripts\live_llm_smoke.py
+
+The check uses five natural-language requests and exits with PASS only when all
+five actually use the LangGraph + Ollama path. A deterministic fallback is
+reported as a failure for this pre-demo check, even though RAMIFY itself can
+continue safely without the model.
+
+OPTIONAL: RUN THE AUTOMATED TEST SUITE
+--------------------------------------
+From the project root in CMD, run:
+
+   .\.venv\Scripts\python.exe -m pytest -q
+
+OPTIONAL: CHECK THE RELEASE PACKAGE
+-----------------------------------
+
+   .\.venv\Scripts\python.exe scripts\release_check.py
+
+OPTIONAL: DOWNLOAD A PROOF PACK
+-------------------------------
+Start RAMIFY, open the Technical page, then choose the Proof Pack button. The
+same package is also available at:
+
+   http://127.0.0.1:8000/api/v0/proof-pack
+
+
+DAVID MEETING VERIFICATION DEMO
+--------------------------------
+From the project root after installing requirements:
+  .\.venv\Scripts\python.exe scripts\david_live_verification_demo.py
+
+This meeting-safe script uses temporary RAMIFY state, proves clean receipt/action verification, demonstrates receipt tamper failure, tests an isolated modified copy of signed evidence bytes so the shared artefact is never edited, and confirms recovery.

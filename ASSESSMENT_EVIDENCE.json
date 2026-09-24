@@ -1,0 +1,56 @@
+{
+  "captured_at": "2026-09-24T05:43:45.793991Z",
+  "app_version": "11.0.7",
+  "repository_visibility": "private - confirm access separately",
+  "git_metadata_available": false,
+  "assessed_branch": null,
+  "assessed_commit_sha": null,
+  "commit_date": null,
+  "working_tree_clean": null,
+  "environment": {
+    "python": "3.13.5",
+    "platform": "linux",
+    "pytest": "9.0.2",
+    "fastapi": "0.128.2",
+    "pydantic": "2.13.4",
+    "cryptography": "46.0.4",
+    "playwright": "1.57.0"
+  },
+  "full_test_command": "/opt/pyvenv/bin/python -m pytest -q",
+  "full_test_result": {
+    "available": true,
+    "command": [
+      "/opt/pyvenv/bin/python",
+      "-m",
+      "pytest",
+      "-q"
+    ],
+    "returncode": 0,
+    "stdout": "..............ss.................................sssss....................... [ 17%]\n............................................................................................................................................ [ 50%]\n................................................................... [ 66%]\n............. [ 69%]\n................................................................ [ 84%]\n................................................... [ 96%]\n.................                                                        [100%]\n422 passed, 7 skipped, 1316 subtests passed in 24.41s",
+    "stderr": ""
+  },
+  "benchmark": {
+    "path": "full engine call including receipt build/sign but excluding HTTP/browser",
+    "runs": 100,
+    "warmups": 10,
+    "dataset": "synthetic v11.0.7 demo dataset",
+    "median_ms": 2.411,
+    "p95_ms": 2.922,
+    "max_ms": 3.137
+  },
+  "optional_live_model_evidence": {
+    "command": "/opt/pyvenv/bin/python scripts/live_llm_smoke.py",
+    "result": {
+      "available": true,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "scripts/live_llm_smoke.py"
+      ],
+      "returncode": 2,
+      "stdout": "Framework: LangGraph | Provider: Ollama | Model: llama3.1\nLIVE LOCAL AI NOT READY: Missing Python package(s): langgraph, langchain-ollama.",
+      "stderr": ""
+    },
+    "interpretation": "return code 0 proves this run used the live local model and matched expected catalogue IDs; any other result is not live-model proof and does not invalidate deterministic RAMIFY"
+  },
+  "note": "If Git fields are null, rerun this script from the final private Git checkout after the release commit. Browser/live-model infrastructure skips must remain explicit and are not proof of execution."
+}

@@ -1,0 +1,26 @@
+RAMIFY OS v11.0.6 - FastAPI David Meeting Mode v4.2
+Prepared 11 September 2026
+
+Validated command:
+  PYTHONPATH=backend pytest -q
+
+Validated result:
+  379 passed
+  4 optional skipped
+  1,312 subtests passed
+  0 failures
+
+Additional checks:
+  Frontend JavaScript syntax: node --check passed for demo.js and david-demo.js
+  Reversible evidence-tamper API smoke: PASS (hash_mismatch -> RATIFY fail -> objective block -> artefact restored)
+  Receipt tamper smoke: PASS (tampered signed field rejected)
+  Northbeam Consumer vs Procurement proof: PASS (same objective allow; Procurement narrows to hold)
+  Action Gate / basket / signed checkout smoke: PASS
+  Human review successor receipt smoke: PASS
+  Quick and Extended Proof Pack routes: PASS
+
+Repository provenance:
+  Commit SHA: NOT EMBEDDED IN THIS EXPORTED ZIP
+  Clean/dirty state: NOT EMBEDDED IN THIS EXPORTED ZIP
+
+Before assessed handover, run scripts/capture_release_evidence.py from the team's real final Git checkout and keep the exact commit SHA, clean/dirty state, timestamp and command output. This file deliberately does not invent repository provenance.

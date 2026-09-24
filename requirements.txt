@@ -1,0 +1,14 @@
+# RAMIFY OS v11 client-demo runtime.
+# Core stack remains bounded; the local-agent packages are pinned to the
+# versions validated against the August 2026 LangGraph/Ollama APIs.
+fastapi>=0.110,<1
+uvicorn[standard]>=0.27,<1
+pydantic>=2,<3
+cryptography>=42,<51
+httpx>=0.27,<1
+
+# Local AI presentation layer (LangGraph + Ollama). The demo still falls back
+# safely when the Ollama desktop service or llama3.1 model is unavailable.
+langgraph==1.2.10
+langchain-core==1.5.3
+langchain-ollama==1.1.0

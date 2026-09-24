@@ -1,0 +1,1485 @@
+{
+  "meta": {
+    "snapshot_id": "demo_seed_2026_07_24",
+    "snapshot_date": "2026-07-24T00:00:00.000000000Z",
+    "notice": "Synthetic demonstration data. Brands, sellers, issuers, certificates and advisories are fictional and certify nothing in the real world. Not for purchasing, safety, legal or compliance decisions.",
+    "categories_note": "Two categories only, per client guidance of 22 July 2026. No paediatric or prescription medicine."
+  },
+  "issuers": {
+    "ramify:demo:issuer:Concordia_Labs_AU": {
+      "ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "name": "Concordia Laboratories (AU)",
+      "role": "lab",
+      "jurisdiction": "AU",
+      "status": "active",
+      "authority_scopes": [
+        "ingredient_claim",
+        "lab_tested_claim",
+        "dosage_claim"
+      ]
+    },
+    "ramify:demo:issuer:Regulator_AU_demo": {
+      "ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "name": "Demonstration Regulator (AU)",
+      "role": "regulator",
+      "jurisdiction": "AU",
+      "status": "active",
+      "authority_scopes": [
+        "safety_claim",
+        "advisory",
+        "recall"
+      ]
+    },
+    "ramify:demo:issuer:GMP_AU_demo": {
+      "ref": "ramify:demo:issuer:GMP_AU_demo",
+      "name": "GMP Certification Body (AU)",
+      "role": "certifier",
+      "jurisdiction": "AU",
+      "status": "active",
+      "authority_scopes": [
+        "certification_claim",
+        "conformity_claim"
+      ]
+    }
+  },
+  "sellers": {
+    "ramify:demo:seller:Meridian_Health_Supply": {
+      "ref": "ramify:demo:seller:Meridian_Health_Supply",
+      "name": "Meridian Health Supply",
+      "authority": "verified",
+      "authorised_categories": [
+        "supplement",
+        "protective_equipment"
+      ],
+      "jurisdiction": "AU"
+    },
+    "ramify:demo:seller:Coastline_Pharmacy_Group": {
+      "ref": "ramify:demo:seller:Coastline_Pharmacy_Group",
+      "name": "Coastline Pharmacy Group",
+      "authority": "verified",
+      "authorised_categories": [
+        "supplement"
+      ],
+      "jurisdiction": "AU"
+    },
+    "ramify:demo:seller:Ashcroft_Medical_Distribution": {
+      "ref": "ramify:demo:seller:Ashcroft_Medical_Distribution",
+      "name": "Ashcroft Medical Distribution",
+      "authority": "verified",
+      "authorised_categories": [
+        "protective_equipment",
+        "supplement"
+      ],
+      "jurisdiction": "AU"
+    },
+    "ramify:demo:seller:Grovewood_Wellness": {
+      "ref": "ramify:demo:seller:Grovewood_Wellness",
+      "name": "Grovewood Wellness",
+      "authority": "verified",
+      "authorised_categories": [
+        "supplement"
+      ],
+      "jurisdiction": "AU",
+      "note": "Genuine and authorised. Deliberately absent from the procurement approved-vendor list, which is what makes the proof case possible."
+    },
+    "ramify:demo:seller:Kestrel_Direct_Imports": {
+      "ref": "ramify:demo:seller:Kestrel_Direct_Imports",
+      "name": "Kestrel Direct Imports",
+      "authority": "unverified",
+      "authorised_categories": [
+        "supplement"
+      ],
+      "jurisdiction": "AU",
+      "note": "A real trading entity whose authority to resell protective equipment has not been established. Not an allegation of wrongdoing."
+    }
+  },
+  "categories": {
+    "supplement": {
+      "label": "Non-prescription supplement",
+      "required_evidence_types": [
+        "coa_pdf",
+        "gmp_cert"
+      ],
+      "required_claim_types": [
+        "ingredient_claim",
+        "certification_claim"
+      ]
+    },
+    "protective_equipment": {
+      "label": "Protective equipment",
+      "required_evidence_types": [
+        "conformity_cert"
+      ],
+      "required_claim_types": [
+        "certification_claim"
+      ]
+    }
+  },
+  "subjects": {
+    "ramify:demo:supp:apex-mg-glyc-120": {
+      "ref": "ramify:demo:supp:apex-mg-glyc-120",
+      "name": "Apex Nutrients Magnesium Glycinate, 120 capsules",
+      "brand": "Apex Nutrients",
+      "category": "supplement",
+      "seller_ref": "ramify:demo:seller:Meridian_Health_Supply",
+      "identifiers": {
+        "gtin": "09312345678901",
+        "sku": "APEX-MG-GLYC-120",
+        "local": "apex-mg-glyc-120"
+      },
+      "claims": [
+        {
+          "ref": "clm:apex:ingredient",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "Magnesium glycinate 400mg elemental per 2 capsules",
+          "evidence_refs": [
+            "ev:apex:coa"
+          ]
+        },
+        {
+          "ref": "clm:apex:lab_tested",
+          "type": "lab_tested_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "Third-party assay within specification",
+          "evidence_refs": [
+            "ev:apex:coa"
+          ]
+        },
+        {
+          "ref": "clm:apex:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Manufactured at a GMP-certified facility",
+          "evidence_refs": [
+            "ev:apex:gmp"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z": {
+      "ref": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+      "name": "Brightway Health Vitamin D3 5000 IU, 60 softgels (batch 2024-11-Z)",
+      "brand": "Brightway Health",
+      "category": "supplement",
+      "batch_ref": "2024-11-Z",
+      "seller_ref": "ramify:demo:seller:Coastline_Pharmacy_Group",
+      "identifiers": {
+        "gtin": "09312345678902",
+        "sku": "BRIGHTWAY-VITD3-5000-B2024-11-Z",
+        "local": "brightway-vitd3-5000-b2024-11-Z"
+      },
+      "claims": [
+        {
+          "ref": "clm:brightway-z:ingredient",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "Cholecalciferol 125ug per softgel",
+          "evidence_refs": [
+            "ev:brightway-z:coa"
+          ]
+        },
+        {
+          "ref": "clm:brightway-z:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Manufactured at a GMP-certified facility",
+          "evidence_refs": [
+            "ev:brightway-z:gmp"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M": {
+      "ref": "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M",
+      "name": "Brightway Health Vitamin D3 5000 IU, 60 softgels (batch 2025-06-M)",
+      "brand": "Brightway Health",
+      "category": "supplement",
+      "batch_ref": "2025-06-M",
+      "seller_ref": "ramify:demo:seller:Coastline_Pharmacy_Group",
+      "identifiers": {
+        "gtin": "09312345678902",
+        "sku": "BRIGHTWAY-VITD3-5000-B2025-06-M",
+        "local": "brightway-vitd3-5000-b2025-06-M"
+      },
+      "claims": [
+        {
+          "ref": "clm:brightway-m:ingredient",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "Cholecalciferol 125ug per softgel",
+          "evidence_refs": [
+            "ev:brightway-m:coa"
+          ]
+        },
+        {
+          "ref": "clm:brightway-m:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Manufactured at a GMP-certified facility",
+          "evidence_refs": [
+            "ev:brightway-m:gmp"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:supp:greenline-ashw-ksm66-90": {
+      "ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+      "name": "Greenline Botanicals Ashwagandha KSM-66, 90 capsules",
+      "brand": "Greenline Botanicals",
+      "category": "supplement",
+      "seller_ref": "ramify:demo:seller:Meridian_Health_Supply",
+      "identifiers": {
+        "gtin": "09312345678903",
+        "sku": "GREENLINE-ASHW-KSM66-90",
+        "local": "greenline-ashw-ksm66-90"
+      },
+      "claims": [
+        {
+          "ref": "clm:greenline:ingredient",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "KSM-66 ashwagandha root extract 600mg",
+          "evidence_refs": [
+            "ev:greenline:coa"
+          ]
+        },
+        {
+          "ref": "clm:greenline:lab_tested",
+          "type": "lab_tested_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "Third-party assay within specification",
+          "evidence_refs": [
+            "ev:greenline:coa"
+          ]
+        },
+        {
+          "ref": "clm:greenline:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Manufactured at a GMP-certified facility",
+          "evidence_refs": [
+            "ev:greenline:gmp"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A": {
+      "ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+      "name": "Northbeam Vitamin C 1000mg, 100 tablets (batch 2025-03-A)",
+      "brand": "Northbeam",
+      "category": "supplement",
+      "batch_ref": "2025-03-A",
+      "seller_ref": "ramify:demo:seller:Grovewood_Wellness",
+      "identifiers": {
+        "gtin": "09312345678904",
+        "sku": "NORTHBEAM-VITC-1000-B2025-03-A",
+        "local": "northbeam-vitc-1000-b2025-03-A"
+      },
+      "claims": [
+        {
+          "ref": "clm:northbeam:ingredient",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "Ascorbic acid 1000mg per tablet",
+          "evidence_refs": [
+            "ev:northbeam:coa"
+          ]
+        },
+        {
+          "ref": "clm:northbeam:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Manufactured at a GMP-certified facility",
+          "evidence_refs": [
+            "ev:northbeam:gmp"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D": {
+      "ref": "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D",
+      "name": "Tidalpoint Omega-3 1000mg, 120 softgels (batch 2025-12-D)",
+      "brand": "Tidalpoint",
+      "category": "supplement",
+      "batch_ref": "2025-12-D",
+      "seller_ref": "ramify:demo:seller:Meridian_Health_Supply",
+      "identifiers": {
+        "gtin": "09312345678905",
+        "sku": "TIDALPOINT-OMEGA3-1000-B2025-12-D",
+        "local": "tidalpoint-omega3-1000-b2025-12-D"
+      },
+      "claims": [
+        {
+          "ref": "clm:tidalpoint:ingredient",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "EPA 180mg / DHA 120mg per softgel",
+          "evidence_refs": [
+            "ev:tidalpoint:coa"
+          ]
+        },
+        {
+          "ref": "clm:tidalpoint:ingredient_restated",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "EPA 300mg / DHA 200mg per softgel",
+          "evidence_refs": [
+            "ev:tidalpoint:label"
+          ]
+        },
+        {
+          "ref": "clm:tidalpoint:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Manufactured at a GMP-certified facility",
+          "evidence_refs": [
+            "ev:tidalpoint:gmp"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:supp:stonefield-zinc-gluc-50-90": {
+      "ref": "ramify:demo:supp:stonefield-zinc-gluc-50-90",
+      "name": "Stonefield Zinc Gluconate 50mg, 90 capsules",
+      "brand": "Stonefield",
+      "category": "supplement",
+      "seller_ref": "ramify:demo:seller:Coastline_Pharmacy_Group",
+      "superseded_by": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+      "supersession_note": "Discontinued by the manufacturer and replaced by the picolinate formulation.",
+      "identifiers": {
+        "gtin": "09312345678906",
+        "sku": "STONEFIELD-ZINC-GLUC-50-90",
+        "local": "stonefield-zinc-gluc-50-90"
+      },
+      "claims": [
+        {
+          "ref": "clm:stonefield-gluc:ingredient",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "Zinc gluconate 50mg per capsule",
+          "evidence_refs": [
+            "ev:stonefield-gluc:coa"
+          ]
+        },
+        {
+          "ref": "clm:stonefield-gluc:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Manufactured at a GMP-certified facility",
+          "evidence_refs": [
+            "ev:stonefield-gluc:gmp"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:supp:stonefield-zinc-picolinate-50-90": {
+      "ref": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+      "name": "Stonefield Zinc Picolinate 50mg, 90 capsules",
+      "brand": "Stonefield",
+      "category": "supplement",
+      "seller_ref": "ramify:demo:seller:Coastline_Pharmacy_Group",
+      "supersedes": "ramify:demo:supp:stonefield-zinc-gluc-50-90",
+      "identifiers": {
+        "gtin": "09312345678907",
+        "sku": "STONEFIELD-ZINC-PICO-50-90",
+        "local": "stonefield-zinc-picolinate-50-90"
+      },
+      "claims": [
+        {
+          "ref": "clm:stonefield-pico:ingredient",
+          "type": "ingredient_claim",
+          "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+          "state": "accepted",
+          "value": "Zinc picolinate 50mg per capsule",
+          "evidence_refs": [
+            "ev:stonefield-pico:coa"
+          ]
+        },
+        {
+          "ref": "clm:stonefield-pico:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Manufactured at a GMP-certified facility",
+          "evidence_refs": [
+            "ev:stonefield-pico:gmp"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:supp:ridgeway-multivit-b2026-02-C": {
+      "ref": "ramify:demo:supp:ridgeway-multivit-b2026-02-C",
+      "name": "Ridgeway Daily Multivitamin, 60 tablets (batch 2026-02-C)",
+      "brand": "Ridgeway",
+      "category": "supplement",
+      "batch_ref": "2026-02-C",
+      "seller_ref": "ramify:demo:seller:Kestrel_Direct_Imports",
+      "identifiers": {
+        "gtin": "09312345678908",
+        "sku": "RIDGEWAY-MULTIVIT-B2026-02-C",
+        "local": "ridgeway-multivit-b2026-02-C"
+      },
+      "claims": [],
+      "note": "Listed with no issuer-asserted claims and no evidence. The system must say it cannot tell, rather than approving by default."
+    },
+    "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K": {
+      "ref": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+      "name": "Harborline Nitrile Examination Gloves, medium, 200 count (batch 2025-09-K)",
+      "brand": "Harborline",
+      "category": "protective_equipment",
+      "batch_ref": "2025-09-K",
+      "seller_ref": "ramify:demo:seller:Ashcroft_Medical_Distribution",
+      "identifiers": {
+        "gtin": "09312345678909",
+        "sku": "HARBORLINE-NITRILE-M-B2025-09-K",
+        "local": "harborline-nitrile-gloves-m-b2025-09-K"
+      },
+      "claims": [
+        {
+          "ref": "clm:harborline:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Conforms to AS/NZS examination glove standard",
+          "evidence_refs": [
+            "ev:harborline:conformity"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:ppe:covelane-n95-resp-b2026-01-B": {
+      "ref": "ramify:demo:ppe:covelane-n95-resp-b2026-01-B",
+      "name": "Covelane N95 Respirator, 20 count (batch 2026-01-B)",
+      "brand": "Covelane",
+      "category": "protective_equipment",
+      "batch_ref": "2026-01-B",
+      "seller_ref": "ramify:demo:seller:Kestrel_Direct_Imports",
+      "identifiers": {
+        "gtin": "09312345678910",
+        "sku": "COVELANE-N95-B2026-01-B",
+        "local": "covelane-n95-resp-b2026-01-B"
+      },
+      "claims": [
+        {
+          "ref": "clm:covelane:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Conforms to the P2/N95 filtration standard",
+          "evidence_refs": [
+            "ev:covelane:conformity"
+          ]
+        }
+      ]
+    },
+    "ramify:demo:ppe:merridale-faceshield-std": {
+      "ref": "ramify:demo:ppe:merridale-faceshield-std",
+      "name": "Merridale Reusable Face Shield, standard",
+      "brand": "Merridale",
+      "category": "protective_equipment",
+      "seller_ref": "ramify:demo:seller:Meridian_Health_Supply",
+      "identifiers": {
+        "gtin": "09312345678911",
+        "sku": "MERRIDALE-FACESHIELD-STD",
+        "local": "merridale-faceshield-std"
+      },
+      "claims": [
+        {
+          "ref": "clm:merridale:certification",
+          "type": "certification_claim",
+          "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+          "state": "accepted",
+          "value": "Conforms to the applicable face shield standard",
+          "evidence_refs": [
+            "ev:merridale:conformity"
+          ]
+        }
+      ]
+    }
+  },
+  "statuses": {
+    "ramify:demo:supp:apex-mg-glyc-120": {
+      "standing": "no_active_recall",
+      "scope": "product",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    },
+    "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z": {
+      "standing": "advisory",
+      "scope": "batch",
+      "batch_ref": "2024-11-Z",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "potency_variance",
+      "detail": "Batch 2024-11-Z placed under voluntary advisory for potency variance.",
+      "issued_at": "2026-02-14T08:00:00.000000000Z"
+    },
+    "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M": {
+      "standing": "advisory",
+      "scope": "batch",
+      "batch_ref": "2025-06-M",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "potency_variance_under_review",
+      "detail": "Batch 2025-06-M placed under advisory pending re-assay.",
+      "issued_at": "2026-05-30T08:00:00.000000000Z"
+    },
+    "ramify:demo:supp:greenline-ashw-ksm66-90": {
+      "standing": "no_active_recall",
+      "scope": "product",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    },
+    "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A": {
+      "standing": "no_active_recall",
+      "scope": "batch",
+      "batch_ref": "2025-03-A",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    },
+    "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D": {
+      "standing": "no_active_recall",
+      "scope": "batch",
+      "batch_ref": "2025-12-D",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    },
+    "ramify:demo:supp:stonefield-zinc-gluc-50-90": {
+      "standing": "no_active_recall",
+      "scope": "product",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    },
+    "ramify:demo:supp:stonefield-zinc-picolinate-50-90": {
+      "standing": "no_active_recall",
+      "scope": "product",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    },
+    "ramify:demo:supp:ridgeway-multivit-b2026-02-C": {
+      "standing": "no_active_recall",
+      "scope": "batch",
+      "batch_ref": "2026-02-C",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    },
+    "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K": {
+      "standing": "recalled",
+      "scope": "batch",
+      "batch_ref": "2025-09-K",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "barrier_integrity_failure",
+      "detail": "Batch 2025-09-K recalled after batch testing found pinhole rates above the permitted threshold.",
+      "issued_at": "2026-06-18T02:30:00.000000000Z"
+    },
+    "ramify:demo:ppe:covelane-n95-resp-b2026-01-B": {
+      "standing": "no_active_recall",
+      "scope": "batch",
+      "batch_ref": "2026-01-B",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    },
+    "ramify:demo:ppe:merridale-faceshield-std": {
+      "standing": "no_active_recall",
+      "scope": "product",
+      "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
+      "reason": "",
+      "issued_at": "2026-07-01T00:00:00.000000000Z"
+    }
+  },
+  "evidence": {
+    "ev:apex:coa": {
+      "ref": "ev:apex:coa",
+      "claim_ref": "clm:apex:ingredient",
+      "subject_ref": "ramify:demo:supp:apex-mg-glyc-120",
+      "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "authority_level": "accredited_laboratory",
+      "type": "coa_pdf",
+      "document_type": "third_party_lab_certificate",
+      "certificate_number": "CONC-2026-00001",
+      "issued_at": "2026-03-12T00:00:00.000000000Z",
+      "valid_from": "2026-03-12T00:00:00.000000000Z",
+      "expires_at": "2027-03-12T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://conc/certificates/CONC-2026-00001",
+      "scope": {
+        "product_ref": "ramify:demo:supp:apex-mg-glyc-120",
+        "batch_ref": null,
+        "tests": [
+          "identity",
+          "purity",
+          "heavy_metals"
+        ]
+      },
+      "artefact": "Certificate of analysis. Sample APX-2603-118. Magnesium glycinate, elemental magnesium 401.2mg per 2 capsules against a 400mg specification. Heavy metals below reporting limit. Microbial within specification.",
+      "supports_claim_refs": [
+        "clm:apex:lab_tested"
+      ]
+    },
+    "ev:apex:gmp": {
+      "ref": "ev:apex:gmp",
+      "claim_ref": "clm:apex:certification",
+      "subject_ref": "ramify:demo:supp:apex-mg-glyc-120",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "gmp_cert",
+      "document_type": "gmp_facility_certificate",
+      "certificate_number": "GMP-2026-00002",
+      "issued_at": "2026-01-20T00:00:00.000000000Z",
+      "valid_from": "2026-01-20T00:00:00.000000000Z",
+      "expires_at": "2027-01-20T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00002",
+      "scope": {
+        "product_ref": "ramify:demo:supp:apex-mg-glyc-120",
+        "batch_ref": null,
+        "tests": [
+          "facility_audit"
+        ]
+      },
+      "artefact": "Good manufacturing practice certificate. Facility AU-GMP-4471. Scope: encapsulation and packing of non-prescription supplements."
+    },
+    "ev:brightway-z:coa": {
+      "ref": "ev:brightway-z:coa",
+      "claim_ref": "clm:brightway-z:ingredient",
+      "subject_ref": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+      "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "authority_level": "accredited_laboratory",
+      "type": "coa_pdf",
+      "document_type": "third_party_lab_certificate",
+      "certificate_number": "CONC-2026-00003",
+      "issued_at": "2026-01-08T00:00:00.000000000Z",
+      "valid_from": "2026-01-08T00:00:00.000000000Z",
+      "expires_at": "2027-01-08T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://conc/certificates/CONC-2026-00003",
+      "scope": {
+        "product_ref": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+        "batch_ref": "2024-11-Z",
+        "tests": [
+          "identity",
+          "purity",
+          "heavy_metals"
+        ]
+      },
+      "artefact": "Certificate of analysis. Sample BWH-2601-042. Cholecalciferol 124.1ug per softgel against a 125ug specification."
+    },
+    "ev:brightway-z:gmp": {
+      "ref": "ev:brightway-z:gmp",
+      "claim_ref": "clm:brightway-z:certification",
+      "subject_ref": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "gmp_cert",
+      "document_type": "gmp_facility_certificate",
+      "certificate_number": "GMP-2026-00004",
+      "issued_at": "2026-02-02T00:00:00.000000000Z",
+      "valid_from": "2026-02-02T00:00:00.000000000Z",
+      "expires_at": "2027-02-02T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00004",
+      "scope": {
+        "product_ref": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+        "batch_ref": "2024-11-Z",
+        "tests": [
+          "facility_audit"
+        ]
+      },
+      "artefact": "Good manufacturing practice certificate. Facility AU-GMP-2210. Scope: softgel encapsulation."
+    },
+    "ev:brightway-m:coa": {
+      "ref": "ev:brightway-m:coa",
+      "claim_ref": "clm:brightway-m:ingredient",
+      "subject_ref": "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M",
+      "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "authority_level": "accredited_laboratory",
+      "type": "coa_pdf",
+      "document_type": "third_party_lab_certificate",
+      "certificate_number": "CONC-2025-00005",
+      "issued_at": "2025-04-20T00:00:00.000000000Z",
+      "valid_from": "2025-04-20T00:00:00.000000000Z",
+      "expires_at": "2026-04-20T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://conc/certificates/CONC-2025-00005",
+      "scope": {
+        "product_ref": "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M",
+        "batch_ref": "2025-06-M",
+        "tests": [
+          "identity",
+          "purity",
+          "heavy_metals"
+        ]
+      },
+      "artefact": "Certificate of analysis. Sample BWH-2504-311. Cholecalciferol 121.8ug per softgel against a 125ug specification."
+    },
+    "ev:brightway-m:gmp": {
+      "ref": "ev:brightway-m:gmp",
+      "claim_ref": "clm:brightway-m:certification",
+      "subject_ref": "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "gmp_cert",
+      "document_type": "gmp_facility_certificate",
+      "certificate_number": "GMP-2026-00006",
+      "issued_at": "2026-07-20T00:00:00.000000000Z",
+      "valid_from": "2026-09-01T00:00:00.000000000Z",
+      "expires_at": "2027-09-01T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00006",
+      "scope": {
+        "product_ref": "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M",
+        "batch_ref": "2025-06-M",
+        "tests": [
+          "facility_audit"
+        ]
+      },
+      "artefact": "Good manufacturing practice certificate, issued 20 July 2026 and taking effect 1 September 2026. Facility AU-GMP-2210."
+    },
+    "ev:greenline:coa": {
+      "ref": "ev:greenline:coa",
+      "claim_ref": "clm:greenline:ingredient",
+      "subject_ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+      "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "authority_level": "accredited_laboratory",
+      "type": "coa_pdf",
+      "document_type": "third_party_lab_certificate",
+      "certificate_number": "CONC-2025-00007",
+      "issued_at": "2025-04-25T00:00:00.000000000Z",
+      "valid_from": "2025-04-25T00:00:00.000000000Z",
+      "expires_at": "2026-04-25T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://conc/certificates/CONC-2025-00007",
+      "scope": {
+        "product_ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+        "batch_ref": null,
+        "tests": [
+          "identity",
+          "purity",
+          "heavy_metals"
+        ]
+      },
+      "artefact": "Certificate of analysis. Sample GRN-2504-207. Withanolides 5.1 per cent against a 5 per cent specification. KSM-66 root extract identity confirmed.",
+      "supports_claim_refs": [
+        "clm:greenline:lab_tested"
+      ]
+    },
+    "ev:greenline:gmp": {
+      "ref": "ev:greenline:gmp",
+      "claim_ref": "clm:greenline:certification",
+      "subject_ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "gmp_cert",
+      "document_type": "gmp_facility_certificate",
+      "certificate_number": "GMP-2026-00008",
+      "issued_at": "2026-03-01T00:00:00.000000000Z",
+      "valid_from": "2026-03-01T00:00:00.000000000Z",
+      "expires_at": "2027-03-01T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00008",
+      "scope": {
+        "product_ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+        "batch_ref": null,
+        "tests": [
+          "facility_audit"
+        ]
+      },
+      "artefact": "Good manufacturing practice certificate. Facility AU-GMP-8802. Scope: botanical extract encapsulation."
+    },
+    "ev:northbeam:coa": {
+      "ref": "ev:northbeam:coa",
+      "claim_ref": "clm:northbeam:ingredient",
+      "subject_ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+      "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "authority_level": "accredited_laboratory",
+      "type": "coa_pdf",
+      "document_type": "third_party_lab_certificate",
+      "certificate_number": "CONC-2026-00009",
+      "issued_at": "2026-04-02T00:00:00.000000000Z",
+      "valid_from": "2026-04-02T00:00:00.000000000Z",
+      "expires_at": "2027-04-02T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://conc/certificates/CONC-2026-00009",
+      "scope": {
+        "product_ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+        "batch_ref": "2025-03-A",
+        "tests": [
+          "identity",
+          "purity",
+          "heavy_metals"
+        ]
+      },
+      "artefact": "Certificate of analysis. Sample NBM-2604-019. Ascorbic acid 1004mg per tablet against a 1000mg specification."
+    },
+    "ev:northbeam:gmp": {
+      "ref": "ev:northbeam:gmp",
+      "claim_ref": "clm:northbeam:certification",
+      "subject_ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "gmp_cert",
+      "document_type": "gmp_facility_certificate",
+      "certificate_number": "GMP-2026-00010",
+      "issued_at": "2026-01-15T00:00:00.000000000Z",
+      "valid_from": "2026-01-15T00:00:00.000000000Z",
+      "expires_at": "2027-01-15T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00010",
+      "scope": {
+        "product_ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+        "batch_ref": "2025-03-A",
+        "tests": [
+          "facility_audit"
+        ]
+      },
+      "artefact": "Good manufacturing practice certificate. Facility AU-GMP-6130. Scope: tablet compression and packing."
+    },
+    "ev:tidalpoint:coa": {
+      "ref": "ev:tidalpoint:coa",
+      "claim_ref": "clm:tidalpoint:ingredient",
+      "subject_ref": "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D",
+      "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "authority_level": "accredited_laboratory",
+      "type": "coa_pdf",
+      "document_type": "third_party_lab_certificate",
+      "certificate_number": "CONC-2026-00011",
+      "issued_at": "2026-05-11T00:00:00.000000000Z",
+      "valid_from": "2026-05-11T00:00:00.000000000Z",
+      "expires_at": "2027-05-11T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://conc/certificates/CONC-2026-00011",
+      "scope": {
+        "product_ref": "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D",
+        "batch_ref": "2025-12-D",
+        "tests": [
+          "identity",
+          "purity",
+          "heavy_metals"
+        ]
+      },
+      "artefact": "Certificate of analysis. Sample TDP-2605-088. EPA 181mg and DHA 119mg per softgel."
+    },
+    "ev:tidalpoint:label": {
+      "ref": "ev:tidalpoint:label",
+      "claim_ref": "clm:tidalpoint:ingredient_restated",
+      "subject_ref": "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "label_image",
+      "document_type": "packaging_artwork_capture",
+      "certificate_number": "GMP-2026-00012",
+      "issued_at": "2026-05-20T00:00:00.000000000Z",
+      "valid_from": "2026-05-20T00:00:00.000000000Z",
+      "expires_at": "2027-05-20T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00012",
+      "scope": {
+        "product_ref": "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D",
+        "batch_ref": "2025-12-D",
+        "tests": [
+          "label_transcription"
+        ]
+      },
+      "artefact": "Packaging artwork capture. Front panel declares EPA 300mg and DHA 200mg per softgel."
+    },
+    "ev:tidalpoint:gmp": {
+      "ref": "ev:tidalpoint:gmp",
+      "claim_ref": "clm:tidalpoint:certification",
+      "subject_ref": "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "gmp_cert",
+      "document_type": "gmp_facility_certificate",
+      "certificate_number": "GMP-2026-00013",
+      "issued_at": "2026-02-18T00:00:00.000000000Z",
+      "valid_from": "2026-02-18T00:00:00.000000000Z",
+      "expires_at": "2027-02-18T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00013",
+      "scope": {
+        "product_ref": "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D",
+        "batch_ref": "2025-12-D",
+        "tests": [
+          "facility_audit"
+        ]
+      },
+      "artefact": "Good manufacturing practice certificate. Facility AU-GMP-3390. Scope: marine oil softgel encapsulation."
+    },
+    "ev:stonefield-gluc:coa": {
+      "ref": "ev:stonefield-gluc:coa",
+      "claim_ref": "clm:stonefield-gluc:ingredient",
+      "subject_ref": "ramify:demo:supp:stonefield-zinc-gluc-50-90",
+      "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "authority_level": "accredited_laboratory",
+      "type": "coa_pdf",
+      "document_type": "third_party_lab_certificate",
+      "certificate_number": "CONC-2025-00014",
+      "issued_at": "2025-02-10T00:00:00.000000000Z",
+      "valid_from": "2025-02-10T00:00:00.000000000Z",
+      "expires_at": "2026-02-10T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://conc/certificates/CONC-2025-00014",
+      "scope": {
+        "product_ref": "ramify:demo:supp:stonefield-zinc-gluc-50-90",
+        "batch_ref": null,
+        "tests": [
+          "identity",
+          "purity",
+          "heavy_metals"
+        ]
+      },
+      "artefact": "Certificate of analysis. Sample STF-2502-064. Zinc gluconate 49.6mg per capsule against a 50mg specification."
+    },
+    "ev:stonefield-gluc:gmp": {
+      "ref": "ev:stonefield-gluc:gmp",
+      "claim_ref": "clm:stonefield-gluc:certification",
+      "subject_ref": "ramify:demo:supp:stonefield-zinc-gluc-50-90",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "gmp_cert",
+      "document_type": "gmp_facility_certificate",
+      "certificate_number": "GMP-2026-00015",
+      "issued_at": "2026-01-05T00:00:00.000000000Z",
+      "valid_from": "2026-01-05T00:00:00.000000000Z",
+      "expires_at": "2027-01-05T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00015",
+      "scope": {
+        "product_ref": "ramify:demo:supp:stonefield-zinc-gluc-50-90",
+        "batch_ref": null,
+        "tests": [
+          "facility_audit"
+        ]
+      },
+      "artefact": "Good manufacturing practice certificate. Facility AU-GMP-5541. Scope: mineral supplement encapsulation."
+    },
+    "ev:stonefield-pico:coa": {
+      "ref": "ev:stonefield-pico:coa",
+      "claim_ref": "clm:stonefield-pico:ingredient",
+      "subject_ref": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+      "issuer_ref": "ramify:demo:issuer:Concordia_Labs_AU",
+      "authority_level": "accredited_laboratory",
+      "type": "coa_pdf",
+      "document_type": "third_party_lab_certificate",
+      "certificate_number": "CONC-2026-00016",
+      "issued_at": "2026-06-01T00:00:00.000000000Z",
+      "valid_from": "2026-06-01T00:00:00.000000000Z",
+      "expires_at": "2027-06-01T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://conc/certificates/CONC-2026-00016",
+      "scope": {
+        "product_ref": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+        "batch_ref": null,
+        "tests": [
+          "identity",
+          "purity",
+          "heavy_metals"
+        ]
+      },
+      "artefact": "Certificate of analysis. Sample STF-2606-140. Zinc picolinate 50.2mg per capsule against a 50mg specification."
+    },
+    "ev:stonefield-pico:gmp": {
+      "ref": "ev:stonefield-pico:gmp",
+      "claim_ref": "clm:stonefield-pico:certification",
+      "subject_ref": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "gmp_cert",
+      "document_type": "gmp_facility_certificate",
+      "certificate_number": "GMP-2026-00017",
+      "issued_at": "2026-01-05T00:00:00.000000000Z",
+      "valid_from": "2026-01-05T00:00:00.000000000Z",
+      "expires_at": "2027-01-05T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00017",
+      "scope": {
+        "product_ref": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+        "batch_ref": null,
+        "tests": [
+          "facility_audit"
+        ]
+      },
+      "artefact": "Good manufacturing practice certificate. Facility AU-GMP-5541. Scope: mineral supplement encapsulation."
+    },
+    "ev:harborline:conformity": {
+      "ref": "ev:harborline:conformity",
+      "claim_ref": "clm:harborline:certification",
+      "subject_ref": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "conformity_cert",
+      "document_type": "conformity_certificate",
+      "certificate_number": "GMP-2026-00018",
+      "issued_at": "2026-03-30T00:00:00.000000000Z",
+      "valid_from": "2026-03-30T00:00:00.000000000Z",
+      "expires_at": "2027-03-30T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00018",
+      "scope": {
+        "product_ref": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+        "batch_ref": "2025-09-K",
+        "tests": [
+          "conformity_assessment"
+        ]
+      },
+      "artefact": "Conformity certificate. Single-use nitrile examination gloves. Tested against the applicable AS/NZS examination glove standard."
+    },
+    "ev:covelane:conformity": {
+      "ref": "ev:covelane:conformity",
+      "claim_ref": "clm:covelane:certification",
+      "subject_ref": "ramify:demo:ppe:covelane-n95-resp-b2026-01-B",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "conformity_cert",
+      "document_type": "conformity_certificate",
+      "certificate_number": "GMP-2026-00019",
+      "issued_at": "2026-04-14T00:00:00.000000000Z",
+      "valid_from": "2026-04-14T00:00:00.000000000Z",
+      "expires_at": "2027-04-14T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "active",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00019",
+      "scope": {
+        "product_ref": "ramify:demo:ppe:covelane-n95-resp-b2026-01-B",
+        "batch_ref": "2026-01-B",
+        "tests": [
+          "conformity_assessment"
+        ]
+      },
+      "artefact": "Conformity certificate. Filtering facepiece respirator. Filtration efficiency 95.4 per cent at the specified particle size."
+    },
+    "ev:merridale:conformity": {
+      "ref": "ev:merridale:conformity",
+      "claim_ref": "clm:merridale:certification",
+      "subject_ref": "ramify:demo:ppe:merridale-faceshield-std",
+      "issuer_ref": "ramify:demo:issuer:GMP_AU_demo",
+      "authority_level": "certification_body",
+      "type": "conformity_cert",
+      "document_type": "conformity_certificate",
+      "certificate_number": "GMP-2026-00020",
+      "issued_at": "2026-05-02T00:00:00.000000000Z",
+      "valid_from": "2026-05-02T00:00:00.000000000Z",
+      "expires_at": "2027-05-02T00:00:00.000000000Z",
+      "retrieved_at": "2026-07-23T10:15:00.000000000Z",
+      "record_status": "revoked",
+      "source_uri": "synthetic://gmp/certificates/GMP-2026-00020",
+      "scope": {
+        "product_ref": "ramify:demo:ppe:merridale-faceshield-std",
+        "batch_ref": null,
+        "tests": [
+          "conformity_assessment"
+        ]
+      },
+      "artefact": "Conformity certificate. Withdrawn by the issuing body on 11 June 2026 after the assessment file could not be produced.",
+      "revoked_at": "2026-06-11T00:00:00.000000000Z"
+    }
+  },
+  "listings": {
+    "note": "Prices are integer cents. No float may enter a signed receipt, so money is counted in the smallest unit rather than stored as a decimal.",
+    "prices_cents": {
+      "ramify:demo:supp:apex-mg-glyc-120": 3495,
+      "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z": 2450,
+      "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M": 2450,
+      "ramify:demo:supp:greenline-ashw-ksm66-90": 4900,
+      "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A": 1995,
+      "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D": 4200,
+      "ramify:demo:supp:stonefield-zinc-gluc-50-90": 1850,
+      "ramify:demo:supp:stonefield-zinc-picolinate-50-90": 2200,
+      "ramify:demo:supp:ridgeway-multivit-b2026-02-C": 1575,
+      "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K": 8900,
+      "ramify:demo:ppe:covelane-n95-resp-b2026-01-B": 6400,
+      "ramify:demo:ppe:merridale-faceshield-std": 2750
+    }
+  },
+  "actor_profiles": {
+    "consumer_v1": {
+      "ref": "consumer_v1",
+      "label": "Consumer shopping agent",
+      "summary": "Shows the warning, lets the person decide",
+      "description": "An individual shopper's agent. Tolerates a warned outcome so long as the warning is put in front of the buyer. Never purchases without a human pressing the button.",
+      "autonomy": "assists",
+      "auto_purchase_on": [],
+      "narrowing_rules": [],
+      "permitted_actions": {
+        "allow": [
+          "add_to_mock_cart",
+          "compare_alternatives"
+        ],
+        "allow_with_warning": [
+          "add_to_mock_cart",
+          "compare_alternatives"
+        ],
+        "hold": [
+          "create_review_task",
+          "compare_alternatives",
+          "halt"
+        ],
+        "escalate": [
+          "create_review_task",
+          "halt"
+        ],
+        "block": [
+          "halt"
+        ]
+      }
+    },
+    "autonomous_buyer_v1": {
+      "ref": "autonomous_buyer_v1",
+      "label": "Autonomous buying agent",
+      "summary": "",
+      "description": "Completes the purchase itself when every check passes and nothing is flagged, with no person in the loop. A warned outcome is not clean enough to buy unattended, so it stops and asks. Spend is capped per line.",
+      "autonomy": "purchases_unattended",
+      "auto_purchase_on": [
+        "allow"
+      ],
+      "budget_limit_cents": 5000,
+      "narrowing_rules": [
+        {
+          "id": "warned_outcome_requires_review",
+          "when": "objective_posture == allow_with_warning",
+          "narrow_to": "hold",
+          "reason_code": "autonomy_withheld_on_warned_outcome"
+        },
+        {
+          "id": "over_budget",
+          "when": "line total > budget_limit_cents",
+          "narrow_to": "hold",
+          "reason_code": "line_total_exceeds_agent_budget"
+        }
+      ],
+      "permitted_actions": {
+        "allow": [
+          "purchase_autonomously",
+          "add_to_mock_cart",
+          "compare_alternatives"
+        ],
+        "allow_with_warning": [
+          "add_to_mock_cart",
+          "compare_alternatives"
+        ],
+        "hold": [
+          "create_review_task",
+          "compare_alternatives",
+          "halt"
+        ],
+        "escalate": [
+          "create_review_task",
+          "halt"
+        ],
+        "block": [
+          "halt"
+        ]
+      }
+    },
+    "budget_guard_v1": {
+      "ref": "budget_guard_v1",
+      "label": "Budget-controlled agent",
+      "summary": "",
+      "description": "Trusts the product assessment exactly as far as any other actor does, then applies a spend ceiling of its own. A product it considers perfectly sound still goes to a person if the line total is over budget.",
+      "autonomy": "assists",
+      "auto_purchase_on": [],
+      "budget_limit_cents": 3000,
+      "narrowing_rules": [
+        {
+          "id": "over_budget",
+          "when": "line total > budget_limit_cents",
+          "narrow_to": "hold",
+          "reason_code": "line_total_exceeds_agent_budget"
+        }
+      ],
+      "permitted_actions": {
+        "allow": [
+          "add_to_mock_cart",
+          "compare_alternatives"
+        ],
+        "allow_with_warning": [
+          "add_to_mock_cart",
+          "compare_alternatives"
+        ],
+        "hold": [
+          "create_review_task",
+          "compare_alternatives",
+          "halt"
+        ],
+        "escalate": [
+          "create_review_task",
+          "halt"
+        ],
+        "block": [
+          "halt"
+        ]
+      }
+    },
+    "brand_loyal_v1": {
+      "ref": "brand_loyal_v1",
+      "label": "Brand-restricted agent",
+      "summary": "",
+      "description": "Acts for a buyer with a standing brand arrangement. A brand outside that arrangement is not a safety judgement and is never treated as one: the product assessment is untouched and the referral is recorded as the agent's own commercial constraint.",
+      "autonomy": "assists",
+      "auto_purchase_on": [],
+      "brand_allowlist": [
+        "Apex Nutrients",
+        "Stonefield"
+      ],
+      "narrowing_rules": [
+        {
+          "id": "brand_not_on_allowlist",
+          "when": "brand not in brand_allowlist",
+          "narrow_to": "hold",
+          "reason_code": "brand_outside_agent_arrangement"
+        }
+      ],
+      "permitted_actions": {
+        "allow": [
+          "add_to_mock_cart",
+          "compare_alternatives"
+        ],
+        "allow_with_warning": [
+          "add_to_mock_cart",
+          "compare_alternatives"
+        ],
+        "hold": [
+          "create_review_task",
+          "compare_alternatives",
+          "halt"
+        ],
+        "escalate": [
+          "create_review_task",
+          "halt"
+        ],
+        "block": [
+          "halt"
+        ]
+      }
+    },
+    "procurement_v1": {
+      "ref": "procurement_v1",
+      "label": "Enterprise procurement agent",
+      "summary": "Approved vendors only, warnings go to a person",
+      "description": "A hospital procurement function answerable to audit. Will not accept a warned outcome without a person confirming it, and buys only from approved vendors.",
+      "autonomy": "assists",
+      "auto_purchase_on": [],
+      "approved_vendors": [
+        "ramify:demo:seller:Meridian_Health_Supply",
+        "ramify:demo:seller:Coastline_Pharmacy_Group",
+        "ramify:demo:seller:Ashcroft_Medical_Distribution"
+      ],
+      "narrowing_rules": [
+        {
+          "id": "warned_outcome_requires_review",
+          "when": "objective_posture == allow_with_warning",
+          "narrow_to": "hold",
+          "reason_code": "procurement_policy_requires_review_of_warned_outcome"
+        },
+        {
+          "id": "seller_not_on_approved_vendor_list",
+          "when": "seller not in approved_vendors",
+          "narrow_to": "hold",
+          "reason_code": "seller_not_on_approved_vendor_list"
+        }
+      ],
+      "permitted_actions": {
+        "allow": [
+          "create_mock_requisition",
+          "compare_alternatives"
+        ],
+        "allow_with_warning": [
+          "create_review_task",
+          "compare_alternatives"
+        ],
+        "hold": [
+          "create_review_task",
+          "compare_alternatives",
+          "halt"
+        ],
+        "escalate": [
+          "create_review_task",
+          "halt"
+        ],
+        "block": [
+          "halt"
+        ]
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "id": "APPROVED-001",
+      "subject_ref": "ramify:demo:supp:apex-mg-glyc-120",
+      "actor": "consumer_v1",
+      "expected_objective": "allow",
+      "expected_decision": "allow",
+      "note": "Clean accept. Current evidence, authorised seller, no advisory."
+    },
+    {
+      "id": "APPROVED-002",
+      "subject_ref": "ramify:demo:supp:apex-mg-glyc-120",
+      "actor": "procurement_v1",
+      "expected_objective": "allow",
+      "expected_decision": "allow",
+      "note": "Same product under procurement. Seller is on the approved vendor list, so nothing narrows."
+    },
+    {
+      "id": "ADVISORY-001",
+      "subject_ref": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+      "actor": "consumer_v1",
+      "expected_objective": "hold",
+      "expected_decision": "hold",
+      "note": "Active advisory on the batch."
+    },
+    {
+      "id": "ADVISORY-EXPIRED-001",
+      "subject_ref": "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M",
+      "actor": "consumer_v1",
+      "expected_objective": "hold",
+      "expected_decision": "hold",
+      "note": "Advisory, one expired certificate and one not yet in effect. The advisory is the primary reason; the evidence findings are still recorded."
+    },
+    {
+      "id": "EXPIRED-001",
+      "subject_ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+      "actor": "consumer_v1",
+      "expected_objective": "allow_with_warning",
+      "expected_decision": "allow_with_warning",
+      "note": "Lab certificate expired 90 days before the snapshot date."
+    },
+    {
+      "id": "EXPIRED-002",
+      "subject_ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+      "actor": "procurement_v1",
+      "expected_objective": "allow_with_warning",
+      "expected_decision": "hold",
+      "note": "Same expired certificate. Procurement policy narrows a warned outcome to review."
+    },
+    {
+      "id": "PROOF-CONSUMER-001",
+      "subject_ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+      "actor": "consumer_v1",
+      "expected_objective": "allow",
+      "expected_decision": "allow",
+      "note": "The proof case. Identical objective facts to PROOF-PROCUREMENT-001."
+    },
+    {
+      "id": "PROOF-PROCUREMENT-001",
+      "subject_ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+      "actor": "procurement_v1",
+      "expected_objective": "allow",
+      "expected_decision": "hold",
+      "note": "The proof case. The seller is genuine and authorised but absent from the approved vendor list, so only the actor stage differs."
+    },
+    {
+      "id": "CONFLICT-001",
+      "subject_ref": "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D",
+      "actor": "consumer_v1",
+      "expected_objective": "allow_with_warning",
+      "expected_decision": "allow_with_warning",
+      "note": "Two issuers state different EPA and DHA content for the same product."
+    },
+    {
+      "id": "SUBSTITUTION-001",
+      "subject_ref": "ramify:demo:supp:stonefield-zinc-gluc-50-90",
+      "actor": "consumer_v1",
+      "expected_objective": "allow_with_warning",
+      "expected_decision": "allow_with_warning",
+      "note": "Discontinued with an expired certificate and a named replacement. Substitution appears as a relationship and a next action, not as a posture."
+    },
+    {
+      "id": "SUBSTITUTION-TARGET-001",
+      "subject_ref": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+      "actor": "consumer_v1",
+      "expected_objective": "allow",
+      "expected_decision": "allow",
+      "note": "The replacement product, so the substitution suggestion leads somewhere clean."
+    },
+    {
+      "id": "INCOMPLETE-001",
+      "subject_ref": "ramify:demo:supp:ridgeway-multivit-b2026-02-C",
+      "actor": "consumer_v1",
+      "expected_objective": "escalate",
+      "expected_decision": "escalate",
+      "note": "No claims and no evidence. The system must say it cannot tell."
+    },
+    {
+      "id": "RECALL-001",
+      "subject_ref": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+      "actor": "consumer_v1",
+      "expected_objective": "block",
+      "expected_decision": "block",
+      "note": "Active recall on the batch."
+    },
+    {
+      "id": "RECALL-002",
+      "subject_ref": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+      "actor": "procurement_v1",
+      "expected_objective": "block",
+      "expected_decision": "block",
+      "note": "A recall cannot be softened by any actor profile."
+    },
+    {
+      "id": "SELLER-RISK-001",
+      "subject_ref": "ramify:demo:ppe:covelane-n95-resp-b2026-01-B",
+      "actor": "consumer_v1",
+      "expected_objective": "allow_with_warning",
+      "expected_decision": "allow_with_warning",
+      "note": "Seller authority for this category is unverified. Not an allegation, an unknown."
+    },
+    {
+      "id": "SELLER-RISK-002",
+      "subject_ref": "ramify:demo:ppe:covelane-n95-resp-b2026-01-B",
+      "actor": "procurement_v1",
+      "expected_objective": "allow_with_warning",
+      "expected_decision": "hold",
+      "note": "Procurement narrows both because the outcome is warned and because the seller is off the approved vendor list."
+    },
+    {
+      "id": "REVOKED-CERT-001",
+      "subject_ref": "ramify:demo:ppe:merridale-faceshield-std",
+      "actor": "consumer_v1",
+      "expected_objective": "block",
+      "expected_decision": "block",
+      "note": "The issuing body withdrew the conformity certificate. The engine derives that from the evidence record's own status, not from a stored answer."
+    }
+  ]
+}

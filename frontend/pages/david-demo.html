@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>David meeting mode · RAMIFY OS</title><link rel="stylesheet" href="/style.css?v=11.0.7-uxfix"></head>
+<body class="david-demo-page">
+<main class="human-page david-meeting-main">
+  <div class="page-head"><div class="eyebrow">CLIENT MEETING MODE</div><h1>RAMIFY OS — prove the trust chain, not just the screens.</h1><p class="lede">A compact meeting flow for David: deterministic product truth, evidence integrity, actor authority, signed receipts and later verification.</p></div>
+
+  <section class="meeting-architecture-ribbon meeting-architecture-large">
+    <div class="meeting-architecture-title"><span class="eyebrow">1 · AUTHORITATIVE ARCHITECTURE</span><strong>Frontend sends requests. The deterministic backend establishes trust and action authority.</strong></div>
+    <div class="meeting-flow"><span>User request</span><i>→</i><span>Identify</span><i>→</i><span>Resolve</span><i>→</i><span>Status</span><i>→</i><span>Verify</span><i>→</i><span>Assess</span><i>→</i><span>Actor Policy</span><i>→</i><span>Action Gate</span><i>→</i><span>Signed Receipt</span><i>→</i><span>Action / Review</span></div>
+  </section>
+
+  <section class="david-demo-section">
+    <div class="david-section-head"><div><span class="eyebrow">2–4 · CLEAN PRODUCT + EVIDENCE PROOF</span><h2>Show a clean decision, then separate integrity from validity.</h2></div><button class="btn" id="david-clean">Run Apex clean assessment</button></div>
+    <div id="david-clean-output" class="david-output"><p class="placeholder">Run the clean assessment to show Identify → Resolve → Status → Verify → Assess and the evidence proof.</p></div>
+  </section>
+
+  <section class="david-demo-section">
+    <div class="david-section-head"><div><span class="eyebrow">5 + 8 · TAMPER PROOFS</span><h2>Prove that both sides of the trust chain fail when altered.</h2></div></div>
+    <div class="david-button-row"><button class="btn btn-ghost" id="david-evidence-tamper">Tamper evidence copy and reassess</button><button class="btn btn-ghost" id="david-receipt-tamper">Tamper signed receipt copy and verify</button></div>
+    <div id="david-tamper-output" class="terminal" hidden></div>
+  </section>
+
+  <section class="david-demo-section">
+    <div class="david-section-head"><div><span class="eyebrow">6 · ONE PRODUCT TRUTH</span><h2>Same Northbeam product. Same evidence. Different delegated authority.</h2></div><button class="btn" id="david-actors">Run Consumer vs Procurement</button></div>
+    <div id="david-actors-output" class="david-output"><p class="placeholder">Objective truth should stay identical while the actor layer may narrow the permitted next action.</p></div>
+  </section>
+
+  <section class="david-demo-section">
+    <div class="david-section-head"><div><span class="eyebrow">7 + 10 · ACTION GATE + CHECKOUT</span><h2>The browser button is not authority.</h2><p>RAMIFY re-reads the stored signed receipt before basket admission and re-verifies it again at checkout.</p></div><button class="btn" id="david-checkout">Run clean purchase → basket → checkout</button></div>
+    <div id="david-checkout-output" class="david-output"><p class="placeholder">This uses the synthetic local basket and signed order flow.</p></div>
+  </section>
+
+  <section class="david-demo-section">
+    <div class="david-section-head"><div><span class="eyebrow">9 · HUMAN SUCCESSOR RECEIPT</span><h2>Human review appends history; it never rewrites the machine receipt.</h2></div><button class="btn" id="david-human">Run advisory → human approval</button></div>
+    <div id="david-human-output" class="david-output"><div class="lineage-mini"><span>Original machine receipt</span><i>→</i><span>Human review</span><i>→</i><span>Signed successor receipt</span></div></div>
+  </section>
+
+  <section class="david-demo-section">
+    <div class="david-section-head"><div><span class="eyebrow">11 · HONEST UNCERTAINTY</span><h2>RAMIFY does not invent certainty when evidence is missing.</h2></div><button class="btn btn-ghost" id="david-incomplete">Run Ridgeway incomplete scenario</button></div>
+    <div id="david-incomplete-output" class="david-output"><p class="placeholder">Missing evidence should be recorded as incomplete/unknown rather than fabricated as a clean pass.</p></div>
+  </section>
+
+  <section class="david-demo-section">
+    <div class="david-section-head"><div><span class="eyebrow">12 · PROOF PACKS</span><h2>Take the proof away from the browser.</h2></div></div>
+    <div class="proof-pack-grid compact-proof-grid"><article><span>Quick</span><strong>5-scenario browser pack</strong><p>Approved, expired evidence, seller risk (Covelane N95), recall and substitution (Stonefield Zinc Gluconate).</p><a class="btn btn-ghost" href="/api/v0/proof-pack">Download Quick Proof Pack</a></article><article><span>Extended</span><strong>Broader verification pack</strong><p>Additional receipts and supporting public verification/evidence material for technical inspection.</p><a class="btn btn-ghost" href="/api/v0/proof-pack/extended">Download Extended Proof Pack</a></article></div>
+  </section>
+
+  <section class="david-demo-section">
+    <div class="david-section-head"><div><span class="eyebrow">13 · TESTING EVIDENCE</span><h2>Show measured release evidence, not “we tested it”.</h2></div></div>
+    <div class="meeting-test-grid"><span><b>422</b><small>tests passed</small></span><span><b>7</b><small>explicit optional/env skips</small></span><span><b>1,316</b><small>subtests passed</small></span><span><b>0</b><small>failures</small></span><span><b id="david-build-id">—</b><small>current UI build ID</small></span></div>
+    <p class="detail-note"><strong>Before the assessed handover:</strong> capture the team's real repository commit SHA, clean/dirty state, timestamp and exact test command. This exported demo does not invent Git provenance that is not present in the archive.</p>
+  </section>
+
+  <section class="david-demo-section honest-security">
+    <div><span class="eyebrow">14 · SECURITY SCOPE</span><h2>Real cryptographic mechanics, honest prototype claims.</h2><p>This local capstone demonstrator uses SHA-256, Ed25519, tamper evidence and signed decision lineage. It is not an immutable blockchain, a product certification service or production-grade key custody.</p></div>
+  </section>
+
+  <section class="david-demo-section final-trust-chain">
+    <span class="eyebrow">15 · FINAL STORY</span><h2>Why RAMIFY is more than a shopping interface</h2>
+    <div class="meeting-flow final-flow"><span>Verified evidence</span><i>→</i><span>Objective product truth</span><i>→</i><span>Actor may only narrow</span><i>→</i><span>Signed receipt</span><i>→</i><span>Action Gate</span><i>→</i><span>Transaction / human successor</span><i>→</i><span>Later verification</span></div>
+  </section>
+  <p class="disclaimer">Synthetic demonstration data only. Not for real purchasing, safety, legal or compliance decisions.</p>
+</main><footer></footer>
+<script src="/shell.js?v=11.0.7-uxfix"></script><script src="/david-demo.js?v=11.0.7-uxfix"></script>
+</body></html>

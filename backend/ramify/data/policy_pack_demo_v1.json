@@ -1,0 +1,116 @@
+{
+  "policy_ref": "supplements_ppe_demo_v1",
+  "policy_version": "1.0.0",
+  "label": "Demo Policy Pack",
+  "status": "demonstration_only",
+  "notice": "A deliberately simplified demonstration set, sufficient to build the prototype. These are not RAMIFY OS production rules and must not be represented as such.",
+  "source": "Client direction of 22 July 2026, item 3.",
+  "severities": {
+    "hard_stop": "The product cannot be trusted regardless of what else is true. No actor may soften it.",
+    "incomplete": "The system could not gather enough to decide. Says nothing about the product either way.",
+    "policy_dependent": "A real finding whose weight depends on who is asking.",
+    "informational": "Recorded for the audit trail. Does not move the posture on its own."
+  },
+  "checks": [
+    {
+      "id": "identity",
+      "label": "Identity resolution",
+      "question": "Does this identifier resolve to exactly one known subject?",
+      "severity_on_fail": "incomplete",
+      "fail_reason_code": "identity_unresolved"
+    },
+    {
+      "id": "standing",
+      "label": "Recall and advisory standing",
+      "question": "Is this product or batch under an active recall or advisory?",
+      "severity_on_fail": "hard_stop",
+      "fail_reason_code": "active_recall_on_batch",
+      "review_reason_code": "active_advisory_on_batch"
+    },
+    {
+      "id": "seller_authority",
+      "label": "Seller authority",
+      "question": "Is the seller established as authorised to supply this category?",
+      "severity_on_fail": "hard_stop",
+      "fail_reason_code": "seller_authority_revoked",
+      "review_reason_code": "seller_authority_unverified_for_category"
+    },
+    {
+      "id": "mandatory_evidence",
+      "label": "Mandatory evidence present",
+      "question": "Is every evidence type this category requires actually attached?",
+      "severity_on_fail": "incomplete",
+      "fail_reason_code": "mandatory_evidence_missing"
+    },
+    {
+      "id": "evidence_freshness",
+      "label": "Evidence validity and integrity",
+      "question": "Is the attached evidence still within its validity period?",
+      "severity_on_fail": "policy_dependent",
+      "review_reason_code": "evidence_expired"
+    },
+    {
+      "id": "claims_and_category",
+      "label": "Claims and category requirements",
+      "question": "Are the required claims present, from an issuer with authority to make them, and not rejected or revoked?",
+      "severity_on_fail": "hard_stop",
+      "fail_reason_code": "claim_rejected_or_revoked",
+      "review_reason_code": "claim_asserted_outside_issuer_authority",
+      "incomplete_reason_code": "required_claim_missing"
+    },
+    {
+      "id": "conflicting_information",
+      "label": "Conflicting information",
+      "question": "Do two issuers state materially different values for the same claim type?",
+      "severity_on_fail": "policy_dependent",
+      "review_reason_code": "issuers_state_conflicting_values"
+    }
+  ],
+  "precedence": {
+    "note": "RESOLVE Demo Specification v0.4 section 7.2, corrected by amendment v0.4.1 item 4: five action postures, six precedence rules. All applicable conditions are evaluated. The most restrictive matched posture determines the outcome; precedence order determines the primary explanatory reason. A reason code is recorded for every condition matched, not only the primary one.",
+    "rules": [
+      {
+        "order": 1,
+        "condition": "standing is recalled",
+        "posture": "block"
+      },
+      {
+        "order": 2,
+        "condition": "any check failed with hard_stop severity",
+        "posture": "block"
+      },
+      {
+        "order": 3,
+        "condition": "standing is advisory",
+        "posture": "hold"
+      },
+      {
+        "order": 4,
+        "condition": "at least one check needs review, no check failed or is incomplete, standing clean",
+        "posture": "allow_with_warning"
+      },
+      {
+        "order": 5,
+        "condition": "every check passed and standing clean",
+        "posture": "allow"
+      },
+      {
+        "order": 6,
+        "condition": "evidence or claims incomplete",
+        "posture": "escalate"
+      }
+    ]
+  },
+  "supersession": {
+    "note": "Client direction of 22 July 2026, item 2. A replacement product is a relationship and a possible next action, never a posture of its own.",
+    "reason_code": "superseded_product_available",
+    "offers_action": "compare_alternatives"
+  },
+  "claim_comparison": {
+    "ingredient_claim": {
+      "mode": "omega3_mg_components",
+      "absolute_tolerance_mg": 5,
+      "note": "For EPA/DHA ingredient claims, values within 5 mg per component are treated as within tolerance. Other ingredient formats fall back to exact normalised comparison."
+    }
+  }
+}

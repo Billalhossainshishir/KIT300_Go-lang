@@ -1,0 +1,36 @@
+[project]
+name = "ramify-decision-receipt"
+version = "11.0.7"
+description = "RAMIFY OS Decision Receipt Interface — KIT300 synthetic local prototype."
+requires-python = ">=3.11,<3.15"
+dependencies = [
+    "fastapi>=0.110,<1",
+    "uvicorn[standard]>=0.27,<1",
+    "pydantic>=2,<3",
+    "cryptography>=42,<51",
+    "httpx>=0.27,<1",
+    "langgraph==1.2.10",
+    "langchain-core==1.5.3",
+    "langchain-ollama==1.1.0",
+]
+
+[project.optional-dependencies]
+agent = ["langgraph==1.2.10", "langchain-core==1.5.3", "langchain-ollama==1.1.0"]
+agent-pydantic = ["pydantic-ai"]
+dev = ["httpx>=0.27,<1"]
+
+[project.scripts]
+ramify-verify = "ramify.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+
+[tool.setuptools.package-data]
+ramify = ["data/*.json", "data/generated/*.json", "data/generated/artefacts/*.txt"]
+
+[tool.pytest.ini_options]
+markers = ["browser_e2e: optional real-browser smoke tests"]

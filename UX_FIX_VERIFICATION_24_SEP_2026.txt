@@ -1,0 +1,35 @@
+RAMIFY OS v11.0.7 - FINAL UX HARDENING VERIFICATION
+Date: 24 September 2026
+
+IMPLEMENTED UX FIXES
+- Non-Shop page headers reduced to compact information heads; Shop retains the large visual hero.
+- Button hover/active/focus colours explicitly preserve readable text.
+- Decorative result scan removed to avoid stray line artefacts beside decision labels.
+- Basket and Human Review action controls wrap responsively and do not cover text.
+- Decision receipt summary now separates Receipt integrity, Evidence validity, Permitted action and Purchase authority.
+- Human receipt summary now separates receipt integrity, original machine result, human outcome and transaction authority.
+- Product artwork is forced to object-fit: contain.
+- Persona identity colours remain separate from green/amber/red trust-state colours.
+- Main shopping journey is Product -> Request -> RAMIFY -> Agent -> Receipt -> Checkout.
+- Needs me, Activity and Human receipts are directly reachable from primary navigation.
+- First-run welcome wording is shorter and non-technical.
+- Guided Demo remains deterministic and does not create purchase authority by itself.
+- Scenario Lab, Presentation Mode, sound toggle and AI mode toggle were not reintroduced.
+- Selecting/editing another product clears stale result, evidence, alternatives and verification output while preserving historical receipts.
+- Keyboard focus and smaller-width responsiveness were hardened.
+
+VERIFICATION RUNS
+- Frontend JavaScript syntax: 11/11 files passed `node --check`.
+- Python compile check: passed.
+- Targeted client/backend/UX regression set: 67 passed, 0 failed.
+- Release hardening tests: 17 passed, 0 failed.
+- Final UX + onboarding checks: 22 passed, 0 failed.
+- Optional browser E2E file: 5 skipped in this environment; skips are not claimed as browser proof.
+- HTTP smoke: /healthz, /shop, style.css and shell.js served successfully from local FastAPI/Uvicorn.
+- Release check: passed after cache cleanup; no shipped private signer material.
+
+IMPORTANT MANUAL ACCEPTANCE
+The requested 5-8 person external usability test cannot be honestly marked complete without real users. A ready-to-run checklist is included in UX_ACCEPTANCE_CHECKLIST_24_SEP_2026.md. Run it on the presentation laptop before final client handover if time permits.
+
+BACKEND SCOPE
+This UX hardening patch does not alter the authoritative trust, policy, Action Gate, signing or transaction backend logic from the previously hardened v11.0.7 build.

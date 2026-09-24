@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interactive tour · RAMIFY OS</title>
+<link rel="stylesheet" href="/style.css?v=11.0.7-uxfix">
+</head>
+<body>
+<main class="tour-main walkthrough-main">
+  <section class="walkthrough-hero" aria-labelledby="walkthrough-title">
+    <div class="walkthrough-hero-copy">
+      <div class="eyebrow">RAMIFY OS · GUIDED SHOPPING JOURNEY</div>
+      <h1 id="walkthrough-title">One product. Six clear steps. One auditable decision.</h1>
+      <p>Follow a product already in the RAMIFY catalogue from selection to a verified decision receipt. The walkthrough stays fast and deterministic; the live Shop remains the place to demonstrate free-form Llama interpretation.</p>
+    </div>
+    <div class="walkthrough-hero-actions">
+      <span class="walkthrough-mode"><i aria-hidden="true"></i> Fast guided mode</span>
+      <a class="btn btn-ghost" href="/shop">Leave tour</a>
+    </div>
+  </section>
+
+  <section class="walkthrough-product-strip" id="walkthrough-product-strip" aria-live="polite">
+    <div class="walkthrough-product-skeleton">Loading the guided product…</div>
+  </section>
+
+  <div class="walkthrough-shell">
+    <aside class="walkthrough-rail" aria-label="Guided tour steps">
+      <div class="walkthrough-rail-head">
+        <span id="walkthrough-count">Step 1 of 6</span>
+        <strong id="walkthrough-progress-label">Product</strong>
+      </div>
+      <div class="walkthrough-progress-track" aria-hidden="true"><span id="walkthrough-progress"></span></div>
+      <nav id="walkthrough-steps"></nav>
+      <div class="walkthrough-rail-note">
+        <strong>What stays fixed</strong>
+        <span>Product facts are checked first. Agent policy can narrow the action, but it cannot rewrite the product result.</span>
+      </div>
+    </aside>
+
+    <section class="walkthrough-stage" id="walkthrough-stage" aria-live="polite">
+      <header class="walkthrough-stage-head">
+        <div>
+          <div class="walkthrough-stage-kicker" id="walkthrough-kicker">01 · PRODUCT</div>
+          <h2 id="walkthrough-stage-title">Meet the product</h2>
+          <p id="walkthrough-stage-intro"></p>
+        </div>
+        <span class="walkthrough-stage-number" id="walkthrough-stage-number">01</span>
+      </header>
+
+      <div class="walkthrough-stage-body" id="walkthrough-stage-body"></div>
+
+      <div class="walkthrough-error" id="walkthrough-error" role="alert" hidden></div>
+
+      <footer class="walkthrough-actions">
+        <button class="walkthrough-back" id="walkthrough-back" type="button">← Back</button>
+        <div class="walkthrough-action-copy" id="walkthrough-action-copy" aria-live="polite"></div>
+        <button class="walkthrough-primary" id="walkthrough-primary" type="button">
+          <span id="walkthrough-primary-label">Use this product</span>
+          <span class="walkthrough-primary-icon" aria-hidden="true">→</span>
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <p class="disclaimer">Synthetic demonstration data. Not for real purchasing, safety, legal or compliance decisions. This tour follows a real catalogue record inside the RAMIFY demo dataset; it does not represent real-world product certification. No payment or external transaction occurs.</p>
+</main>
+<footer></footer>
+<script src="/shell.js?v=11.0.7-uxfix"></script>
+<script src="/tour.js?v=11.0.7-uxfix-rebuild"></script>
+</body>
+</html>
