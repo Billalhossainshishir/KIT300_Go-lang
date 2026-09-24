@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Certificate of analysis. Sample BWH-2504-311. Cholecalciferol 121.8ug per softgel against a 125ug specification.","authority_level":"accredited_laboratory","certificate_number":"CONC-2025-00005","claim_ref":"clm:brightway-m:ingredient","document_type":"third_party_lab_certificate","expires_at":"2026-04-20T00:00:00.000000000Z","issued_at":"2025-04-20T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","record_status":"active","ref":"ev:brightway-m:coa","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":"2025-06-M","product_ref":"ramify:demo:supp:brightway-vitd3-5000-b2025-06-M","tests":["identity","purity","heavy_metals"]},"source_uri":"synthetic://conc/certificates/CONC-2025-00005","subject_ref":"ramify:demo:supp:brightway-vitd3-5000-b2025-06-M","type":"coa_pdf","valid_from":"2025-04-20T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:brightway-m:ingredient":{"issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","ref":"clm:brightway-m:ingredient","state":"accepted","type":"ingredient_claim","value":"Cholecalciferol 125ug per softgel"}}}
+
+Certificate of analysis. Sample BWH-2504-311. Cholecalciferol 121.8ug per softgel against a 125ug specification.
+
+Synthetic demonstration artefact. Certifies nothing.

@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Good manufacturing practice certificate. Facility AU-GMP-3390. Scope: marine oil softgel encapsulation.","authority_level":"certification_body","certificate_number":"GMP-2026-00013","claim_ref":"clm:tidalpoint:certification","document_type":"gmp_facility_certificate","expires_at":"2027-02-18T00:00:00.000000000Z","issued_at":"2026-02-18T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:GMP_AU_demo","record_status":"active","ref":"ev:tidalpoint:gmp","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":"2025-12-D","product_ref":"ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D","tests":["facility_audit"]},"source_uri":"synthetic://gmp/certificates/GMP-2026-00013","subject_ref":"ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D","type":"gmp_cert","valid_from":"2026-02-18T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:tidalpoint:certification":{"issuer_ref":"ramify:demo:issuer:GMP_AU_demo","ref":"clm:tidalpoint:certification","state":"accepted","type":"certification_claim","value":"Manufactured at a GMP-certified facility"}}}
+
+Good manufacturing practice certificate. Facility AU-GMP-3390. Scope: marine oil softgel encapsulation.
+
+Synthetic demonstration artefact. Certifies nothing.

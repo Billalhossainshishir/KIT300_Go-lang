@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Good manufacturing practice certificate, issued 20 July 2026 and taking effect 1 September 2026. Facility AU-GMP-2210.","authority_level":"certification_body","certificate_number":"GMP-2026-00006","claim_ref":"clm:brightway-m:certification","document_type":"gmp_facility_certificate","expires_at":"2027-09-01T00:00:00.000000000Z","issued_at":"2026-07-20T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:GMP_AU_demo","record_status":"active","ref":"ev:brightway-m:gmp","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":"2025-06-M","product_ref":"ramify:demo:supp:brightway-vitd3-5000-b2025-06-M","tests":["facility_audit"]},"source_uri":"synthetic://gmp/certificates/GMP-2026-00006","subject_ref":"ramify:demo:supp:brightway-vitd3-5000-b2025-06-M","type":"gmp_cert","valid_from":"2026-09-01T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:brightway-m:certification":{"issuer_ref":"ramify:demo:issuer:GMP_AU_demo","ref":"clm:brightway-m:certification","state":"accepted","type":"certification_claim","value":"Manufactured at a GMP-certified facility"}}}
+
+Good manufacturing practice certificate, issued 20 July 2026 and taking effect 1 September 2026. Facility AU-GMP-2210.
+
+Synthetic demonstration artefact. Certifies nothing.

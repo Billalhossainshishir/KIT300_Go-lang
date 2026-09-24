@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop · RAMIFY OS</title>
+<link rel="stylesheet" href="/style.css?v=11.0.7-uxfix">
+</head>
+<body>
+
+<main class="journey-main">
+  <div class="page-head shop-head">
+    <div>
+      <div class="eyebrow">RAMIFY OS · SHOPPING DEMO</div>
+      <h1>Shop normally. We will guide the trust check one step at a time.</h1>
+      <p class="lede">Choose a product first. Nothing is assessed until you ask RAMIFY to check it. After that, request interpretation, deterministic checks, agent response, receipt and checkout are shown as separate steps.</p>
+    </div>
+    <div class="shop-head-actions">
+      <button class="btn btn-quiet" id="start-fresh" type="button">↻ Start fresh</button>
+      <a class="btn btn-ghost" href="/tour">Guided demo</a>
+    </div>
+    <aside class="shop-hero-visual" aria-label="RAMIFY journey overview">
+      <div class="shop-hero-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="shop-hero-flow">
+        <span><b>01</b><strong>Understand</strong><small>AI or exact catalogue match</small></span>
+        <i aria-hidden="true">→</i>
+        <span><b>02</b><strong>Verify</strong><small>Deterministic RAMIFY checks</small></span>
+        <i aria-hidden="true">→</i>
+        <span><b>03</b><strong>Control</strong><small>Policy, receipt and Action Gate</small></span>
+      </div>
+      <p><span></span> Local-first · auditable · synthetic demo</p>
+    </aside>
+  </div>
+  <div class="ramify-product-line"><strong>AI can recommend and interpret.</strong><span>RAMIFY decides what the agent is allowed to do — and records why.</span></div>
+
+  <p class="disclaimer">Synthetic demonstration data. Brands, sellers, issuers, certificates, advisories and prices are fictional. Every action is simulated. Not for real purchasing, safety, legal or compliance decisions.</p>
+
+  <div class="journey-promise" aria-label="How this demo behaves">
+    <span><b>1</b><strong>You choose</strong><small>Browsing alone does nothing</small></span>
+    <span><b>2</b><strong>RAMIFY checks</strong><small>Only when you continue</small></span>
+    <span><b>3</b><strong>You stay in control</strong><small>Human review when needed</small></span>
+  </div>
+
+  <nav class="journey-progress" id="journey-progress" aria-label="Shopping journey">
+    <button type="button" data-journey-step="0" class="active"><span>1</span><strong>Product</strong><small>Choose</small></button>
+    <button type="button" data-journey-step="1" disabled><span>2</span><strong>Request</strong><small>Understand</small></button>
+    <button type="button" data-journey-step="2" disabled><span>3</span><strong>RAMIFY</strong><small>Check</small></button>
+    <button type="button" data-journey-step="3" disabled><span>4</span><strong>Agent</strong><small>Respond</small></button>
+    <button type="button" data-journey-step="4" disabled><span>5</span><strong>Receipt</strong><small>Summarise</small></button>
+    <button type="button" data-journey-step="5" disabled><span>6</span><strong>Checkout</strong><small>Finish</small></button>
+  </nav>
+
+  <!-- STEP 1 · SHOP -->
+  <section class="journey-stage active" id="journey-stage-0" data-stage="0">
+    <div class="journey-stage-head">
+      <div class="journey-step-number">01</div>
+      <div><div class="eyebrow">START HERE</div><h2>Choose what you want to buy</h2><p>Pick a product card, or type a normal request. You can also choose which agent is shopping for you.</p></div>
+    </div>
+
+    <div class="controls shop-controls">
+      <div style="min-width:230px;">
+        <label class="field-label" for="actor">Your shopping agent</label>
+        <select id="actor"></select>
+      </div>
+      <div style="flex:1;min-width:260px;">
+        <label class="field-label" for="query">Plain-English request</label>
+        <input type="text" id="query" placeholder="e.g. Check BlueHarbour Omega Oil from Value Health Outlet" autocomplete="off">
+      </div>
+      <div style="width:96px;">
+        <label class="field-label" for="qty">Qty</label>
+        <input type="number" id="qty" value="1" min="1" max="1000">
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="btn" id="run">Use this request</button>
+      </div>
+    </div>
+    <p class="action-note" id="profile-note"></p>
+
+    <div class="selection-panel" id="selection-panel" hidden>
+      <div class="selection-icon" id="selection-icon">✓</div>
+      <div class="selection-copy">
+        <div class="eyebrow">PRODUCT SELECTED</div>
+        <h3 id="selection-name">Product selected</h3>
+        <p id="selection-meta"></p>
+      </div>
+      <button class="btn btn-lg" id="continue-ramify">Continue with RAMIFY →</button>
+    </div>
+
+    <div class="section-row catalogue-heading">
+      <div>
+        <span class="eyebrow">LOCAL CATALOGUE</span>
+        <h2 class="section">Choose a product</h2>
+        <p class="section-hint">Select any product to prepare the journey. Nothing is assessed until you continue with RAMIFY.</p>
+      </div>
+      <button class="btn btn-story" id="open-cases" aria-haspopup="dialog" aria-expanded="false" aria-controls="case-drawer"><span>Explore demo stories</span><b aria-hidden="true">↗</b></button>
+    </div>
+    <div class="grid" id="catalogue"></div>
+  </section>
+
+  <div id="result" hidden>
+    <section class="trust-timeline-shell" id="trust-timeline" aria-label="RAMIFY trust timeline"></section>
+    <!-- STEP 2 · REQUEST INTERPRETATION -->
+    <section class="journey-stage" id="journey-stage-1" data-stage="1" hidden>
+      <div class="journey-stage-head">
+        <div class="journey-step-number">02</div>
+        <div><div class="eyebrow">REQUEST INTERPRETATION</div><h2>First, the request is understood</h2><p>An exact catalogue selection is matched directly. Genuine free-form text can use the local AI. Neither path decides whether the product is trusted.</p></div>
+      </div>
+      <div class="interpretation-strip" id="interpretation" hidden></div>
+      <div id="ai-fallback-banner" class="ai-fallback-banner" hidden></div>
+      <div class="boundary-card"><strong>Important boundary</strong><span>AI interprets and explains. The deterministic RAMIFY engine makes the product-trust decision.</span></div>
+    </section>
+
+    <!-- STEP 3 · DETERMINISTIC CHECKS -->
+    <section class="journey-stage" id="journey-stage-2" data-stage="2" hidden>
+      <div class="journey-stage-head">
+        <div class="journey-step-number">03</div>
+        <div><div class="eyebrow">RAMIFY CHECK</div><h2>Now RAMIFY checks the product facts</h2><p>Identity, seller, evidence, validity, claims, conflicts and recall status are checked before any agent policy is applied.</p></div>
+      </div>
+      <div class="panel process-panel" id="trace"></div>
+      <div class="evidence-trail-panel" id="evidence-trail-panel" hidden></div>
+    </section>
+
+    <!-- STEP 4 · AGENT RESPONSE -->
+    <section class="journey-stage" id="journey-stage-3" data-stage="3" hidden>
+      <div class="journey-stage-head">
+        <div class="journey-step-number">04</div>
+        <div><div class="eyebrow">AGENT RESPONSE</div><h2>One product result. Your agent decides what it may do next.</h2><p>The product result stays locked. Your selected agent can only make the next step stricter.</p></div>
+      </div>
+      <div id="verdict"></div>
+      <div id="risk-path" class="risk-path-shell"></div>
+      <div id="why-panel" class="why-panel"></div>
+
+      <details class="journey-detail" open>
+        <summary>Your agent's buying rules</summary>
+        <div class="panel" id="conditions"></div>
+      </details>
+      <details class="journey-detail" open>
+        <summary>What can happen next</summary>
+        <div class="panel" id="gate"></div>
+      </details>
+      <div id="alternatives-wrap">
+        <h2 class="section">Trusted alternatives</h2>
+        <div class="panel" id="alternatives" hidden></div>
+      </div>
+    </section>
+
+    <!-- STEP 5 · HUMAN-FRIENDLY + JSON RECEIPT -->
+    <section class="journey-stage" id="journey-stage-4" data-stage="4" hidden>
+      <div class="journey-stage-head">
+        <div class="journey-step-number">05</div>
+        <div><div class="eyebrow">FINAL SUMMARY</div><h2>Read the decision like a normal customer</h2><p>The human-friendly receipt explains what RAMIFY found and what the agent decided. The complete signed JSON stays available underneath for audit.</p></div>
+      </div>
+      <div class="human" id="human"></div>
+      <div class="terminal" id="terminal" hidden></div>
+    </section>
+
+    <!-- STEP 6 · CHECKOUT -->
+    <section class="journey-stage" id="journey-stage-5" data-stage="5" hidden>
+      <div class="journey-stage-head">
+        <div class="journey-step-number">06</div>
+        <div><div class="eyebrow">FINISH THE JOURNEY</div><h2 id="checkout-stage-title">Ready for the next step</h2><p id="checkout-stage-copy">If the recorded decision permits purchase, the checked product can move to the simulated basket and checkout.</p></div>
+      </div>
+      <div class="panel checkout-stage-card" id="buy-strip" hidden></div>
+      <div class="checkout-blocked" id="checkout-blocked" hidden></div>
+      <section class="session-summary" id="session-summary" aria-label="Session summary"></section>
+    </section>
+
+    <div class="journey-nav" id="journey-nav" hidden>
+      <button class="btn btn-ghost" id="journey-back">← Back</button>
+      <div class="journey-nav-copy"><span id="journey-position">Step 2 of 6</span><small id="journey-next-label">Next: RAMIFY checks</small></div>
+      <button class="btn btn-lg" id="journey-next">Next →</button>
+    </div>
+  </div>
+</main>
+
+<div class="drawer-scrim story-scrim" id="case-scrim" hidden></div>
+<aside class="drawer story-library" id="case-drawer" role="dialog" aria-modal="true" aria-labelledby="case-drawer-title" hidden>
+  <header class="story-library-head">
+    <div>
+      <span class="eyebrow">DEMO STORY LIBRARY</span>
+      <h2 id="case-drawer-title">Choose the story you want to demonstrate</h2>
+      <p>Start with one of the five clear client stories below. Choosing a story only prepares the product and agent — RAMIFY still waits for you to continue.</p>
+    </div>
+    <button class="drawer-close story-close" id="close-cases" aria-label="Close demo stories">×</button>
+  </header>
+
+  <section class="story-featured" aria-labelledby="story-featured-title">
+    <div class="story-section-title">
+      <div><span class="eyebrow">RECOMMENDED</span><h3 id="story-featured-title">Five stories that explain RAMIFY quickly</h3></div>
+      <div class="story-legend" aria-label="Decision legend"><span class="tone-green">Allow</span><span class="tone-orange">Needs attention</span><span class="tone-red">Block</span></div>
+    </div>
+    <div class="story-featured-grid" id="scenario-featured"></div>
+  </section>
+
+  <details class="story-advanced">
+    <summary><span><b>Full acceptance library</b><small>Open the complete test catalogue when you need a specific edge case.</small></span><strong id="story-library-count">All cases</strong></summary>
+    <div class="story-filter-bar" id="story-filter-bar" role="toolbar" aria-label="Filter demo stories">
+      <button type="button" class="active" data-story-filter="all">All</button>
+      <button type="button" data-story-filter="green">Allow</button>
+      <button type="button" data-story-filter="orange">Needs attention</button>
+      <button type="button" data-story-filter="red">Blocked</button>
+    </div>
+    <div class="scenario-grid story-all-grid" id="scenarios"></div>
+  </details>
+
+  <footer class="story-library-foot"><span>All stories use the same deterministic trust engine.</span><span>Synthetic data · no real purchase is made.</span></footer>
+</aside>
+
+<footer></footer>
+<script src="/shell.js?v=11.0.7-uxfix"></script>
+<script src="/console.js?v=11.0.7-uxfix"></script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My agents · RAMIFY OS</title>
+<link rel="stylesheet" href="/style.css?v=11.0.7-uxfix">
+</head>
+<body>
+
+<main class="human-page">
+  <div class="page-head">
+    <div class="eyebrow">YOUR BUYING RULES</div>
+    <h1>My agents</h1>
+    <p class="lede">
+      Every agent receives the same product result. You can then choose how cautious each agent should be, how much it may spend, and which brands or sellers it may use.
+    </p>
+  </div>
+
+  <p class="disclaimer">Synthetic demonstration data. Brands, sellers, issuers, certificates,
+    advisories and prices are fictional and certify nothing in the real world. Every action is
+    simulated. Not for real purchasing, safety, legal or compliance decisions.</p>
+
+  <section class="agent-principle-card">
+    <div><span class="eyebrow">ONE PRODUCT TRUTH</span><strong>The facts stay fixed. Your agents only change what they are allowed to do next.</strong></div>
+    <div class="agent-principle-flow"><span>Objective result</span><b>→</b><span>Delegated policy</span><b>→</b><span>Permitted action</span></div>
+  </section>
+  <h2 class="section">Compare your agents</h2>
+  <div class="controls">
+    <div style="flex:1;min-width:260px;">
+      <label class="field-label" for="product">Product</label>
+      <select id="product"></select>
+    </div>
+    <div style="width:96px;">
+      <label class="field-label" for="qty">Qty</label>
+      <input type="number" id="qty" value="1" min="1" max="1000">
+    </div>
+    <div style="display:flex;align-items:flex-end;">
+      <button class="btn" id="run">Compare</button>
+    </div>
+  </div>
+
+  <div id="comparison" style="margin-top:18px;"></div>
+
+  <h2 class="section">
+    Agent profiles
+    <button class="btn btn-sm" id="new-agent" style="margin-left:auto;flex:none;">New agent</button>
+  </h2>
+  <p class="section-hint">Open any agent to adjust its buying rules. These settings can make an agent more cautious, but they cannot turn a blocked product into an allowed one.</p>
+  <div class="persona-grid" id="personas"></div>
+
+  <dialog id="editor">
+    <h3 id="editor-title">Edit agent</h3>
+    <p style="font-size:13px;color:var(--ink-3);margin-top:0;max-width:62ch;">
+      You are changing the agent's buying rules, not the product result. A hard stop such as a recall remains a hard stop for every agent.
+    </p>
+
+    <div class="form-row">
+      <label class="field-label" for="f-label">Name</label>
+      <input type="text" id="f-label" maxlength="60">
+    </div>
+
+    <div class="form-row">
+      <label class="field-label" for="f-summary">One-line summary</label>
+      <input type="text" id="f-summary" maxlength="120">
+    </div>
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label class="field-label" for="f-autonomy">May it buy without asking you?</label>
+        <select id="f-autonomy"></select>
+        <p class="hint" id="autonomy-hint"></p>
+      </div>
+      <div class="form-row">
+        <label class="field-label" for="f-budget">Maximum spend per item</label>
+        <input type="number" id="f-budget" min="0" step="1" placeholder="leave empty for no limit">
+        <p class="hint">Anything above this amount is sent to you for a decision.</p>
+      </div>
+      <div class="form-row">
+        <label class="field-label" for="f-purchase-style">Where should an approved transaction go?</label>
+        <select id="f-purchase-style">
+          <option value="cart">Consumer basket</option>
+          <option value="requisition">Procurement requisition</option>
+        </select>
+        <p class="hint" id="purchase-style-hint">This changes the transaction workflow, not the product-trust result. Procurement requisitions are staged records, not autonomous consumer purchases.</p>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label class="field-label">Brands it may buy</label>
+      <div class="chip-set" id="f-brands"></div>
+      <p class="hint">Select none to allow every brand. A brand being off the list is a commercial
+        choice and is never recorded as a safety finding.</p>
+    </div>
+
+    <div class="form-row">
+      <label class="field-label">Sellers it may buy from</label>
+      <div class="chip-set" id="f-vendors"></div>
+      <p class="hint">Select none to allow every seller.</p>
+    </div>
+
+    <div class="form-row checkbox-row">
+      <input type="checkbox" id="f-warned">
+      <label for="f-warned">Ask me before acting on any result that carries a warning</label>
+    </div>
+
+    <div class="form-row">
+      <label class="field-label">What this agent would then do</label>
+      <div class="panel" id="preview" style="box-shadow:none;"></div>
+    </div>
+
+    <p class="form-error" id="editor-error"></p>
+
+    <div class="dialog-actions">
+      <button class="btn btn-quiet" id="editor-reset" hidden>Reset to default</button>
+      <button class="btn btn-ghost" id="editor-cancel">Cancel</button>
+      <button class="btn" id="editor-save">Save</button>
+    </div>
+  </dialog>
+</main>
+
+<footer></footer>
+
+<script src="/shell.js?v=11.0.7-uxfix"></script>
+<script src="/agents.js?v=11.0.7-uxfix"></script>
+</body>
+</html>

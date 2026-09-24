@@ -1,0 +1,22 @@
+RAMIFY OS v11.0.7 - FINAL GO RELEASE VALIDATION
+==============================================
+
+Architecture
+------------
+- Golden Go folder/module style restored: cmd/, internal/ramify/, data/, docs/, frontend/, product_images/, demo_runtime_seed/, bin/.
+- Current September frontend/data/doc additions retained.
+- Newer David demo and demo-proof routes retained.
+
+Automated validation performed for this package
+-----------------------------------------------
+- go test ./... passes.
+- all 17 shipped synthetic scenarios match their expected objective posture and actor decision.
+- generated decision receipts verify with the Go receipt verifier.
+- current frontend pages, CSS, JavaScript and product images are served by the Go HTTP layer.
+- latest API smoke tests pass, including evidence-tamper and proof-pack endpoints.
+- Windows, Linux amd64, macOS amd64 and macOS arm64 binaries are cross-built from this source tree.
+- the Windows launcher uses an automatically selected loopback port and opens the Shop automatically.
+
+Scope
+-----
+Synthetic local demonstration only.

@@ -1,0 +1,27 @@
+RAMIFY OS v11.0.7 — FINAL GO EDITION
+
+Architecture is intentionally organised like the 21 August Golden Go release:
+- cmd/ramify          one-click local launcher
+- cmd/verify          standalone receipt verifier
+- internal/ramify     modular Go application package
+  - http.go           HTTP surface and request handling
+  - assets.go         pages/assets and build identity
+  - data.go           catalogue/policy/evidence loading helpers
+  - checks.go         RATIFY checks and precedence
+  - engine.go         actor/action/assessment composition
+  - profiles.go       agent policy/profile logic
+  - crypto.go         SHA-256 + Ed25519 receipt sealing/verification
+  - storage.go        receipt/action/review state and signer lifecycle
+  - cart.go           basket/requisition/checkout flows
+  - ai.go             deterministic interpretation/explanation boundary
+  - workflows.go      compare, alternatives, demo proofs and proof-pack routes
+- data/               current synthetic dataset, policy and signed evidence metadata
+- frontend/           latest client UI, including david-demo and UX fixes
+- docs/               project documentation and latest hardening addendum
+- product_images/     current catalogue images
+- demo_runtime_seed/  deterministic synthetic demo signer seed
+- bin/                prebuilt launchers/verifiers
+
+The 21 August ZIP was used as the architecture/organisation reference only. The
+current September project content is retained, including the newer demo routes,
+David meeting page, latest dataset/policy/evidence files and frontend fixes.

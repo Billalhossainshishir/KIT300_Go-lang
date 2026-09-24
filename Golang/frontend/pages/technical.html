@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Technical console · RAMIFY OS</title><link rel="stylesheet" href="/style.css?v=11.0.7-uxfix"></head>
+<body>
+<main class="human-page">
+  <div class="page-head"><div class="eyebrow">FOR TECHNICAL REVIEWERS</div><h1>Technical console</h1><p class="lede">The rest of the demo keeps things simple. This page shows the technical vocabulary, scenario coverage, verification and audit details for reviewers who want to inspect the system more closely.</p></div>
+  <p class="disclaimer">Local synthetic prototype. Measurements describe this small dataset on this machine and are not a production benchmark. Not for real purchasing, safety, legal or compliance decisions.</p>
+  <div class="technical-kpis" id="technical-kpis"></div>
+  <h2 class="section">Local AI integration</h2>
+  <div class="panel local-ai-panel" id="local-ai-runtime">Checking the local AI layer…</div>
+  <section class="ai-boundary-map" aria-label="RAMIFY decision boundary">
+    <div class="ai-boundary-side ai-side"><span class="eyebrow">OUTSIDE THE TRUST BOUNDARY</span><strong>LangGraph + Ollama + Llama 3.1</strong><p>Understands free-form requests and can explain an already sealed receipt.</p></div>
+    <div class="ai-boundary-arrow"><span>interpretation</span><b>→</b><span>read-only explanation</span></div>
+    <div class="ai-boundary-side core-side"><span class="eyebrow">TRUSTED RAMIFY CORE</span><strong>Deterministic checks + policy + Action Gate</strong><p>Creates product truth, permitted action, human-review boundary and signed purchase authority.</p></div>
+  </section>
+  <h2 class="section">Environment proof</h2>
+  <div class="panel environment-proof" id="environment-proof">Loading local environment evidence…</div>
+  <h2 class="section">System architecture and data flow</h2>
+  <section class="system-map" aria-label="RAMIFY system architecture and data flow">
+    <div class="system-map-track">
+      <article class="system-node user"><span>01</span><strong>Shop / user</strong><small>Product card or natural-language request</small></article>
+      <i aria-hidden="true">→</i>
+      <article class="system-node ai"><span>02</span><strong>Interpretation adapter</strong><small>Exact match, safe matcher, or LangGraph + Llama</small></article>
+      <i aria-hidden="true">→</i>
+      <article class="system-node core"><span>03</span><strong>RESOLVE</strong><small>Identity, canonical product projection and standing</small></article>
+      <i aria-hidden="true">→</i>
+      <article class="system-node core"><span>04</span><strong>RATIFY</strong><small>Evidence validity, integrity, claims and conflicts</small></article>
+      <i aria-hidden="true">→</i>
+      <article class="system-node policy"><span>05</span><strong>Agent policy</strong><small>Applies delegated restrictions without rewriting product truth</small></article>
+      <i aria-hidden="true">→</i>
+      <article class="system-node gate"><span>06</span><strong>Action Gate</strong><small>Allows, pauses, escalates or blocks the simulated next action</small></article>
+      <i aria-hidden="true">→</i>
+      <article class="system-node receipt"><span>07</span><strong>Signed receipt</strong><small>Canonical record, verification and audit lineage</small></article>
+    </div>
+    <div class="system-map-output">
+      <span><b>Human review</b><small>Linked successor receipt</small></span>
+      <span><b>Basket / checkout</b><small>Only with valid purchase authority</small></span>
+      <span><b>Activity / audit</b><small>What happened, why and proof</small></span>
+    </div>
+  </section>
+  <h2 class="section">Five RESOLVE primitives</h2>
+  <section class="resolve-proof-map" aria-label="Five deterministic RESOLVE primitives">
+    <article><span>01</span><strong>identify</strong><small>Input: GTIN, SKU, product card or phrase</small><b>Output: one known subject or unresolved</b></article>
+    <i>→</i>
+    <article><span>02</span><strong>resolve</strong><small>Input: subject reference</small><b>Output: canonical product record</b></article>
+    <i>→</i>
+    <article><span>03</span><strong>status</strong><small>Input: batch/advisory/recall standing</small><b>Output: active standing or unknown</b></article>
+    <i>→</i>
+    <article><span>04</span><strong>verify</strong><small>Input: evidence and rules</small><b>Output: evidence findings</b></article>
+    <i>→</i>
+    <article><span>05</span><strong>assess</strong><small>Input: product truth + actor policy</small><b>Output: permitted action + receipt</b></article>
+  </section>
+  <p class="detail-note primitive-note">The UI also shows seven detailed RATIFY checks inside the verify stage. They are details under the five primitive proof, not a replacement for it.</p>
+  <h2 class="section">Decision lineage and proof pack</h2>
+  <section class="decision-lineage-map" aria-label="RAMIFY decision lineage">
+    <article><span>1</span><strong>Machine receipt</strong><small>Deterministic product truth and agent policy</small></article>
+    <i>→</i>
+    <article><span>2</span><strong>Human successor</strong><small>Only when Needs me is required</small></article>
+    <i>→</i>
+    <article><span>3</span><strong>Action Gate event</strong><small>Observable simulated next step</small></article>
+    <i>→</i>
+    <article><span>4</span><strong>Basket / order receipt</strong><small>Only with current purchase authority</small></article>
+  </section>
+  <div class="panel proof-pack-callout">
+    <div><span class="eyebrow">CLIENT TAKE-AWAY</span><h3>Export a RAMIFY Proof Pack</h3><p>Creates a ZIP of signed synthetic receipts, an index and verification notes. This is a client evidence artefact, not a real-world product certification.</p></div>
+    <a class="btn" href="/proof-pack">Open proof pack page →</a>
+  </div>
+  <h2 class="section">Product-result to agent-decision rules</h2>
+  <div class="panel" id="transitions">Loading…</div>
+  <h2 class="section">Scenario coverage</h2>
+  <div class="panel" id="coverage">Loading…</div>
+  <h2 class="section">Receipt history integrity</h2>
+  <div class="panel" id="ledger">Loading…</div>
+  <h2 class="section">Scope alignment note</h2>
+  <div class="panel scope-note"><strong>Implementation scope</strong><p>The signed RESOLVE v0.4 brief described a minimal Go binary proof. This release presents the expanded Python/FastAPI RAMIFY OS prototype required for the final browser demonstration, while preserving the same RESOLVE/RATIFY trust boundary and verifier story. Treat the Go description as the earlier core-contract concept and this build as the client demonstration artefact.</p></div>
+  <div class="hero-actions"><a class="btn" href="/david-demo">Open David meeting mode</a><a class="btn btn-ghost" href="/activity">Open decision history</a><a class="btn btn-quiet" href="/help">How to verify outside the browser</a></div>
+</main>
+<footer></footer>
+<script src="/shell.js?v=11.0.7-uxfix"></script><script src="/technical.js?v=11.0.7-uxfix"></script>
+</body></html>

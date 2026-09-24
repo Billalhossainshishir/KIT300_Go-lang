@@ -1,0 +1,21 @@
+# Go
+/bin/
+*.exe
+*.test
+*.out
+
+# Runtime state
+.runtime/
+data/generated/
+*.jsonl
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets / local model config
+.env
+*.key
+*.pem

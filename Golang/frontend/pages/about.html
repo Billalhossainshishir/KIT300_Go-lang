@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About · RAMIFY OS</title>
+<link rel="stylesheet" href="/style.css?v=11.0.7-uxfix">
+</head>
+<body>
+
+<main class="human-page prose-page">
+  <div class="page-head">
+    <h1>About RAMIFY OS</h1>
+    <p class="lede">
+      A prototype for checking product evidence before an agent acts, and for keeping a clear record of what was checked, decided and authorised.
+    </p>
+  </div>
+
+  <p class="disclaimer">Synthetic demonstration data. Brands, sellers, issuers, certificates,
+    advisories and prices are fictional and certify nothing in the real world. Every action is
+    simulated. Not for real purchasing, safety, legal or compliance decisions.</p>
+
+  <div class="prose">
+
+    <p class="lead">
+      Shopping is starting to happen without us. You ask for something, software finds it, and
+      increasingly that software can complete the purchase on its own. Which raises a question
+      nobody used to have to ask out loud: how does it know the thing is genuine?
+    </p>
+
+    <h2>The problem in simple terms</h2>
+    <p>
+      A language model can be useful for understanding a request and explaining a result, but product trust should not depend on generated language alone. A confident explanation is not the same thing as verified evidence.
+    </p>
+    <p>
+      That is fine when you are asking for a recipe. It is not fine when the product is a batch of
+      examination gloves that was recalled last month, or a supplement whose lab certificate
+      expired in April, or a listing from a seller nobody has ever verified.
+    </p>
+
+    <h2>What RAMIFY OS does about it</h2>
+    <p>
+      It separates interpretation from product assessment. The model can help understand the request, while deterministic checks evaluate the product facts.
+    </p>
+    <p>
+      Before your agent buys anything, the product goes through the same seven checks every time.
+      Is this the product it claims to be? Is there a recall or advisory against this batch? Is the
+      seller established for this category? Is the paperwork this category requires attached? Is
+      that paperwork still in date? Do the claims come from bodies entitled to make them? Do any two
+      sources contradict each other?
+    </p>
+    <p>
+      Those checks read facts and return findings. They give the same answer every time, from the
+      same evidence, no matter who is asking. The AI can help interpret the request and explain the finished result. It is not authorised to create or alter the product-trust decision.
+    </p>
+
+    <div class="pull">
+      The language model explains the decision. It does not make it.
+    </div>
+
+    <h2>Two questions, not one</h2>
+    <p>
+      This is the distinction the whole thing is built around, and it is worth a minute.
+    </p>
+    <p>
+      <strong>Is this product sound?</strong> That is a question about the product. It has one
+      answer, and everybody gets the same one.
+    </p>
+    <p>
+      <strong>May <em>this</em> buyer act on it?</strong> That is a question about you. Your
+      spending limit, your approved brands, your suppliers, whether you want to see anything
+      carrying a warning before it goes through.
+    </p>
+    <p>
+      Every result on the shop page shows both, side by side, in that order. Your own rules can
+      make an outcome <em>stricter</em> — an agent may always stop on something the checks passed.
+      They cannot make it looser. There is no combination of settings that turns a recall into a
+      purchase, for any agent, including one you build yourself.
+    </p>
+
+    <h2>What you get back</h2>
+    <p>
+      Three answers, and only three.
+    </p>
+    <p>
+      <strong class="tone-green">Green</strong> — a clean approval. The checks are satisfied and no warning is attached.
+    </p>
+    <p>
+      <strong class="tone-amber">Orange</strong> — attention is required. This can mean an approved result with a warning, or a genuine pause for human review. The label and receipt always say which one; colour alone is never the decision.
+    </p>
+    <p>
+      <strong class="tone-red">Red</strong> — something failed on grounds no setting can wave
+      through. Your agent will not proceed, and neither will anybody else's.
+    </p>
+    <p>
+      Underneath, the system works in five outcomes rather than three, because "allowed, with
+      something you should read" and "allowed" are genuinely different, and so are "stopped on a
+      finding" and "stopped because there was not enough on file to judge". The receipt carries the
+      precise one. The colour is only ever how it is shown to you, and is never stored.
+    </p>
+
+    <h2>And receipts people can actually read</h2>
+    <p>
+      Every check produces a machine receipt: what was looked at, what was found, what was decided,
+      and when. If a person later decides a reviewable case, the system creates a linked Human
+      Receipt that explains the same record in plain English and keeps the full JSON underneath.
+      Both are sealed at the moment they are written — a SHA-256 hash of the exact bytes, and a
+      system Ed25519 signature over that hash — so if a single character changes later, checking it says so.
+    </p>
+    <p>
+      Not that the file cannot be edited. Anyone can edit a file. That it cannot be edited
+      <em>without the change being obvious</em>. That is a smaller promise, and it is one that can
+      actually be kept.
+    </p>
+    <p>
+      So when someone asks you in a year why you bought this, the answer is attached to the
+      purchase. You are not reconstructing it from memory.
+    </p>
+
+    <h2>Why the design is auditable</h2>
+
+    <h3>Because the product result is separate from the buyer</h3>
+    <p>
+      The product either satisfied the checks or it did not, and everyone gets the same answer to
+      that question. What differs between one buyer and the next is only what they are permitted to
+      <em>do</em> with the answer — and that difference is written into the receipt as its own
+      field, next to the objective one, rather than blended into a single verdict.
+    </p>
+
+    <h3>Because missing information is shown as missing</h3>
+    <p>
+      Missing evidence is not evidence of a problem, and it is not treated as one. When there is
+      not enough on file to judge something, the answer is that it cannot be judged, and the agent
+      stops. An agent that has never once said "I am not sure" has not been careful, it has been
+      lucky.
+    </p>
+
+    <h3>Because the receipt can be checked</h3>
+    <p>
+      Every receipt can be verified — by you, by your accountant, by a regulator, on a different
+      computer, months later, without asking us for anything. The button in the interface and the
+      command-line tool shipped with this build run the same code, so they cannot quietly drift
+      apart. A promise you can only take our word for is not worth much.
+    </p>
+
+    <h3>Because human decisions are recorded separately</h3>
+    <p>
+      When a reviewable case stops, a person may decline it or authorise it once. That choice is
+      recorded in a separate system-sealed Human Receipt next to the original machine receipt,
+      which is left exactly as it was. The ledger only ever grows. Hard stops such as recall do not
+      enter human review and cannot be overridden.
+    </p>
+
+    <h3>Because agent settings cannot remove hard stops</h3>
+    <p>
+      You can tell your agent to spend more, buy other brands, act without asking. You cannot tell
+      it that a recalled product is fine. The agent editor shows you this directly: whatever you
+      type above, the outcomes that need a person or a stop always read <em>cannot buy</em>.
+    </p>
+
+    <h2>What this demo includes</h2>
+    <p>
+      A prototype, built for the University of Tasmania's KIT300 capstone for RAMIFY OS. The
+      documented demo configuration binds the application to the local machine; the optional model
+      connection is also directed to local Ollama. This describes the configured architecture rather
+      than claiming to prove network isolation.
+    </p>
+    <p>
+      It holds <strong>twelve products</strong> across two categories — nine non-prescription
+      supplements and three items of protective equipment — from <strong>five sellers</strong>,
+      with <strong>twenty evidence records</strong> issued by <strong>three</strong> laboratories
+      and regulators, and <strong>seventeen</strong> named cases covering a recall, advisories,
+      lapsed and withdrawn certificates, a discontinued product with a named replacement, a seller
+      whose authority is unverified, and one product with nothing on file at all.
+    </p>
+    <p>
+      Every date is judged against a fixed snapshot of <strong>24 July 2026</strong>, so a case that
+      returns a warning today still returns it next year. Five agents come set up; you can edit any
+      of them or build your own.
+    </p>
+
+    <h3>The honesty boundary</h3>
+    <p>
+      The products, brands, sellers, laboratories, certificates and prices are invented. They
+      describe no real company and certify nothing. Nothing is bought and no money moves.
+    </p>
+    <p>
+      The cryptography is not invented. Every hash is a genuine SHA-256 digest of the bytes being
+      hashed, and every signature a genuine Ed25519 signature. What is small here is the size of the
+      catalogue, not the honesty of what runs over it.
+    </p>
+
+
+    <h2>Before RAMIFY / after RAMIFY</h2>
+    <section class="before-after" id="before-after">
+      <div class="before-after-tabs" role="tablist" aria-label="Compare an ordinary agent with RAMIFY">
+        <button type="button" class="active" data-ba="before" role="tab" aria-selected="true">Without RAMIFY</button>
+        <button type="button" data-ba="after" role="tab" aria-selected="false">With RAMIFY</button>
+      </div>
+      <div class="before-after-panel active" data-ba-panel="before">
+        <span class="eyebrow">DIRECT AI ACTION</span>
+        <div class="before-after-flow"><span>User asks</span><b>→</b><span>AI recommends</span><b>→</b><span>Action</span></div>
+        <p>The explanation and the action can become tightly coupled. Product evidence may be difficult to audit independently.</p>
+      </div>
+      <div class="before-after-panel" data-ba-panel="after" hidden>
+        <span class="eyebrow">RAMIFY-GOVERNED ACTION</span>
+        <div class="before-after-flow"><span>User asks</span><b>→</b><span>AI interprets</span><b>→</b><span>RAMIFY verifies</span><b>→</b><span>Policy</span><b>→</b><span>Signed action</span></div>
+        <p>The model helps with language, while product trust, agent policy and purchase authority stay deterministic, explicit and auditable.</p>
+      </div>
+    </section>
+
+    <h2>Built from client feedback</h2>
+    <div class="feedback-marker-grid">
+      <span><b>Human-first receipts</b><small>Plain language before JSON</small></span>
+      <span><b>Five persona policies</b><small>Light identity colours carried to outcomes</small></span>
+      <span><b>Guided shopping journey</b><small>Fast deterministic walkthrough</small></span>
+      <span><b>Local AI boundary</b><small>Llama interprets; RAMIFY decides</small></span>
+      <span><b>Protected purchase flow</b><small>Only fresh purchase receipts authorise checkout</small></span>
+      <span><b>Visible audit trail</b><small>Signed receipts and action events</small></span>
+    </div>
+
+    <div class="cta-row">
+      <a class="btn btn-lg" href="/shop">Try it</a>
+      <a class="btn btn-lg btn-ghost" href="/help">How to use it</a>
+    </div>
+
+    <p style="margin-top:36px;padding:14px 17px;background:#fdf6e9;border:1px solid var(--amber-line);
+              border-left-width:3px;border-radius:0 var(--r-sm) var(--r-sm) 0;">
+      <strong>Not for real purchasing, safety, legal or compliance decisions.</strong>
+    </p>
+
+  </div>
+</main>
+
+<footer></footer>
+
+<script src="/shell.js?v=11.0.7-uxfix"></script>
+<script>mountShell("/about"); mountFooter(); initBeforeAfter();</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guided demo · RAMIFY OS</title>
+<link rel="stylesheet" href="/style.css?v=11.0.7-uxfix">
+</head>
+<body class="guided-demo-page">
+<main class="guided-main">
+  <header class="guided-intro guided-intro-v2">
+    <div class="guided-intro-copy">
+      <div class="eyebrow">RAMIFY OS · GUIDED CLIENT DEMO</div>
+      <h1>A complete trust journey, explained one clear step at a time.</h1>
+      <p>Start with a familiar shopping request, then follow how RAMIFY interprets, verifies, applies delegated policy and creates a signed receipt — without live-model delay in the scripted walkthrough.</p>
+      <div class="guided-intro-chips" aria-label="Guided demo highlights">
+        <span><b>6</b> clear stages</span>
+        <span><b>Fast</b> deterministic walkthrough</span>
+        <span><b>Signed</b> decision receipt</span>
+      </div>
+    </div>
+    <div class="guided-intro-actions">
+      <span class="guided-live-note"><i aria-hidden="true"></i> Fast guided walkthrough · no Llama wait</span>
+      <a class="btn btn-ghost guided-shop-link" href="/shop"><span>Open the live shop</span><b>↗</b></a>
+    </div>
+  </header>
+
+  <section class="meeting-architecture-ribbon" aria-label="Authoritative RAMIFY architecture">
+    <div class="meeting-architecture-title"><span class="eyebrow">AUTHORITATIVE FLOW</span><strong>Frontend sends the request. The deterministic backend makes the trust decision.</strong></div>
+    <div class="meeting-flow">
+      <span>User request</span><i>→</i><span>Identify</span><i>→</i><span>Resolve</span><i>→</i><span>Status</span><i>→</i><span>Verify</span><i>→</i><span>Assess</span><i>→</i><span>Actor Policy</span><i>→</i><span>Action Gate</span><i>→</i><span>Signed Receipt</span><i>→</i><span>Action / Review</span>
+    </div>
+    <a class="btn btn-ghost" href="/david-demo">Open David meeting mode →</a>
+  </section>
+
+  <section class="guided-launchpad" aria-label="Guided demo setup">
+    <div class="guided-picker">
+      <div class="guided-picker-field">
+        <label class="field-label" for="scenario">Choose a demo story</label>
+        <div class="guided-select-wrap"><select id="scenario"></select><span aria-hidden="true">⌄</span></div>
+      </div>
+      <button class="btn guided-start-btn" id="run-demo"><span class="guided-start-icon" aria-hidden="true">▶</span><span class="guided-start-copy">Start guided demo</span><b>→</b></button>
+    </div>
+    <div class="guided-scenario-preview" id="guided-scenario-preview" aria-live="polite">
+      <span class="guided-preview-label">Selected story</span>
+      <strong>Loading demo stories…</strong>
+      <small>RAMIFY will prepare this scenario locally.</small>
+    </div>
+  </section>
+
+  <section id="guided-empty" class="guided-empty guided-empty-v2">
+    <div class="guided-empty-visual" aria-hidden="true">
+      <span class="guided-empty-mark">R</span>
+      <span class="guided-empty-orbit orbit-a"></span>
+      <span class="guided-empty-orbit orbit-b"></span>
+      <i class="guided-empty-dot dot-a"></i><i class="guided-empty-dot dot-b"></i><i class="guided-empty-dot dot-c"></i>
+    </div>
+    <div class="guided-empty-copy">
+      <span class="guided-preview-label">READY FOR THE WALKTHROUGH</span>
+      <strong>Choose a story, then let the interface do the explaining.</strong>
+      <p>The demo keeps technical detail available, but presents the business meaning first so a non-ICT audience can follow every decision.</p>
+      <div class="guided-empty-flow"><span>Request</span><i>→</i><span>Checks</span><i>→</i><span>Policy</span><i>→</i><span>Receipt</span></div>
+    </div>
+  </section>
+
+  <div id="walkthrough" class="guided-shell guided-shell-v2" hidden>
+    <aside class="guided-rail guided-rail-v2">
+      <div class="guided-rail-head">
+        <span class="guided-rail-kicker">JOURNEY</span>
+        <strong>How the decision moves</strong>
+      </div>
+      <div id="guided-steps" class="guided-steps"></div>
+      <div class="guided-rail-note">
+        <span>Trust boundary</span>
+        <p>AI can understand and explain. RAMIFY's deterministic engine decides product trust.</p>
+      </div>
+      <div class="guided-receipt-ref" id="guided-receipt-ref" hidden></div>
+    </aside>
+
+    <div class="guided-content guided-content-v2">
+      <div class="guided-progress-shell">
+        <div class="guided-progress-copy"><span id="guided-progress-title">Request</span><small id="guided-progress-meta">Step 1 of 6</small></div>
+        <div class="guided-progress" aria-hidden="true"><span id="guided-progress-bar"></span></div>
+      </div>
+      <article class="guided-stage-card guided-stage-card-v2" id="guided-stage" aria-live="polite"></article>
+      <div class="guided-actions guided-actions-v2">
+        <button class="btn btn-ghost guided-nav-btn" id="guided-back"><span>←</span><strong>Back</strong></button>
+        <div class="guided-position"><strong id="guided-position">Step 1 of 6</strong><span id="guided-next-copy">Next: understand the request</span></div>
+        <button class="btn guided-nav-btn guided-next-btn" id="guided-next"><strong>Next</strong><span>→</span></button>
+      </div>
+    </div>
+  </div>
+
+  <p class="disclaimer">Synthetic demonstration data. Every action is simulated. Not for real purchasing, safety, legal or compliance decisions. The measurements shown are local demo measurements, not production benchmarks.</p>
+</main>
+<footer></footer>
+<script src="/shell.js?v=11.0.7-uxfix"></script>
+<script src="/demo.js?v=11.0.7-uxfix"></script>
+</body>
+</html>

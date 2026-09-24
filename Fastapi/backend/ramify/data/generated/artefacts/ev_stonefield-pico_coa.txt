@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Certificate of analysis. Sample STF-2606-140. Zinc picolinate 50.2mg per capsule against a 50mg specification.","authority_level":"accredited_laboratory","certificate_number":"CONC-2026-00016","claim_ref":"clm:stonefield-pico:ingredient","document_type":"third_party_lab_certificate","expires_at":"2027-06-01T00:00:00.000000000Z","issued_at":"2026-06-01T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","record_status":"active","ref":"ev:stonefield-pico:coa","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":null,"product_ref":"ramify:demo:supp:stonefield-zinc-picolinate-50-90","tests":["identity","purity","heavy_metals"]},"source_uri":"synthetic://conc/certificates/CONC-2026-00016","subject_ref":"ramify:demo:supp:stonefield-zinc-picolinate-50-90","type":"coa_pdf","valid_from":"2026-06-01T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:stonefield-pico:ingredient":{"issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","ref":"clm:stonefield-pico:ingredient","state":"accepted","type":"ingredient_claim","value":"Zinc picolinate 50mg per capsule"}}}
+
+Certificate of analysis. Sample STF-2606-140. Zinc picolinate 50.2mg per capsule against a 50mg specification.
+
+Synthetic demonstration artefact. Certifies nothing.

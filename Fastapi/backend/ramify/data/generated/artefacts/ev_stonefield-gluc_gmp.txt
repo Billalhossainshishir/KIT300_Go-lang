@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Good manufacturing practice certificate. Facility AU-GMP-5541. Scope: mineral supplement encapsulation.","authority_level":"certification_body","certificate_number":"GMP-2026-00015","claim_ref":"clm:stonefield-gluc:certification","document_type":"gmp_facility_certificate","expires_at":"2027-01-05T00:00:00.000000000Z","issued_at":"2026-01-05T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:GMP_AU_demo","record_status":"active","ref":"ev:stonefield-gluc:gmp","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":null,"product_ref":"ramify:demo:supp:stonefield-zinc-gluc-50-90","tests":["facility_audit"]},"source_uri":"synthetic://gmp/certificates/GMP-2026-00015","subject_ref":"ramify:demo:supp:stonefield-zinc-gluc-50-90","type":"gmp_cert","valid_from":"2026-01-05T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:stonefield-gluc:certification":{"issuer_ref":"ramify:demo:issuer:GMP_AU_demo","ref":"clm:stonefield-gluc:certification","state":"accepted","type":"certification_claim","value":"Manufactured at a GMP-certified facility"}}}
+
+Good manufacturing practice certificate. Facility AU-GMP-5541. Scope: mineral supplement encapsulation.
+
+Synthetic demonstration artefact. Certifies nothing.

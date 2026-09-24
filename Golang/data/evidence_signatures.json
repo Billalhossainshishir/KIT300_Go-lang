@@ -1,0 +1,102 @@
+{
+  "ev:apex:coa": {
+    "content_hash": "sha256:47cb4a7bf48400092e926afbc9a038a33440c25074317ef7cd5c2ec47065cbf1",
+    "signature": "RHgVeqL3uaXAxgVhvEdzcoEWf+vISW8AYj8bYZGsvFSLZvI6tpgkeVeVy74MQQgyhIy6uRq8N5ho2XYSBNncAg==",
+    "storage_path": "artefacts/ev_apex_coa.txt"
+  },
+  "ev:apex:gmp": {
+    "content_hash": "sha256:368e2a1016dfb744b981cf5134df78a7293e5e7c2e20ddc914570ea26ee60b50",
+    "signature": "uRqr0hWj2G70dDOavIZi3sNg8Y/6qLwVrI8NpgvIzVPGcY5Qfp97z/0stV+i/trW95UQH7WSlbfvg0bhFaBLCw==",
+    "storage_path": "artefacts/ev_apex_gmp.txt"
+  },
+  "ev:brightway-m:coa": {
+    "content_hash": "sha256:7f8d2833026962b290a3802160afec8bca55aeb0e71b107cc2180082ce180a1e",
+    "signature": "YnXqHhxo2/s4DGt9pHel9lDnwpRUuhYs2dKqKy/Y/1HAOGZnGDis++I5TwEJzz6ki+k3OWtJUxwnppDhhei+CA==",
+    "storage_path": "artefacts/ev_brightway-m_coa.txt"
+  },
+  "ev:brightway-m:gmp": {
+    "content_hash": "sha256:310302703e27456627bf2668d7cce940e090cd19d304faeaae34056eb01b9f98",
+    "signature": "CKwSgSDbMN/op4utspljIiBHzwxIwqRv5kpbF+oELY70Hr1lSULtPkxQMy4aAHK6FLr9s8FwWVGdpP/Z3IG+Cw==",
+    "storage_path": "artefacts/ev_brightway-m_gmp.txt"
+  },
+  "ev:brightway-z:coa": {
+    "content_hash": "sha256:a827ff1359568dcb87070b529aa4e38b228f1e495d9e9e3f4581203f5ec0d0cd",
+    "signature": "VMyq2IwytMAsPA8a0jrg5xJID+jvh4m+kbRCdkZzCH/P/a4XGAaq1/HVR6+VWz/7iRkhUPxWDYzw5Mtx0FMhCA==",
+    "storage_path": "artefacts/ev_brightway-z_coa.txt"
+  },
+  "ev:brightway-z:gmp": {
+    "content_hash": "sha256:cd8b827aceaad2dd58cd3edaed44e3de8c1cd005954ac64468397e19595883c6",
+    "signature": "eFFWb60aJX9WNAWuIYimKo8/Nm2PqdPZ7svD3QBJrEnZqth8R20dXlwNjCDgGRZICFnGQTAoKvqtgoE1s15xDA==",
+    "storage_path": "artefacts/ev_brightway-z_gmp.txt"
+  },
+  "ev:covelane:conformity": {
+    "content_hash": "sha256:aa43aac04ecce5d18141d382def0584729d1376ddba584e495a08684fbfdb6a8",
+    "signature": "hZ7DiPYtUhaHNo/X6seTylCyUSlgQoJfgzbYCg21wFvrz+zQP1bYQSyvQLCo1VpE+SnCOKYRqPTKc5wT8nlTDg==",
+    "storage_path": "artefacts/ev_covelane_conformity.txt"
+  },
+  "ev:greenline:coa": {
+    "content_hash": "sha256:83c41372e633a737084cce31702ce3611730bb5dae2b34d587cac24ebed4ffd1",
+    "signature": "+Duc84T8/4Hue9/LRQP0B8K3t0dI/84jKZtaQL65WrMFe1JzMq1aAuCk7ko38ZBMzFeR01x/SeuYvX1e3pEFCw==",
+    "storage_path": "artefacts/ev_greenline_coa.txt"
+  },
+  "ev:greenline:gmp": {
+    "content_hash": "sha256:e2e8adc06b350f4504a4afd8b3ccbe2d73d8dbf18df14b7ef026c1b492281d3b",
+    "signature": "3fA1sXIEEkFQGSaGHS0QUl+ICLw0MzE8OQLsHuuNQ3TAxFRLpgtLaFYdXf4s8dbpIHQzlT40wUDt6hpkeLDIAw==",
+    "storage_path": "artefacts/ev_greenline_gmp.txt"
+  },
+  "ev:harborline:conformity": {
+    "content_hash": "sha256:7bbafd056c7d2fd9f6a4550853d8fa17d13b3aeb4ea94ec3eea00b6ab2180577",
+    "signature": "v0hBNrDK6Gotb4NTA2FX62L/ezKYz6dsClu3zPb+KpsMBKFxFnxd6L27HDvWMP178zsbHajJIbBxi639cT7LAA==",
+    "storage_path": "artefacts/ev_harborline_conformity.txt"
+  },
+  "ev:merridale:conformity": {
+    "content_hash": "sha256:d6ba4f54bccd050bec11e6fdb1bd947c1b371726133d7fa0dad90e9654d71644",
+    "signature": "eBGzlWR6a0PeG18nXeusaCzrkCICSnnQO3qEPYkTwUAile7MMMVEZ6gqT279LDpqJWmG5NMHDdoFBnvBYLAvCA==",
+    "storage_path": "artefacts/ev_merridale_conformity.txt"
+  },
+  "ev:northbeam:coa": {
+    "content_hash": "sha256:c6037ccf59667d06172eabbe2910fad7c797d602d874d7de0530700193da2b04",
+    "signature": "haiI7iBlsquLVTCulxDDlR+tj04E5b0KfwuFDfLK5V9QRyb/cqyYbSx+AlQhKEywqk+bkt1czoVz2OmcJBzCAg==",
+    "storage_path": "artefacts/ev_northbeam_coa.txt"
+  },
+  "ev:northbeam:gmp": {
+    "content_hash": "sha256:8c43361219571ea4bce3fcbaabd5ef505463614456ca9668a53fb74a7f93f147",
+    "signature": "ka7QCXS3WZ7eJBGYJxoi6Cfw7nOGtptiq/0LWCFhvOu/jR7Q0UvEvy8/J9tlmz1TRGCGdcKFVH7/kwnNcKWsAg==",
+    "storage_path": "artefacts/ev_northbeam_gmp.txt"
+  },
+  "ev:stonefield-gluc:coa": {
+    "content_hash": "sha256:32c814162ab035bfeff17f80c63d8f9406c92456a2c65745241dac80aa9d2e62",
+    "signature": "8Ksw85DJH58uiC5aaH4nCMPWyIZhVHGvRpRy2y5MF/ptVNlC2eF6OVl/rlZet5bZNQ0+iXOkMvTWD6PIHXxeCg==",
+    "storage_path": "artefacts/ev_stonefield-gluc_coa.txt"
+  },
+  "ev:stonefield-gluc:gmp": {
+    "content_hash": "sha256:eeabda24577dd9e9346d2529eaf6b0e9043ba214cf8a834aacb4633433658ecb",
+    "signature": "x49Wl9CEWYUyWcSuZojJl3ZJtNuWd0XVQqeHe8GAwEoKEvzLvu+CJKCIF2izkfN2HTnZLBcgihUFs8wwH2dPCQ==",
+    "storage_path": "artefacts/ev_stonefield-gluc_gmp.txt"
+  },
+  "ev:stonefield-pico:coa": {
+    "content_hash": "sha256:f35f9cb4139d51d13102ce70f979796aca0f67fc11474d255be2597a65a676b2",
+    "signature": "Gra6RxapJIkSokooQL5eCkycE0jAD9nSeZ6GjGkIvcmooOEFUf/LkpVF/+A9ViN5yJS3+zh3O+AWciKYbG0vBQ==",
+    "storage_path": "artefacts/ev_stonefield-pico_coa.txt"
+  },
+  "ev:stonefield-pico:gmp": {
+    "content_hash": "sha256:d5227145042e651ba35294aaa3cd28ae14cf274e8e844ca5dd235dcee1474c81",
+    "signature": "kJ4MsK0VxcHNo2y0w3jfi9tnUPZkIAKKy4dbGdV9aF7BjgYuPRS9zu8eAZFn1gmolkTu0tefyQRiICIKPcx8BQ==",
+    "storage_path": "artefacts/ev_stonefield-pico_gmp.txt"
+  },
+  "ev:tidalpoint:coa": {
+    "content_hash": "sha256:5a33992dcf8055aa14e809dd3c43cb692674c41361b537eaa50f35da850c6463",
+    "signature": "BVR288CBsIeMsvzFEqakYT6NGlo8eorzJ6a5MkliHcSNmziO3sPI7pK96/FZG1jD/1mf8RsF5SIFyF8fQEg6Cw==",
+    "storage_path": "artefacts/ev_tidalpoint_coa.txt"
+  },
+  "ev:tidalpoint:gmp": {
+    "content_hash": "sha256:d799d9f6aa9cd00f597c4f2555cca68b56bc58074622a6f7884e88d050ae1446",
+    "signature": "KeAwc5T0cwfkRF1VkDebM6oBGUOuf1IakIy6jOaOdPa66rTPZXHSAD8TaCC7MZVae/dMOkxrkngjYg+2R8UvDQ==",
+    "storage_path": "artefacts/ev_tidalpoint_gmp.txt"
+  },
+  "ev:tidalpoint:label": {
+    "content_hash": "sha256:3a1b64d6d4c786f1c758cea02e51326fad3a9b40ae73474e79d7a0c2fa7d7060",
+    "signature": "42GrwwzGn2HzWiLMFcrUpMfoP5W0farGR8QzdoAofIheTLXc0w6wqjqrZP/L1p36Vv7/6im7IQSXTdD/thV2Dg==",
+    "storage_path": "artefacts/ev_tidalpoint_label.txt"
+  }
+}

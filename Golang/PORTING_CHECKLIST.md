@@ -1,0 +1,26 @@
+# Porting checklist
+
+- [x] Go module and repository structure
+- [x] Static frontend serving
+- [x] `/healthz`
+- [x] initial `/api/v0/identify`
+- [x] `/api/v0/resolve`
+- [x] `/api/v0/status`
+- [ ] `/api/v0/verify`
+- [ ] `/api/v0/assess`
+- [ ] `/api/v0/compare`
+- [ ] alternatives
+- [ ] Action Gate
+- [ ] action ledger verification
+- [ ] cart / checkout
+- [ ] requisition flow
+- [ ] actor profiles CRUD/preview
+- [ ] review queue / successor receipts
+- [ ] receipt verification
+- [ ] catalogue / subject endpoints
+- [ ] proof packs
+- [ ] agent status / interpretation / explanation
+- [ ] demo verification endpoints
+- [ ] CLI verification command
+- [ ] parity test corpus
+- [ ] full frontend smoke test against Go backend

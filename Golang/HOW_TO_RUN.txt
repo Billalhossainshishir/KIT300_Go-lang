@@ -1,0 +1,36 @@
+RAMIFY OS v11.0.7 - FINAL GO EDITION
+===================================
+
+WINDOWS - SIMPLEST WAY
+----------------------
+1. Extract the ZIP.
+2. Open the bin folder.
+3. Double-click RAMIFY.exe.
+
+RAMIFY selects a free loopback port and opens the Shop in your default browser.
+No Python, FastAPI or Uvicorn installation is required for the prebuilt client.
+
+SOURCE DEVELOPMENT
+------------------
+Requires Go 1.23+:
+
+    go test ./...
+    go run ./cmd/ramify
+
+To start without opening a browser:
+
+    go run ./cmd/ramify -no-browser
+
+To force port 8000:
+
+    go run ./cmd/ramify -no-browser -port 8000
+
+STANDALONE RECEIPT VERIFIER
+---------------------------
+
+    bin\RAMIFY-Verify.exe receipt.json
+
+PROJECT STRUCTURE
+-----------------
+The layout follows the Golden Go architecture, while carrying the latest project
+frontend, data, API/demo additions, proof-pack routes and September UX changes.
