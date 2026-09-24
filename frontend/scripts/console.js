@@ -236,7 +236,16 @@ function selectProduct(subjectRef) {
 function goJourney(step) {
   journeyStep = Math.max(0, Math.min(5, Number(step) || 0));
   if (journeyStep > journeyMax) journeyMax = journeyStep;
-  $$(".journey-stage").forEach((stage) => {
+
+  const shopHeader = document.querySelector(".shop-head");
+  const productLine = document.querySelector(".ramify-product-line");
+  const journeyPromise = document.querySelector(".journey-promise");
+  const shopOnlyVisible = journeyStep === 0;
+  if (shopHeader) shopHeader.hidden = !shopOnlyVisible;
+  if (productLine) productLine.hidden = !shopOnlyVisible;
+  if (journeyPromise) journeyPromise.hidden = !shopOnlyVisible;
+
+  $(".journey-stage").forEach((stage) => {
     const active = Number(stage.dataset.stage) === journeyStep;
     stage.hidden = !active;
     stage.classList.toggle("active", active);
