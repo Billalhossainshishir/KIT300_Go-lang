@@ -3154,7 +3154,7 @@ body > footer a { color: #447767; }
    Objective trust colour stays untouched. */
 .split-half.split-agent.persona-tone {
   background:linear-gradient(145deg,var(--persona-bg),#fff 64%);
-  border-color:var(--persona-line); box-shadow:inset 4px 0 0 var(--persona-accent);
+  border-color:var(--persona-line); box-shadow:none;
 }
 .split-agent .split-label { color:var(--persona-ink); }
 
