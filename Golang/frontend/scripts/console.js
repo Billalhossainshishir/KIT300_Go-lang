@@ -807,23 +807,28 @@ function renderTrace(result) {
     .join('<u aria-hidden="true">→</u>');
 
   $("trace").innerHTML = `
-    <div class="performance-proof">
-      <span><small>Interpretation</small><b>${Number.isFinite(aiMs) ? `${aiMs.toFixed(3)} ms` : "not measured"}</b></span>
-      <span><small>Deterministic RAMIFY</small><b>${totalMs.toFixed(3)} ms</b></span>
-      <span><small>Local total</small><b>${combinedMs.toFixed(3)} ms</b></span>
-      <span><small>Receipt</small><b>signed + checkable</b></span>
-      <p>AI latency is kept separate from deterministic trust-engine latency. These are local demo measurements, not production benchmarks.</p>
-    </div>
     <div class="primitive-proof-workspace">
-      <div class="trust-timeline-title"><span class="eyebrow">FIVE RESOLVE PRIMITIVES</span><strong>The deterministic proof at the centre of RAMIFY</strong></div>
+      <div class="trust-timeline-title"><span class="eyebrow">FIVE RESOLVE PRIMITIVES</span><strong>What RAMIFY checked</strong></div>
       <div class="primitive-proof-track">${primitiveCards}</div>
-      <p class="detail-note">The seven detailed evidence checks sit inside the verify stage. The model does not create any primitive output.</p>
+      <p class="detail-note">This is the main trust-check path. Open the technical details only when you need the evidence and timing breakdown.</p>
     </div>
-    ${rows}
-    <div class="checks">
-      <div class="field-label" style="margin-bottom:10px;">The seven detailed checks under verify()</div>
-      ${checks}
-    </div>`;
+    <details class="trace-technical-details">
+      <summary>View timing and detailed evidence checks</summary>
+      <div class="trace-technical-body">
+        <div class="performance-proof">
+          <span><small>Interpretation</small><b>${Number.isFinite(aiMs) ? `${aiMs.toFixed(3)} ms` : "not measured"}</b></span>
+          <span><small>Deterministic RAMIFY</small><b>${totalMs.toFixed(3)} ms</b></span>
+          <span><small>Local total</small><b>${combinedMs.toFixed(3)} ms</b></span>
+          <span><small>Receipt</small><b>signed + checkable</b></span>
+          <p>AI latency is kept separate from deterministic trust-engine latency. These are local demo measurements, not production benchmarks.</p>
+        </div>
+        ${rows}
+        <div class="checks">
+          <div class="field-label" style="margin-bottom:10px;">Seven detailed checks under verify()</div>
+          ${checks}
+        </div>
+      </div>
+    </details>`;
   $$("[data-evidence-index]", $("trace")).forEach((button) =>
     button.addEventListener("click", () => openEvidenceTrail(Number(button.dataset.evidenceIndex)))
   );
