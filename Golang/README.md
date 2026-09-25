@@ -48,17 +48,28 @@ frontend/
 docs/
 product_images/
 demo_runtime_seed/
-bin/
-runtime_data/
+bin/                 generated in packaged releases; intentionally not committed
+runtime_data/        generated local state; intentionally not committed
 ```
 
-## Run on Windows
+## Run the project
 
-1. Extract the ZIP completely.
-2. Open `bin`.
-3. Double-click **`RAMIFY.exe`**.
+### From this GitHub source repository
 
-The launcher chooses a free loopback port and opens the Shop automatically. Python, FastAPI and Uvicorn are not required.
+The repository intentionally does **not** commit generated binaries (`bin/` and `*.exe` are ignored). With Go 1.23+ installed:
+
+```text
+cd Golang
+go test ./...
+go vet ./...
+go run ./cmd/ramify
+```
+
+The launcher chooses a free loopback port and opens the Shop automatically.
+
+### From the packaged Windows release ZIP
+
+The separately built release package includes `bin/RAMIFY.exe` and `bin/RAMIFY-Verify.exe`. Extract that release ZIP completely, open `bin`, and double-click **`RAMIFY.exe`**. Python, FastAPI and Uvicorn are not required.
 
 ### Optional local Llama
 
