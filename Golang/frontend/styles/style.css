@@ -5496,3 +5496,145 @@ nav .count { flex:none; margin-left:0 !important; }
 @media (max-width:620px) {
   .journey-stage { padding:22px 17px !important; }
 }
+
+
+/* ── QA final-five UX polish · 25 Sep 2026 ─────────────────────────────
+   Keep dialogs inside the viewport, make story status treatment consistent,
+   prevent drawer clipping, reduce Step 3 technical density, and improve zoom. */
+
+/* Trust Passport: safe viewport geometry and an always-visible close control. */
+.trust-passport-dialog {
+  position:relative !important;
+  width:min(720px,calc(100vw - 24px)) !important;
+  max-height:calc(100dvh - 24px) !important;
+  overflow:auto !important;
+  scrollbar-gutter:stable;
+}
+.trust-passport-x {
+  position:sticky;
+  top:10px;
+  z-index:10;
+  float:right;
+  margin:10px 10px -48px 0;
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border:1px solid #dbe6e1;
+  border-radius:12px;
+  background:rgba(255,255,255,.96);
+  color:#35564c;
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+  box-shadow:0 7px 20px rgba(21,57,45,.08);
+}
+.trust-passport-x:hover { background:#173f35; color:#fff; }
+.trust-passport-dialog .dialog-actions {
+  position:sticky;
+  bottom:0;
+  margin:0;
+  padding:12px 18px;
+  background:rgba(255,255,255,.96);
+  border-top:1px solid #e7eeea;
+}
+.trust-passport-grid small { font-size:11px !important; }
+.trust-passport-grid b { font-size:12px !important; }
+.trust-passport-proof strong { font-size:12px !important; }
+.trust-passport-proof p { font-size:12px !important; line-height:1.5; }
+
+/* Demo stories: one consistent status edge for every card. */
+.story-card {
+  --story-tone:#68b29d;
+  border-left:4px solid var(--story-tone) !important;
+}
+.story-card.tone-green { --story-tone:#68b29d; }
+.story-card.tone-orange { --story-tone:#d49631; }
+.story-card.tone-red { --story-tone:#c05a3b; }
+.story-card::after { display:none !important; }
+.story-card:hover {
+  border-left-color:var(--story-tone) !important;
+}
+.story-card:focus-visible {
+  outline:3px solid color-mix(in srgb,var(--story-tone) 38%,transparent);
+  outline-offset:2px;
+}
+
+/* Story library: keep header/close control visible and prevent edge clipping. */
+.story-library {
+  width:min(calc(100vw - 24px),1120px) !important;
+  max-height:calc(100dvh - 24px) !important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+.story-library-head {
+  padding:22px 24px 18px !important;
+}
+.story-close {
+  position:sticky;
+  top:0;
+  align-self:start;
+  flex:none;
+}
+.story-featured { padding:20px 24px 24px !important; }
+.story-advanced { margin:0 24px 20px !important; }
+.story-library-foot { padding:0 24px 20px !important; }
+
+/* Step 3: technical evidence is available, but no longer fills the screen by default. */
+.trace-technical-details {
+  margin-top:16px;
+  border:1px solid #e1e9e5;
+  border-radius:14px;
+  background:#fafcfa;
+  overflow:hidden;
+}
+.trace-technical-details > summary {
+  padding:13px 15px;
+  cursor:pointer;
+  color:#36594e;
+  font-size:12.5px;
+  font-weight:750;
+  list-style:none;
+}
+.trace-technical-details > summary::-webkit-details-marker { display:none; }
+.trace-technical-details > summary::after {
+  content:"+";
+  float:right;
+  font-size:16px;
+  color:#618077;
+}
+.trace-technical-details[open] > summary::after { content:"−"; }
+.trace-technical-body { padding:0 14px 14px; }
+
+/* Zoom/smaller viewport behaviour. */
+@media (max-width:760px) {
+  .trust-passport-head { grid-template-columns:76px minmax(0,1fr) !important; }
+  .trust-passport-image { width:76px !important; height:68px !important; }
+  .trust-passport-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  #trust-passport-body { padding:18px 16px 8px !important; }
+  .story-library-head { grid-template-columns:minmax(0,1fr) auto !important; gap:12px !important; }
+  .story-featured-grid,
+  .story-all-grid { grid-template-columns:1fr !important; }
+}
+@media (max-width:480px) {
+  .trust-passport-dialog {
+    width:calc(100vw - 12px) !important;
+    max-height:calc(100dvh - 12px) !important;
+    border-radius:16px !important;
+  }
+  .trust-passport-grid { grid-template-columns:1fr !important; }
+  .trust-passport-head { grid-template-columns:1fr !important; }
+  .story-library {
+    width:calc(100vw - 12px) !important;
+    max-height:calc(100dvh - 12px) !important;
+    border-radius:18px !important;
+  }
+  .story-library-head,
+  .story-featured { padding-left:16px !important; padding-right:16px !important; }
+  .story-advanced { margin-left:16px !important; margin-right:16px !important; }
+  .story-library-foot {
+    padding-left:16px !important;
+    padding-right:16px !important;
+    flex-direction:column;
+  }
+}
