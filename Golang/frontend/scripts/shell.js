@@ -160,9 +160,14 @@ function toast(message, kind) {
   if (!node) {
     node = document.createElement("div");
     node.id = "toast";
+    node.setAttribute("role", "status");
+    node.setAttribute("aria-live", "polite");
+    node.setAttribute("aria-atomic", "true");
     document.body.appendChild(node);
   }
   node.className = `toast${kind ? " " + kind : ""}`;
+  node.setAttribute("role", kind === "bad" ? "alert" : "status");
+  node.setAttribute("aria-live", kind === "bad" ? "assertive" : "polite");
   node.textContent = message;
   requestAnimationFrame(() => node.classList.add("show"));
   clearTimeout(node._timer);
@@ -341,6 +346,7 @@ function personaFingerprint(profile) {
 }
 
 async function openTrustPassport(subjectRef, assessment = null) {
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const cat = await catalogue();
   const product = cat.products.find((p) => p.subject_ref === subjectRef);
   if (!product) return;
@@ -355,6 +361,14 @@ async function openTrustPassport(subjectRef, assessment = null) {
     dialog = $("trust-passport-dialog");
     $("trust-passport-x").addEventListener("click", () => dialog.close());
     $("trust-passport-close").addEventListener("click", () => dialog.close());
+  }
+  dialog._returnFocus = opener;
+  if (!dialog.dataset.focusReturnBound) {
+    dialog.addEventListener("close", () => {
+      const target = dialog._returnFocus;
+      if (target && document.contains(target)) target.focus();
+    });
+    dialog.dataset.focusReturnBound = "1";
   }
   const status = source.status || {};
   const evidence = (source.evidence || []).filter(Boolean);
