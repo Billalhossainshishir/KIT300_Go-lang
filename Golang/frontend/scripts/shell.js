@@ -465,7 +465,10 @@ function renderVerdictSplit(result) {
         <div class="split-value tone-${esc(objective.colour)}">${esc(objective.machine_posture)}</div>
         <div class="split-user">${esc(objective.label)}</div>
       </div>
-      <div class="split-arrow ${narrowed ? "narrowed" : ""}">${narrowed ? "↓" : "="}</div>
+      <div class="split-arrow ${narrowed ? "narrowed" : ""}" aria-label="Agent policy handoff">
+        <span>Agent policy</span>
+        <b aria-hidden="true">→</b>
+      </div>
       <div class="split-half split-agent ${personaClass(result.actor_ref)}">
         <div class="split-label"><span class="persona-dot" aria-hidden="true"></span>${esc(result.actor_label)} response</div>
         <div class="split-sub">What this agent is allowed to do with the product result</div>
