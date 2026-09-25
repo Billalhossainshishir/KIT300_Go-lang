@@ -236,6 +236,15 @@ function selectProduct(subjectRef) {
 function goJourney(step) {
   journeyStep = Math.max(0, Math.min(5, Number(step) || 0));
   if (journeyStep > journeyMax) journeyMax = journeyStep;
+
+  const shopHeader = document.querySelector(".shop-head");
+  const productLine = document.querySelector(".ramify-product-line");
+  const journeyPromise = document.querySelector(".journey-promise");
+  const shopOnlyVisible = journeyStep === 0;
+  if (shopHeader) shopHeader.hidden = !shopOnlyVisible;
+  if (productLine) productLine.hidden = !shopOnlyVisible;
+  if (journeyPromise) journeyPromise.hidden = !shopOnlyVisible;
+
   $$(".journey-stage").forEach((stage) => {
     const active = Number(stage.dataset.stage) === journeyStep;
     stage.hidden = !active;
@@ -1039,7 +1048,7 @@ function renderReceipt(result) {
       <footer class="receipt-foot">
         <div><strong>Sealed and checkable.</strong> Any later change to this receipt is
           detectable from the hash and signature it carries. Check it with the button above
-          or with <span class="mono">scripts/ramify_verify.py</span> on any machine.</div>
+          or with <span class="mono">bin/RAMIFY-Verify</span> (or <span class="mono">RAMIFY-Verify.exe</span> on Windows).</div>
         <div class="receipt-notice">${esc(r.notice)}</div>
       </footer>
     </div>`;
@@ -1126,7 +1135,7 @@ async function renderExplanation(receipt) {
 
 async function copyReceipt() {
   await copyText(JSON.stringify(current.receipt, null, 2), () =>
-    toast("Copied. Check it yourself with: python scripts/ramify_verify.py receipt.json")
+    toast("Copied. Check it yourself with: bin\\RAMIFY-Verify.exe receipt.json")
   );
 }
 

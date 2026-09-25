@@ -1,31 +1,44 @@
-# RAMIFY OS v11.0.7 — Final Go Architecture
+# RAMIFY OS v11.0.7 — Final Go + Latest Frontend Release
 
-This package is the final Go project organised in the same architectural style as the 21 August Golden Go release, while retaining the newer project work added afterward.
+This package combines the **modular Golden Go architecture** with the **most recent FastAPI project improvements supplied on 25 September 2026**. The uploaded FastAPI ZIP was treated as the source of truth for the latest frontend and user-facing behaviour; the 21 August Golden Go release remains the architecture/organisation reference.
 
-## What is preserved from the current project
+## What is in this release
 
-The current frontend is retained, including the Shop journey updates, David demo page, agent/cart/review/activity/human-receipt/technical/proof-pack pages, latest JavaScript, CSS and product images. The current synthetic catalogue, policy pack, evidence metadata and artefacts are also retained.
-
-The Go server exposes the complete current API surface, including assessment, compare, alternatives, Action Gate, cart, requisition, agent editing, human review, receipt verification, ledger checks, subject inspection, evidence-tamper demonstration, absent-status demonstration, dedicated checkout proof, Quick Proof Pack and Extended Proof Pack endpoints.
+- Current Shop, Guided Demo, David Demo, Agents, Needs Me, Basket, Activity, Human Receipts, Technical, Proof Pack, About and Help UI.
+- Current CSS, JavaScript and product images from the latest supplied FastAPI project.
+- Complete Go API surface matching the current browser application.
+- Deterministic RESOLVE → RATIFY → actor policy → Action Gate → signed receipt trust path.
+- SHA-256 + Ed25519 receipt sealing and verification.
+- Persistent local receipts, action ledger, basket/orders/requisitions and edited/custom agent profiles.
+- Human-review successor receipts without rewriting the original machine receipt.
+- Receipt-backed basket/requisition/checkout authority and one-time receipt controls.
+- Real evidence-byte integrity checks and isolated tamper demonstration.
+- Optional **native Go → local Ollama/Llama 3.1** request interpretation and receipt explanation. The LLM is outside the trust boundary and can never set a posture, permission or purchase authority.
+- Quick Proof Pack: 5 signed receipts + manifest + public keys + evidence artefacts + policy + Go verifier.
+- Extended Proof Pack: 6 signed receipts + the same verification material + selected release evidence.
+- One-click Windows launcher and standalone receipt verifier.
 
 ## Architecture
 
 ```text
 cmd/
-  ramify/        application launcher
+  ramify/        one-click application launcher
   verify/        standalone receipt verifier
 internal/ramify/
-  http.go
-  assets.go
-  data.go
-  checks.go
-  engine.go
-  profiles.go
-  crypto.go
-  storage.go
-  cart.go
-  ai.go
-  workflows.go
+  http.go        HTTP surface
+  assets.go      page/asset serving and build identity
+  data.go        catalogue/policy/evidence helpers
+  checks.go      RATIFY checks and precedence
+  evidence.go    evidence bytes/hash/signature/binding verification
+  engine.go      assessment composition
+  profiles.go    editable actor policy
+  crypto.go      receipt sealing/verification
+  persistence.go durable local runtime state
+  storage.go     receipt/action/review ledgers
+  cart.go        basket/requisition/checkout
+  ai.go          deterministic matcher + optional native Go/Ollama adapter
+  workflows.go   comparison, alternatives and demo proofs
+  proofpack.go   Quick/Extended Proof Packs
 data/
   artefacts/
   demo_seed.json
@@ -36,12 +49,39 @@ docs/
 product_images/
 demo_runtime_seed/
 bin/
+runtime_data/
 ```
 
-The trust boundary remains deterministic: **RESOLVE → RATIFY → actor policy → Action Gate → sealed receipt**. Interpretation/explanation is presentation-side and does not set trust posture or signed authority.
+## Run on Windows
 
-## Run
+1. Extract the ZIP completely.
+2. Open `bin`.
+3. Double-click **`RAMIFY.exe`**.
 
-On Windows, extract the release and double-click `bin\RAMIFY.exe`. For development, use `go test ./...` and `go run ./cmd/ramify`.
+The launcher chooses a free loopback port and opens the Shop automatically. Python, FastAPI and Uvicorn are not required.
 
-This is a synthetic KIT300 demonstration, not a production purchasing, medical, safety, legal or compliance system.
+### Optional local Llama
+
+RAMIFY works without Ollama. For the live local-AI interpretation/explanation path, install Ollama and pull the configured model once:
+
+```text
+ollama pull llama3.1
+ollama serve
+```
+
+The Go runtime calls only the local Ollama service. If it is unavailable, RAMIFY automatically uses the deterministic catalogue matcher and receipt-derived explanation.
+
+## Development validation
+
+```text
+go test ./...
+go vet ./...
+```
+
+The final compatibility suite includes the 17/17 named scenarios, basket/order regression, human review, procurement requisitions, agent CRUD, persistent state restart, real evidence tamper detection, native Go/Ollama boundary tests and Proof Pack content checks.
+
+## Historical FastAPI evidence
+
+The original recent FastAPI release documents are retained under `docs/fastapi_reference/` so none of the supplied project evidence is lost. They are historical source evidence; current run instructions and release validation are the Go documents at the project root.
+
+This is a synthetic KIT300 demonstration. It is not a production purchasing, medical, safety, legal or compliance system.

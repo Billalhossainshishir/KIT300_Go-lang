@@ -1,0 +1,20 @@
+RAMIFY OS v11.0.6 — 21 September P1 Patch Verification
+Verified: 2026-09-23T04:32:49Z
+
+Targeted regression command:
+PYTHONPATH=backend RAMIFY_DATA_DIR=<temporary-directory> pytest -q backend/tests/test_david_feedback_21sep_p1.py
+Result: 11 passed
+
+Full backend regression command:
+PYTHONPATH=backend RAMIFY_DATA_DIR=<temporary-directory> pytest -q backend/tests
+Result: 390 passed, 4 skipped, 1316 subtests passed, 0 failures
+
+Additional verification:
+- 20/20 shipped evidence artefacts passed SHA-256 + issuer Ed25519 + signed v2 metadata/claim binding verification.
+- 17/17 shipped seed scenarios retained their expected objective posture and actor decision.
+- python -m compileall -q backend scripts: PASS
+- node --check over all 11 shipped frontend JavaScript files: PASS
+- No seed_private directory or runtime signer_key.json is included in the project package.
+
+Scope note:
+The four skipped tests are optional environment-dependent browser/live-model tests. Their skip is not evidence of live Ollama execution.

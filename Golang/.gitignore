@@ -6,6 +6,7 @@
 
 # Runtime state
 .runtime/
+runtime_data/
 data/generated/
 *.jsonl
 

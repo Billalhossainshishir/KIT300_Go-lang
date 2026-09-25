@@ -1,0 +1,46 @@
+
+==============================================================================
+1) CLEAN TRUST CHAIN — EVIDENCE -> DECISION -> ACTION
+==============================================================================
+Primitive order: identify -> resolve -> status -> verify -> assess
+Product: Apex Nutrients Magnesium Glycinate, 120 capsules
+Objective posture: allow
+Actor decision: allow
+Receipt: ramify:demo:rcpt:459ab7961ce9431aaa43414ea69d16fe
+[PASS] receipt hash
+[PASS] RAMIFY Ed25519 signature
+[PASS] receipt integrity
+[PASS] purchase authority window
+[PASS] Action Gate admitted signed basket line
+[PASS] checkout produced signed order
+
+==============================================================================
+2) RECEIPT TAMPER — RECEIPT INTEGRITY FAILS
+==============================================================================
+[PASS] tampered receipt hash rejected
+[PASS] tampered receipt signature rejected
+[PASS] tampered receipt cannot be trusted
+  reason: hash_valid: content does not match the sealed hash
+  reason: signature_valid: Ed25519 signature does not verify against the embedded key
+
+==============================================================================
+3) EVIDENCE TAMPER — RATIFY EVIDENCE INTEGRITY FAILS
+==============================================================================
+Objective posture after evidence tamper: block
+Actor decision after evidence tamper: block
+Reason codes: evidence_hash_mismatch
+[PASS] RATIFY detected changed evidence bytes
+  detected by reason code: evidence_hash_mismatch
+[PASS] evidence artefact restored byte-for-byte
+
+==============================================================================
+4) RECOVERY — ORIGINAL EVIDENCE PASSES AGAIN
+==============================================================================
+[PASS] restored evidence returns clean objective result — objective=allow, actor=allow
+
+Meeting message:
+  Evidence integrity is verified BEFORE the trust decision.
+  Receipt integrity is verified AFTER the decision is sealed.
+  The Action Gate only acts on valid signed authority.
+
+Demo completed without modifying the normal RAMIFY ledger.

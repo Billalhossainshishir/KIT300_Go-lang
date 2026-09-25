@@ -43,6 +43,10 @@ function personaClass(actorRef) {
 
 function agentSourceLabel(source) {
   const raw = String(source || "");
+  if (raw.startsWith("go+ollama:")) {
+    const model = raw.slice("go+ollama:".length) || "local model";
+    return `Local AI · Go + Ollama · ${model}`;
+  }
   if (raw.startsWith("langgraph+ollama:")) {
     const model = raw.slice("langgraph+ollama:".length) || "local model";
     return `Local AI · LangGraph + Ollama · ${model}`;

@@ -19,7 +19,7 @@ const TOUR_STEPS = Object.freeze([
     sub: "Understand",
     kicker: "02 · REQUEST",
     title: "Understand what the shopper means",
-    intro: "The guided walkthrough uses the fast deterministic matcher because the product is already known. Free-form Shop requests can use LangGraph + Llama 3.1.",
+    intro: "The guided walkthrough uses the fast deterministic matcher because the product is already known. Free-form Shop requests can use the native Go + Ollama Llama 3.1 adapter.",
   },
   {
     key: "ramify",
@@ -216,7 +216,7 @@ function renderRequestStep() {
       <h3>Known selection → deterministic match</h3>
       <p>Because this product was deliberately selected in the previous step, the guided tour does not send it to Llama just to identify it again.</p>
       <div class="walkthrough-flow-mini"><span>Selected product</span><b>→</b><span>Catalogue matcher</span><b>→</b><span>Product reference</span></div>
-      <p class="walkthrough-caption">In the live Shop, genuinely free-form text can still use LangGraph + Ollama + Llama 3.1.</p>
+      <p class="walkthrough-caption">In the live Shop, genuinely free-form text can still use the native Go + Ollama + Llama 3.1 path.</p>
     </div>
     ${interpretationSummary()}
   </div>`;

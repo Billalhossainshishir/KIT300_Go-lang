@@ -1,22 +1,60 @@
-RAMIFY OS v11.0.7 - FINAL GO RELEASE VALIDATION
-==============================================
+RAMIFY OS v11.0.7-go-final — FINAL RELEASE VALIDATION
+====================================================
+Validation date: 25 September 2026
 
-Architecture
+SOURCE MERGE
 ------------
-- Golden Go folder/module style restored: cmd/, internal/ramify/, data/, docs/, frontend/, product_images/, demo_runtime_seed/, bin/.
-- Current September frontend/data/doc additions retained.
-- Newer David demo and demo-proof routes retained.
+PASS  Golden Go folder/module architecture retained.
+PASS  Latest supplied FastAPI frontend used as the source of truth for current UX.
+PASS  All 25 recent frontend files are present; only Go-specific factual wording was adapted.
+PASS  41/41 current FastAPI API routes (excluding the page catch-all) are present in Go.
 
-Automated validation performed for this package
------------------------------------------------
-- go test ./... passes.
-- all 17 shipped synthetic scenarios match their expected objective posture and actor decision.
-- generated decision receipts verify with the Go receipt verifier.
-- current frontend pages, CSS, JavaScript and product images are served by the Go HTTP layer.
-- latest API smoke tests pass, including evidence-tamper and proof-pack endpoints.
-- Windows, Linux amd64, macOS amd64 and macOS arm64 binaries are cross-built from this source tree.
-- the Windows launcher uses an automatically selected loopback port and opens the Shop automatically.
+STATIC / SOURCE CHECKS
+----------------------
+PASS  go test -count=1 ./...
+PASS  go vet ./...
+PASS  every frontend/scripts/*.js passes node --check
+PASS  no Python runtime files (.py / requirements.txt / pyproject.toml) remain in the final Go project
 
-Scope
+FUNCTIONAL REGRESSION
+---------------------
+PASS  17/17 named synthetic scenarios match expected objective posture and actor decision.
+PASS  scenario decision receipts verify.
+PASS  current pages, JS, CSS and product images serve from Go.
+PASS  Basket regression: lines/orders/requisitions are arrays, never null.
+PASS  Assess -> Add -> Place order -> reload returns lines=[] and signed order verification succeeds.
+PASS  Human review successor + human-authorised purchase flow.
+PASS  Procurement requisition remains separate and verifies.
+PASS  Action ledger hash chain + receipt links verify.
+PASS  Runtime receipt/action/cart/custom-agent state persists across restart tests.
+PASS  Agent preview/create/update/reset + derived policy tests.
+PASS  Real evidence-byte tamper demo: verified -> hash_mismatch -> block; shared artefact unchanged.
+PASS  Optional native Go -> Ollama adapter tested with a local fake model endpoint; LLM remains presentation-only.
+
+PROOF PACKS
+-----------
+PASS  Quick Proof Pack contains 5 receipts, manifest, public keys, policy, evidence signatures/artefacts and verify_receipts.go.
+PASS  Quick portable verifier: 5/5 receipts PASS.
+PASS  Extended Proof Pack contains 6 receipts plus verification/release evidence.
+PASS  Extended portable verifier: 6/6 receipts PASS.
+
+BUILDS
+------
+PASS  Windows amd64: RAMIFY.exe + RAMIFY-Verify.exe
+PASS  Linux amd64: launcher + verifier
+PASS  macOS amd64: launcher + verifier
+PASS  macOS arm64: launcher + verifier
+
+BROWSER RUNNER NOTE
+-------------------
+NOT COUNTED AS PASS: headless Chromium navigation to the local server was attempted,
+but this execution environment blocks 127.0.0.1 browser navigation with
+ERR_BLOCKED_BY_ADMINISTRATOR. The product flow itself passed via HTTP regression,
+Go tests and current frontend JavaScript contract checks. Perform the final visual
+browser walkthrough on the Windows presentation machine before assessed handover.
+
+SCOPE
 -----
-Synthetic local demonstration only.
+Synthetic local demonstration only. Optional Ollama interprets/explains; deterministic
+RAMIFY remains the sole decision authority. This is not a production product
+certification system, blockchain, or production-grade key custody implementation.

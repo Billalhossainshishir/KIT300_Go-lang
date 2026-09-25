@@ -1,9 +1,6 @@
 package ramify
 
 import (
-	"archive/zip"
-	"bytes"
-	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -88,13 +85,16 @@ func (s *Server) alternativesHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) vocabularyHTTP(w http.ResponseWriter, r *http.Request) {
-	posts := []any{}
-	for _, p := range []string{"allow", "allow_with_warning", "hold", "escalate", "block"} {
-		posts = append(posts, traffic(p))
+	postures := []any{
+		map[string]any{"machine_posture": "allow", "user_facing": "Approved", "meaning": "Every check passed. The agent may proceed.", "light": "green", "carries_warning": false, "needs_a_person": false},
+		map[string]any{"machine_posture": "allow_with_warning", "user_facing": "Approved with warning", "meaning": "The agent may proceed, but there is a finding the buyer should see first.", "light": "orange", "carries_warning": true, "needs_a_person": false},
+		map[string]any{"machine_posture": "hold", "user_facing": "Human review required", "meaning": "The agent stops and a person decides.", "light": "orange", "carries_warning": false, "needs_a_person": true},
+		map[string]any{"machine_posture": "escalate", "user_facing": "Human review required", "meaning": "Not enough was on file to judge. The agent stops and a person decides.", "light": "orange", "carries_warning": false, "needs_a_person": true},
+		map[string]any{"machine_posture": "block", "user_facing": "Rejected", "meaning": "A check failed on grounds no policy can soften. The agent must not proceed.", "light": "red", "carries_warning": false, "needs_a_person": false},
 	}
 	stands := []any{}
 	for _, x := range []string{"no_active_recall", "advisory", "recalled", "unknown"} {
-		m := standingDisplay(x)
+		m := copyMap(standingDisplay(x))
 		m["standing"] = x
 		stands = append(stands, m)
 	}
@@ -111,7 +111,17 @@ func (s *Server) vocabularyHTTP(w http.ResponseWriter, r *http.Request) {
 			rows = append(rows, map[string]any{"objective_posture": o, "actor_decision": a, "objective_rank": restrict[o], "actor_rank": restrict[a], "permitted": restrict[a] >= restrict[o], "kind": kind})
 		}
 	}
-	writeJSON(w, 200, map[string]any{"mapping_version": "posture_mapping_v1.0.0", "postures": posts, "standings": stands, "transitions": map[string]any{"mapping_version": "posture_mapping_v1.0.0", "order_least_to_most_restrictive": order, "rows": rows}})
+	writeJSON(w, 200, map[string]any{
+		"mapping_version": "posture_mapping_v1.0.0",
+		"postures":        postures,
+		"standings":       stands,
+		"transitions": map[string]any{
+			"mapping_version":                 "posture_mapping_v1.0.0",
+			"order_least_to_most_restrictive": order,
+			"rows":                            rows,
+			"note":                            "An actor decision is permitted only where it is at least as restrictive as the objective posture. Every row marked 'widens' is rejected by the policy stage rather than accepted.",
+		},
+	})
 }
 
 func (s *Server) catalogueHTTP(w http.ResponseWriter, r *http.Request) {
@@ -166,24 +176,54 @@ func (s *Server) evidenceTamperHTTP(w http.ResponseWriter, r *http.Request) {
 	_ = decodeBody(r, &q)
 	ref := str(q["subject_ref"])
 	sub := s.seed.Subject(ref)
-	refs := s.evidenceRefs(sub)
-	if len(refs) == 0 {
+	if sub == nil {
 		writeJSON(w, 404, map[string]any{"detail": "No evidence artefact is available for this subject."})
 		return
 	}
-	e := s.evidence(refs[0])
-	writeJSON(w, 200, map[string]any{"subject_ref": ref, "evidence_ref": refs[0], "clean_integrity": map[string]any{"state": "verified", "detail": "artefact hash and issuer signature verify"}, "tampered_integrity": map[string]any{"state": "hash_mismatch", "detail": "artefact bytes do not match the signed content hash"}, "ratify_outcome": "fail", "objective_posture": "block", "reason_codes": []string{"evidence_hash_mismatch"}, "shared_artefact_modified": false, "artefact_restored": true, "evidence_record": e, "note": "Synthetic isolated demonstration; the shared evidence artefact was never modified."})
-}
-
-func (s *Server) absentStatusHTTP(w http.ResponseWriter, r *http.Request) {
-	c := check("standing", "Recall and advisory standing", "incomplete", "incomplete", "No status record is held, so recall standing is unknown.", []string{"status_unknown"}, nil, nil)
-	writeJSON(w, 200, map[string]any{"input": "no status record supplied", "standing": "unknown", "check": c, "reason_codes": []string{"status_unknown"}})
+	var record map[string]any
+	for _, evidenceRef := range s.evidenceRefs(sub) {
+		candidate := s.evidence(evidenceRef)
+		if candidate != nil && str(candidate["storage_path"]) != "" {
+			record = candidate
+			break
+		}
+	}
+	if record == nil {
+		writeJSON(w, 404, map[string]any{"detail": "No evidence artefact is available for this subject."})
+		return
+	}
+	root := filepath.Clean(filepath.Join(s.root, "data"))
+	path := filepath.Clean(filepath.Join(root, str(record["storage_path"])))
+	rel, err := filepath.Rel(root, path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		writeJSON(w, 409, map[string]any{"detail": "Evidence path is outside the synthetic data directory."})
+		return
+	}
+	original, err := os.ReadFile(path)
+	if err != nil {
+		writeJSON(w, 404, map[string]any{"detail": "Evidence artefact is missing."})
+		return
+	}
+	tampered := append(append([]byte{}, original...), []byte("\nRAMIFY SYNTHETIC IN-MEMORY TAMPER DEMO.\n")...)
+	claims := arr(sub["claims"])
+	cleanFinding := s.evaluateEvidenceIntegrityBytes(record, original, ref, claims)
+	tamperedFinding := s.evaluateEvidenceIntegrityBytes(record, tampered, ref, claims)
+	reasons := []string{}
+	if code := integrityReason[str(tamperedFinding["state"])]; code != "" {
+		reasons = append(reasons, code)
+	}
+	writeJSON(w, 200, map[string]any{
+		"subject_ref": ref, "evidence_ref": record["ref"], "clean_integrity": cleanFinding, "tampered_integrity": tamperedFinding,
+		"ratify_outcome": "fail", "objective_posture": "block", "reason_codes": reasons,
+		"shared_artefact_modified": false, "artefact_restored": true,
+		"note": "Synthetic isolated demonstration; the shared evidence artefact was never modified.",
+	})
 }
 
 func (s *Server) demoCartResetHTTP(w http.ResponseWriter, r *http.Request) {
-	state.mu.Lock()
-	state.cart = nil
-	state.mu.Unlock()
+	// This Go build keeps the guided-demo transaction isolated in memory for the
+	// request, so there is no dedicated persistent demo basket to clear and the
+	// normal consumer basket is deliberately left untouched.
 	writeJSON(w, 200, map[string]any{"cleared": true, "simulated": true, "normal_cart_untouched": true})
 }
 
@@ -193,55 +233,41 @@ func (s *Server) demoCheckoutProofHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 500, map[string]any{"detail": err.Error()})
 		return
 	}
-	line, err := s.cartAddByReceipt(str(o["receipt_ref"]))
-	if err != nil {
-		writeJSON(w, 409, map[string]any{"detail": err.Error()})
-		return
+	receipt := obj(o["receipt"])
+	orderValues := obj(receipt["order"])
+	line := map[string]any{
+		"line_id": randomHex(6), "subject_ref": receipt["subject_ref"], "product_name": receipt["product_name"],
+		"brand": valueOr(s.seed.Subject(str(receipt["subject_ref"])), "brand", ""), "quantity": orderValues["quantity"],
+		"unit_price_cents": orderValues["unit_price_cents"], "line_total_cents": orderValues["line_total_cents"],
+		"receipt_ref": receipt["receipt_id"], "payload_hash": receipt["payload_hash"], "actor_ref": receipt["actor_ref"], "actor_label": receipt["actor_label"],
+		"objective_posture": receipt["objective_posture"], "actor_decision": receipt["actor_decision"], "unattended": false,
+		"human_authorised": false, "human_review_outcome": nil, "supersedes_receipt": nil, "added_at": rfc3339Nano(time.Now().UTC()),
 	}
-	state.mu.Lock()
-	lines := append([]map[string]any(nil), state.cart...)
-	state.mu.Unlock()
-	total := 0
-	for _, l := range lines {
-		total += intv(l["line_total_cents"])
+	orderLine := map[string]any{
+		"subject_ref": line["subject_ref"], "product_name": line["product_name"], "quantity": line["quantity"], "line_total_cents": line["line_total_cents"],
+		"receipt_ref": line["receipt_ref"], "receipt_hash": line["payload_hash"], "actor_ref": line["actor_ref"], "objective_posture": line["objective_posture"],
+		"actor_decision": line["actor_decision"], "human_authorised": false, "supersedes_receipt": nil,
 	}
-	order := s.seal(map[string]any{"schema_version": "0.4", "record_type": "order_record", "order_id": "ramify:demo:order:" + randomHex(16), "data_snapshot": s.seed.SnapshotID(), "line_count": len(lines), "item_count": 1, "total_cents": total, "currency": "AUD", "lines": []any{line}, "timestamp": time.Now().UTC().Format(time.RFC3339Nano)})
-	writeJSON(w, 200, map[string]any{"assessment": o, "verification": s.verifyReceipt(obj(o["receipt"])), "line": line, "order": order, "normal_cart_untouched": true, "note": "Dedicated demonstration transaction proof."})
+	order := s.seal(map[string]any{
+		"schema_version": "0.4", "record_type": "order_record", "order_id": "ramify:demo:order:" + randomHex(16), "data_snapshot": s.seed.SnapshotID(),
+		"line_count": 1, "item_count": 1, "total_cents": intv(line["line_total_cents"]), "currency": "AUD", "lines": []any{orderLine}, "timestamp": rfc3339Nano(time.Now().UTC()),
+		"customer_summary": map[string]any{
+			"headline":                     "RAMIFY checked every item before this simulated order was recorded.",
+			"what_was_checked":             "1 basket line(s), each linked to a sealed product decision receipt.",
+			"how_the_order_was_authorised": "0 line(s) were authorised by a person; 0 line(s) were permitted for autonomous purchase; 1 line(s) followed the agent's normal purchase policy.",
+			"what_did_not_happen":          "No real payment, inventory movement or shipment occurred.",
+			"audit_message":                "The machine decision, any human follow-on decision and this order record remain separate, linked and independently verifiable.",
+		},
+		"notice": "Simulated order. No purchase was made, no money moved and no inventory was touched. Every line names the decision receipt that admitted it.",
+	})
+	writeJSON(w, 200, map[string]any{
+		"assessment": o, "verification": s.verifyReceipt(receipt), "line": line, "order": order,
+		"normal_cart_untouched": true,
+		"note":                  "Dedicated demonstration cart; the normal consumer basket is not cleared or modified.",
+	})
 }
 
-func (s *Server) proofPackHTTP(w http.ResponseWriter, r *http.Request) {
-	examples := [][3]string{{"01_APPROVED_Apex", "ramify:demo:supp:apex-mg-glyc-120", "consumer_v1"}, {"02_EXPIRED_Evidence", "ramify:demo:supp:greenline-ashw-ksm66-90", "consumer_v1"}, {"03_SELLER_RISK", "ramify:demo:ppe:covelane-n95-resp-b2026-01-B", "consumer_v1"}, {"04_RECALL_Block", "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K", "consumer_v1"}, {"05_SUBSTITUTION", "ramify:demo:supp:stonefield-zinc-gluc-50-90", "consumer_v1"}}
-	var buf bytes.Buffer
-	zw := zip.NewWriter(&buf)
-	index := []any{}
-	for _, e := range examples {
-		o, _ := s.assessOne(e[1], e[2], "", 1, "proof_pack", false)
-		rc := obj(o["receipt"])
-		name := "receipts/" + e[0] + "_" + strings.ReplaceAll(str(rc["receipt_id"]), ":", "-") + ".json"
-		f, _ := zw.Create(name)
-		b, _ := json.MarshalIndent(rc, "", "  ")
-		_, _ = f.Write(append(b, '\n'))
-		index = append(index, map[string]any{"receipt_id": rc["receipt_id"], "subject_ref": rc["subject_ref"], "product_name": rc["product_name"], "objective_posture": rc["objective_posture"], "actor_decision": rc["actor_decision"], "payload_hash": rc["payload_hash"]})
-	}
-	f, _ := zw.Create("receipt_index.json")
-	b, _ := json.MarshalIndent(index, "", "  ")
-	_, _ = f.Write(b)
-	f, _ = zw.Create("README.txt")
-	_, _ = f.Write([]byte("RAMIFY OS Go Quick Proof Pack\nSynthetic demonstration evidence only.\n"))
-	_ = zw.Close()
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", `attachment; filename="RAMIFY-Quick-Proof-Pack.zip"`)
-	w.WriteHeader(200)
-	_, _ = w.Write(buf.Bytes())
-}
-
-func (s *Server) extendedProofPackHTTP(w http.ResponseWriter, r *http.Request) {
-	p := filepath.Join(s.root, "RAMIFY-Extended-Proof-Pack.zip")
-	if _, err := os.Stat(p); err != nil {
-		writeJSON(w, 404, map[string]any{"detail": "Extended Proof Pack is not present in this build."})
-		return
-	}
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", `attachment; filename="RAMIFY-Extended-Proof-Pack.zip"`)
-	http.ServeFile(w, r, p)
+func (s *Server) absentStatusHTTP(w http.ResponseWriter, r *http.Request) {
+	c := check("standing", "Recall and advisory standing", "incomplete", "incomplete", "No status record is held, so recall standing is unknown.", []string{"status_unknown"}, nil, nil)
+	writeJSON(w, 200, map[string]any{"input": "no status record supplied", "standing": "unknown", "check": c, "reason_codes": []string{"status_unknown"}})
 }

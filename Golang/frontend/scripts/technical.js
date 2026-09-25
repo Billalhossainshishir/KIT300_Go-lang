@@ -26,7 +26,7 @@ async function boot() {
   const environment = $("environment-proof");
   if (environment) {
     const modeLabel = agent.local_model_available
-      ? `${agent.framework || "LangGraph"} + ${agent.provider || "Ollama"} + ${agent.model || "local model"}`
+      ? `${agent.framework || "Native Go adapter"} + ${agent.provider || "Ollama"} + ${agent.model || "local model"}`
       : agent.presentation_state === "model_missing"
       ? "Model not installed - deterministic fallback"
       : agent.presentation_state === "offline"
@@ -39,7 +39,7 @@ async function boot() {
       <span><small>AI endpoint</small><b>local Ollama when available</b></span>
       <span><small>Current interpretation path</small><b>${esc(modeLabel)}</b></span>
       <span><small>Decision authority</small><b>deterministic RAMIFY core</b></span>
-    </div><p class="detail-note">This is configuration evidence from the local server, not a network-forensics audit. The shipped command binds Uvicorn to 127.0.0.1 and the core RAMIFY decision path has no external web dependency.</p>`;
+    </div><p class="detail-note">This is configuration evidence from the local server, not a network-forensics audit. The shipped Go launcher binds the local server to 127.0.0.1 by default and the core RAMIFY decision path has no external web dependency.</p>`;
   }
 
   const ready = Boolean(agent.local_model_available) && agent.active_mode === "local_llm";

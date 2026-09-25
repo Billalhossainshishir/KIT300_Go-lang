@@ -1,56 +1,40 @@
 {
-  "captured_at": "2026-09-24T05:43:45.793991Z",
-  "app_version": "11.0.7",
-  "repository_visibility": "private - confirm access separately",
-  "git_metadata_available": false,
-  "assessed_branch": null,
-  "assessed_commit_sha": null,
-  "commit_date": null,
-  "working_tree_clean": null,
-  "environment": {
-    "python": "3.13.5",
-    "platform": "linux",
-    "pytest": "9.0.2",
-    "fastapi": "0.128.2",
-    "pydantic": "2.13.4",
-    "cryptography": "46.0.4",
-    "playwright": "1.57.0"
+  "release": "RAMIFY OS v11.0.7-go-final",
+  "validation_date": "2026-09-25",
+  "runtime": "Go 1.23+",
+  "source_merge": {
+    "architecture_reference": "21 August Golden Go release",
+    "latest_behavior_reference": "user-supplied KIT300_Go-lang.zip (recent FastAPI project)",
+    "frontend_files_from_recent_source": 25,
+    "api_routes_matched": "41/41 frontend/API routes (excluding page catch-all)"
   },
-  "full_test_command": "/opt/pyvenv/bin/python -m pytest -q",
-  "full_test_result": {
-    "available": true,
-    "command": [
-      "/opt/pyvenv/bin/python",
-      "-m",
-      "pytest",
-      "-q"
-    ],
-    "returncode": 0,
-    "stdout": "..............ss.................................sssss....................... [ 17%]\n............................................................................................................................................ [ 50%]\n................................................................... [ 66%]\n............. [ 69%]\n................................................................ [ 84%]\n................................................... [ 96%]\n.................                                                        [100%]\n422 passed, 7 skipped, 1316 subtests passed in 24.41s",
-    "stderr": ""
+  "automated_validation": {
+    "go_test": "PASS - go test -count=1 ./...",
+    "go_vet": "PASS - go vet ./...",
+    "javascript_syntax": "PASS - every frontend/scripts/*.js checked with node --check",
+    "named_scenarios": "PASS - 17/17 expected objective posture + actor decision",
+    "receipt_integrity": "PASS - generated scenario receipts verify",
+    "basket_checkout_regression": "PASS - assess -> add -> checkout -> reload; empty collections remain [] and signed order verifies",
+    "human_review_successor": "PASS - linked successor + human receipt + one-time basket authority",
+    "procurement_requisition": "PASS - separate signed requisition workflow verifies",
+    "evidence_tamper": "PASS - clean evidence verified; isolated modified bytes produce hash_mismatch -> block; shared artefact unchanged",
+    "action_ledger": "PASS - hash chain and receipt links verify",
+    "runtime_persistence": "PASS - receipt/action/cart/custom-agent state survives server reconstruction in automated test",
+    "agent_editor": "PASS - preview/create/update/reset and derived narrowing policy",
+    "native_ollama_boundary": "PASS - fake local Ollama integration test confirms interpretation/explanation only; deterministic receipt outcome remains authoritative",
+    "quick_proof_pack": "PASS - 5/5 receipts verified with included verify_receipts.go",
+    "extended_proof_pack": "PASS - 6/6 receipts verified with included verify_receipts.go",
+    "cross_platform_builds": "PASS - Windows amd64, Linux amd64, macOS amd64 and macOS arm64 launcher/verifier binaries built"
   },
-  "benchmark": {
-    "path": "full engine call including receipt build/sign but excluding HTTP/browser",
-    "runs": 100,
-    "warmups": 10,
-    "dataset": "synthetic v11.0.7 demo dataset",
-    "median_ms": 2.411,
-    "p95_ms": 2.922,
-    "max_ms": 3.137
+  "browser_runner": {
+    "attempted": true,
+    "result": "ENVIRONMENT BLOCKED",
+    "detail": "Headless Chromium navigation to local 127.0.0.1 was blocked by the execution environment with ERR_BLOCKED_BY_ADMINISTRATOR. This is not counted as a browser PASS. The basket bug is covered by API/contract regression tests and the current frontend JavaScript syntax checks."
   },
-  "optional_live_model_evidence": {
-    "command": "/opt/pyvenv/bin/python scripts/live_llm_smoke.py",
-    "result": {
-      "available": true,
-      "command": [
-        "/opt/pyvenv/bin/python",
-        "scripts/live_llm_smoke.py"
-      ],
-      "returncode": 2,
-      "stdout": "Framework: LangGraph | Provider: Ollama | Model: llama3.1\nLIVE LOCAL AI NOT READY: Missing Python package(s): langgraph, langchain-ollama.",
-      "stderr": ""
-    },
-    "interpretation": "return code 0 proves this run used the live local model and matched expected catalogue IDs; any other result is not live-model proof and does not invalidate deterministic RAMIFY"
-  },
-  "note": "If Git fields are null, rerun this script from the final private Git checkout after the release commit. Browser/live-model infrastructure skips must remain explicit and are not proof of execution."
+  "known_scope": [
+    "Synthetic local KIT300 demonstration only.",
+    "Optional Ollama is presentation-only and outside the deterministic trust boundary.",
+    "Cryptographic mechanics are demonstrative; this is not production key custody or a real certification service.",
+    "Final Git commit SHA/clean state must be captured from the team's actual repository checkout."
+  ]
 }

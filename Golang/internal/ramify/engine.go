@@ -38,44 +38,97 @@ func traffic(posture string) map[string]any {
 	return x
 }
 
+func maxUS(d time.Duration) int64 {
+	us := d.Microseconds()
+	if us < 1 {
+		return 1
+	}
+	return us
+}
+
+func msFromUS(us int64) float64 { return float64(us) / 1000.0 }
+
 func (s *Server) assessOne(identifier, actorRef, policyRef string, quantity int, context string, persist bool) (map[string]any, error) {
 	if quantity < 1 || quantity > 1000 {
 		return nil, fmt.Errorf("quantity must be between 1 and 1000")
 	}
+	fullStarted := time.Now()
+	latencies := map[string]int64{}
+	trace := []any{}
+
+	started := time.Now()
 	id := s.identifyResult(identifier)
+	latencies["identify"] = maxUS(time.Since(started))
 	ref := str(id["subject_ref"])
 	if ref == "" {
 		ref = identifier
 	}
+	identifyOut := ref
+	if !boolv(id["resolved"]) {
+		identifyOut = "unresolved"
+	}
+	trace = append(trace, map[string]any{"primitive": "identify", "input": identifier, "output": identifyOut, "latency_us": latencies["identify"]})
+
+	started = time.Now()
 	subject := s.seed.Subject(ref)
-	resolve := map[string]any{"subject_ref": ref, "canonical_state": "observed", "known": false}
+	resolve := map[string]any{"subject_ref": ref, "canonical_state": "observed", "identifiers": map[string]any{}, "freshness": map[string]any{"generated_at": rfc3339Nano(time.Now().UTC()), "ttl_seconds": freshnessTTLSeconds, "data_snapshot": s.seed.SnapshotID()}, "known": false}
 	if subject != nil {
-		resolve = map[string]any{"subject_ref": ref, "canonical_state": "asserted", "product_name": subject["name"], "brand": subject["brand"], "category": subject["category"], "seller_ref": subject["seller_ref"], "identifiers": subject["identifiers"], "known": true}
+		stateName := "asserted"
 		if len(arr(subject["claims"])) == 0 {
-			resolve["canonical_state"] = "observed"
+			stateName = "observed"
+		}
+		resolve = map[string]any{
+			"subject_ref": ref, "canonical_state": stateName, "product_name": subject["name"], "brand": subject["brand"], "category": subject["category"],
+			"seller_ref": subject["seller_ref"], "identifiers": subject["identifiers"], "freshness": map[string]any{"generated_at": rfc3339Nano(time.Now().UTC()), "ttl_seconds": freshnessTTLSeconds, "data_snapshot": s.seed.SnapshotID()}, "known": true,
+		}
+		for _, key := range []string{"batch_ref", "superseded_by", "supersedes"} {
+			if v, ok := subject[key]; ok {
+				resolve[key] = v
+			}
+		}
+		if _, ok := subject["superseded_by"]; ok {
+			resolve["supersession_note"] = valueOr(subject, "supersession_note", "")
 		}
 	}
+	latencies["resolve"] = maxUS(time.Since(started))
+	trace = append(trace, map[string]any{"primitive": "resolve", "input": ref, "output": resolve["canonical_state"], "latency_us": latencies["resolve"]})
+
+	started = time.Now()
 	status := s.statusResult(ref)
+	latencies["status"] = maxUS(time.Since(started))
+	trace = append(trace, map[string]any{"primitive": "status", "input": ref, "output": status["standing"], "latency_us": latencies["status"]})
+
+	started = time.Now()
 	verify := s.ratify(ref, id, status)
+	latencies["verify"] = maxUS(time.Since(started))
 	pack := s.policyPack()
 	if policyRef != "" && policyRef != str(pack["policy_ref"]) {
 		return nil, fmt.Errorf("Unsupported policy_ref: %s", policyRef)
 	}
 	checks := []map[string]any{}
+	findings := 0
 	for _, v := range arr(verify["check_results"]) {
-		checks = append(checks, obj(v))
+		c := obj(v)
+		checks = append(checks, c)
+		if str(c["outcome"]) != "pass" {
+			findings++
+		}
 	}
-	post, matchedRule, primaryRule, primaryReason, matched, reasons := s.objective(checks, str(status["standing"]))
+	verifyOut := "all checks passed"
+	if findings > 0 {
+		verifyOut = fmt.Sprintf("%d finding(s)", findings)
+	}
+	trace = append(trace, map[string]any{"primitive": "verify", "input": fmt.Sprintf("%d checks", len(checks)), "output": verifyOut, "latency_us": latencies["verify"]})
+
 	unit := s.price(ref)
-	var line any = nil
-	if unit > 0 {
-		line = unit * quantity
-	}
 	order := map[string]any{"quantity": quantity, "unit_price_cents": nil, "line_total_cents": nil}
 	if unit > 0 {
 		order["unit_price_cents"] = unit
-		order["line_total_cents"] = line
+		order["line_total_cents"] = unit * quantity
 	}
+
+	started = time.Now()
+	post, matchedRule, primaryRule, primaryReason, matched, reasons := s.objective(checks, str(status["standing"]))
 	actor, err := s.applyActor(post, actorRef, subject, order)
 	if err != nil {
 		return nil, err
@@ -86,21 +139,70 @@ func (s *Server) assessOne(identifier, actorRef, policyRef string, quantity int,
 		reasons = append(reasons, str(sub["reason_code"]))
 	}
 	reasons = uniqueStrings(reasons)
+	latencies["assess"] = maxUS(time.Since(started))
+	trace = append(trace, map[string]any{"primitive": "assess", "input": post + " under " + actorRef, "output": actor["decision"], "latency_us": latencies["assess"]})
+	latencies["total"] = latencies["identify"] + latencies["resolve"] + latencies["status"] + latencies["verify"] + latencies["assess"]
+
 	now := time.Now().UTC()
-	receipt := map[string]any{"schema_version": "0.4", "receipt_id": "ramify:demo:rcpt:" + randomHex(16), "subject_ref": ref, "product_name": valueOr(resolve, "product_name", valueOr(id, "product_name", "")), "data_snapshot": s.seed.SnapshotID(), "dataset_digest": verify["dataset_digest"], "assessment_context": context, "policy_ref": pack["policy_ref"], "policy_digest": verify["policy_digest"], "policy_version": pack["policy_version"], "policy_status": pack["status"], "actor_ref": actorRef, "actor_label": actor["actor_label"], "canonical_state": resolve["canonical_state"], "check_results": verify["check_results"], "claim_results": verify["claim_results"], "status_result": status, "objective_posture": post, "objective_matched_rule": matchedRule, "primary_reason_rule": primaryRule, "primary_reason": primaryReason, "matched_conditions": matched, "actor_decision": actor["decision"], "actor_narrowed": actor["narrowed"], "actor_applied_rules": actor["applied_rules"], "actor_conditions": actor["conditions_evaluated"], "reason_codes": reasons, "permitted_actions": a["permitted_actions"], "selected_action": a["selected_action"], "issuer_refs": s.issuerRefs(verify, status), "timestamp": now.Format(time.RFC3339Nano), "expires_at": now.Add(time.Hour).Format(time.RFC3339Nano), "latencies_us": map[string]any{"identify": 1, "resolve": 1, "status": 1, "verify": 1, "assess": 1, "total": 5}, "notice": "Synthetic demonstration data. This receipt records what was checked against a curated test dataset and certifies nothing in the real world."}
+	latencyPayload := map[string]any{}
+	for k, v := range latencies {
+		latencyPayload[k] = v
+	}
+	receipt := map[string]any{
+		"schema_version": "0.4", "receipt_id": "ramify:demo:rcpt:" + randomHex(16), "subject_ref": ref,
+		"product_name": valueOr(resolve, "product_name", valueOr(id, "product_name", "")), "data_snapshot": s.seed.SnapshotID(), "dataset_digest": verify["dataset_digest"],
+		"assessment_context": context, "policy_ref": pack["policy_ref"], "policy_digest": verify["policy_digest"], "policy_version": pack["policy_version"], "policy_status": pack["status"],
+		"actor_ref": actorRef, "actor_label": actor["actor_label"], "call_trace": trace, "canonical_state": resolve["canonical_state"], "check_results": verify["check_results"],
+		"claim_results": verify["claim_results"], "status_result": status, "objective_posture": post, "objective_matched_rule": matchedRule, "primary_reason_rule": primaryRule,
+		"primary_reason": primaryReason, "matched_conditions": matched, "actor_decision": actor["decision"], "actor_narrowed": actor["narrowed"], "actor_applied_rules": actor["applied_rules"],
+		"actor_conditions": actor["conditions_evaluated"], "reason_codes": reasons, "permitted_actions": a["permitted_actions"], "selected_action": a["selected_action"],
+		"issuer_refs": s.issuerRefs(verify, status), "timestamp": rfc3339Nano(now), "expires_at": rfc3339Nano(now.Add(time.Hour)), "latencies_us": latencyPayload,
+		"timing_scope": map[string]any{
+			"signed_measurement": "deterministic five-primitive evaluation through Action Gate",
+			"excludes":           []string{"receipt signing", "receipt persistence", "HTTP/network/rendering"},
+			"note":               "Full request timing, when reported, is release evidence outside the signed decision payload.",
+		},
+		"notice": "Synthetic demonstration data. This receipt records what was checked against a curated test dataset and certifies nothing in the real world.",
+	}
 	if unit > 0 {
 		receipt["order"] = map[string]any{"quantity": quantity, "unit_price_cents": unit, "line_total_cents": unit * quantity, "currency": "AUD"}
 	}
 	if sub := a["substitution"]; sub != nil {
 		receipt["substitution"] = sub
 	}
+
+	signStarted := time.Now()
 	receipt = s.seal(receipt)
+	signingUS := maxUS(time.Since(signStarted))
+	persistenceUS := int64(0)
 	if persist {
+		persistStarted := time.Now()
 		state.mu.Lock()
 		state.receipts = append(state.receipts, receipt)
 		state.mu.Unlock()
+		_ = s.persistReceipts()
+		persistenceUS = maxUS(time.Since(persistStarted))
 	}
-	out := map[string]any{"subject_ref": ref, "product_name": receipt["product_name"], "resolved": id["resolved"], "objective_posture": post, "objective_light": traffic(post), "actor_decision": actor["decision"], "actor_label": actor["actor_label"], "narrowed": actor["narrowed"], "traffic_light": traffic(str(actor["decision"])), "conditions_evaluated": actor["conditions_evaluated"], "applied_rules": actor["applied_rules"], "reason_codes": reasons, "selected_action": a["selected_action"], "selected_action_description": a["selected_action_description"], "permitted_actions": a["permitted_actions"], "unattended": a["unattended"], "requires_human": a["requires_human"], "escalation": nil, "standing_display": standingDisplay(str(status["standing"])), "primary_reason": primaryReason, "can_add_to_cart": contains(stringSlice(a["permitted_actions"]), "add_to_mock_cart") || contains(stringSlice(a["permitted_actions"]), "purchase_autonomously"), "can_create_requisition": contains(stringSlice(a["permitted_actions"]), "create_mock_requisition"), "substitution": a["substitution"], "order": order, "receipt_ref": receipt["receipt_id"], "receipt": receipt, "call_trace": []any{}, "runtime_timing_ms": map[string]any{"deterministic_evaluation": 0.005, "receipt_build_and_sign": 0.1, "receipt_persistence": 0.01, "full_engine_call": 0.2, "scope_note": "Full HTTP/network/browser time is outside this engine measurement."}, "display_latency_ms": map[string]any{"total": 0.005}}
+	fullUS := maxUS(time.Since(fullStarted))
+
+	out := map[string]any{
+		"subject_ref": ref, "product_name": receipt["product_name"], "resolved": id["resolved"], "objective_posture": post, "objective_light": traffic(post),
+		"actor_decision": actor["decision"], "actor_label": actor["actor_label"], "narrowed": actor["narrowed"], "traffic_light": traffic(str(actor["decision"])),
+		"conditions_evaluated": actor["conditions_evaluated"], "applied_rules": actor["applied_rules"], "reason_codes": reasons, "selected_action": a["selected_action"],
+		"selected_action_description": a["selected_action_description"], "permitted_actions": a["permitted_actions"], "unattended": a["unattended"], "requires_human": a["requires_human"],
+		"escalation": nil, "standing_display": standingDisplay(str(status["standing"])), "primary_reason": primaryReason,
+		"can_add_to_cart":        contains(stringSlice(a["permitted_actions"]), "add_to_mock_cart") || contains(stringSlice(a["permitted_actions"]), "purchase_autonomously"),
+		"can_create_requisition": contains(stringSlice(a["permitted_actions"]), "create_mock_requisition"), "substitution": a["substitution"], "order": order,
+		"receipt_ref": receipt["receipt_id"], "receipt": receipt, "call_trace": trace,
+		"runtime_timing_ms": map[string]any{
+			"deterministic_evaluation": msFromUS(latencies["total"]), "receipt_build_and_sign": msFromUS(signingUS), "receipt_persistence": msFromUS(persistenceUS),
+			"full_engine_call": msFromUS(fullUS), "scope_note": "Full HTTP/network/browser time is outside this engine measurement.",
+		},
+		"display_latency_ms": map[string]any{
+			"identify": msFromUS(latencies["identify"]), "resolve": msFromUS(latencies["resolve"]), "status": msFromUS(latencies["status"]),
+			"verify": msFromUS(latencies["verify"]), "assess": msFromUS(latencies["assess"]), "total": msFromUS(latencies["total"]),
+		},
+	}
 	if str(actor["decision"]) == "hold" || str(actor["decision"]) == "escalate" || str(actor["decision"]) == "block" {
 		out["escalation"] = map[string]any{"kind": "review", "headline": "RAMIFY stopped before acting", "body": primaryReason, "decided_by": "A person", "tone": "caution", "icon": "◇", "matched_reason_codes": reasons, "requires_human": boolv(a["requires_human"]), "decision": actor["decision"]}
 	}

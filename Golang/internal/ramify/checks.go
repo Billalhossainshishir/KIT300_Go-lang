@@ -70,38 +70,66 @@ func (s *Server) ratify(subjectRef string, idr, status map[string]any) map[strin
 	} else {
 		checks = append(checks, check("mandatory_evidence", "Mandatory evidence present", "pass", "informational", fmt.Sprintf("All %d required evidence type(s) are attached.", len(stringSlice(s.category(cat)["required_evidence_types"]))), nil, refs, nil))
 	}
-	// Evidence freshness/integrity. Integrity is derived from bundled signed metadata; the dedicated tamper endpoint demonstrates byte mismatch.
+	// Evidence freshness/integrity. The Go release verifies the same artefact bytes,
+	// SHA-256 digest, issuer Ed25519 signature and signed metadata/claim binding as
+	// the recent FastAPI build before freshness is considered.
 	snapshot := parseTime(obj(s.seedMap()["meta"])["snapshot_date"])
 	worst := 0
 	reasons := []string{}
 	desc := []string{}
 	findings := []any{}
+	claimsForBinding := arr(subject["claims"])
 	for _, r := range refs {
 		ev := s.evidence(r)
 		if ev == nil {
 			continue
 		}
-		integ := map[string]any{"state": "verified", "detail": "artefact hash and issuer signature metadata are present"}
+		integ := s.evaluateEvidenceIntegrity(ev, str(subject["ref"]), claimsForBinding)
 		freshness := map[string]any{"state": "current", "detail": "current"}
 		local := 0
+		integrityState := str(integ["state"])
+		switch integrityState {
+		case "verified":
+		case "missing_metadata", "artefact_missing", "unknown_issuer_key":
+			local = 2
+			if code := integrityReason[integrityState]; code != "" {
+				reasons = append(reasons, code)
+			}
+			desc = append(desc, r+" integrity: "+str(integ["detail"]))
+		default:
+			local = 3
+			if code := integrityReason[integrityState]; code != "" {
+				reasons = append(reasons, code)
+			}
+			desc = append(desc, r+" integrity: "+str(integ["detail"]))
+		}
 		if str(ev["record_status"]) == "revoked" || str(ev["record_status"]) == "withdrawn" {
 			freshness = map[string]any{"state": "revoked", "detail": "the issuer " + str(ev["record_status"]) + " this certificate"}
-			local = 3
+			if local < 3 {
+				local = 3
+			}
 			reasons = append(reasons, "evidence_revoked")
 		} else if ex := parseTime(ev["expires_at"]); !ex.IsZero() && snapshot.After(ex) {
-			freshness = map[string]any{"state": "expired", "detail": fmt.Sprintf("expired %d days ago", int(snapshot.Sub(ex).Hours()/24))}
-			local = 1
+			freshness = map[string]any{"state": "expired", "detail": fmt.Sprintf("expired %d days ago", int(snapshot.Sub(ex).Hours()/24)), "days_expired": int(snapshot.Sub(ex).Hours() / 24)}
+			if local < 1 {
+				local = 1
+			}
 			reasons = append(reasons, "evidence_expired")
 		} else if vf := parseTime(ev["valid_from"]); !vf.IsZero() && snapshot.Before(vf) {
-			freshness = map[string]any{"state": "not_yet_valid", "detail": "not yet valid"}
-			local = 1
+			days := int(vf.Sub(snapshot).Hours() / 24)
+			freshness = map[string]any{"state": "not_yet_valid", "detail": fmt.Sprintf("does not take effect for another %d days", days), "days_until_valid": days}
+			if local < 1 {
+				local = 1
+			}
 			reasons = append(reasons, "evidence_not_yet_valid")
+		} else if ex := parseTime(ev["expires_at"]); !ex.IsZero() {
+			freshness = map[string]any{"state": "current", "detail": fmt.Sprintf("valid for a further %d days", int(ex.Sub(snapshot).Hours()/24)), "days_until_expiry": int(ex.Sub(snapshot).Hours() / 24)}
 		}
 		findings = append(findings, map[string]any{"evidence_ref": r, "integrity": integ, "freshness": freshness})
 		if local > worst {
 			worst = local
 		}
-		if local > 0 {
+		if str(freshness["state"]) != "current" {
 			desc = append(desc, r+" validity: "+str(freshness["detail"]))
 		}
 	}
@@ -112,10 +140,13 @@ func (s *Server) ratify(subjectRef string, idr, status map[string]any) map[strin
 		if worst == 1 {
 			out, severity = "review", "policy_dependent"
 		}
+		if worst == 2 {
+			out, severity = "incomplete", "incomplete"
+		}
 		if worst >= 3 {
 			out, severity = "fail", "hard_stop"
 		}
-		detail := fmt.Sprintf("All %d evidence record(s) are current at %s.", len(refs), snapshot.Format("2006-01-02"))
+		detail := fmt.Sprintf("All %d evidence record(s) have verified signed bindings and are current at %s.", len(refs), snapshot.Format("2006-01-02"))
 		if len(desc) > 0 {
 			detail = strings.Join(desc, "; ") + "."
 		}
@@ -181,41 +212,88 @@ func (s *Server) verifyResult(ref string, checks []map[string]any, claims []any)
 	pack := s.policyPack()
 	claimResults := []map[string]any{}
 	subject := s.seed.Subject(ref)
+	snapshot := parseTime(obj(s.seedMap()["meta"])["snapshot_date"])
 	for _, cv := range claims {
 		c := obj(cv)
 		verdict := "accepted"
 		rs := []string{}
-		for _, er := range stringSlice(c["evidence_refs"]) {
-			ev := s.evidence(er)
-			if ev == nil {
-				verdict = "rejected"
-				rs = append(rs, "evidence_artefact_missing")
-				continue
+		severe := false
+		revoked := false
+		if st := str(c["state"]); st == "rejected" || st == "revoked" {
+			verdict = st
+			if reason := str(c["reason"]); reason != "" {
+				rs = append(rs, reason)
 			}
-			if str(ev["record_status"]) == "revoked" {
-				verdict = "revoked"
-				rs = append(rs, "evidence_revoked")
-				continue
-			}
-			snap := parseTime(obj(s.seedMap()["meta"])["snapshot_date"])
-			ex := parseTime(ev["expires_at"])
-			vf := parseTime(ev["valid_from"])
-			if (!ex.IsZero() && snap.After(ex)) || (!vf.IsZero() && snap.Before(vf)) {
-				if verdict == "accepted" {
-					verdict = "accepted_with_scope_limit"
+		} else if len(stringSlice(c["evidence_refs"])) == 0 {
+			verdict = "rejected"
+			rs = append(rs, "claim_evidence_missing")
+		} else {
+			for _, er := range stringSlice(c["evidence_refs"]) {
+				ev := s.evidence(er)
+				if ev == nil {
+					rs = append(rs, "evidence_artefact_missing")
+					severe = true
+					continue
 				}
-				if !ex.IsZero() && snap.After(ex) {
+				bindingOK := str(ev["subject_ref"]) == ref && str(ev["issuer_ref"]) == str(c["issuer_ref"])
+				supported := []string{str(ev["claim_ref"])}
+				supported = append(supported, stringSlice(ev["supports_claim_refs"])...)
+				if !contains(supported, str(c["ref"])) {
+					bindingOK = false
+				}
+				if !bindingOK {
+					rs = append(rs, "claim_evidence_binding_invalid")
+					severe = true
+				}
+				integ := s.evaluateEvidenceIntegrity(ev, ref, claims)
+				if st := str(integ["state"]); st != "verified" {
+					code := integrityReason[st]
+					if code == "" {
+						code = "evidence_integrity_unverified"
+					}
+					rs = append(rs, code)
+					if st == "unsafe_path" || st == "hash_mismatch" || st == "signature_invalid" || st == "subject_scope_mismatch" || st == "artefact_binding_mismatch" {
+						severe = true
+					}
+				}
+				if st := str(ev["record_status"]); st == "revoked" || st == "withdrawn" {
+					rs = append(rs, "evidence_revoked")
+					revoked = true
+					severe = true
+				} else if ex := parseTime(ev["expires_at"]); !ex.IsZero() && snapshot.After(ex) {
 					rs = append(rs, "evidence_expired")
-				} else {
+				} else if vf := parseTime(ev["valid_from"]); !vf.IsZero() && snapshot.Before(vf) {
 					rs = append(rs, "evidence_not_yet_valid")
 				}
 			}
+			iss := s.issuer(str(c["issuer_ref"]))
+			if iss == nil || str(iss["status"]) != "active" {
+				rs = append(rs, "evidence_issuer_inactive")
+				severe = true
+			} else if !contains(stringSlice(iss["authority_scopes"]), str(c["type"])) {
+				rs = append(rs, "asserted_outside_issuer_authority")
+			}
+			if revoked {
+				verdict = "revoked"
+			} else if severe {
+				verdict = "rejected"
+			} else if len(uniqueStrings(rs)) > 0 {
+				verdict = "accepted_with_scope_limit"
+			}
 		}
 		iss := s.issuer(str(c["issuer_ref"]))
-		claimResults = append(claimResults, map[string]any{"claim_ref": c["ref"], "type": c["type"], "verdict": verdict, "value": valueOr(c, "value", ""), "issuer_ref": c["issuer_ref"], "issuer_name": valueOr(iss, "name", "unknown issuer"), "evidence_refs": stringSlice(c["evidence_refs"]), "reason_codes": uniqueStrings(rs)})
+		claimResults = append(claimResults, map[string]any{
+			"claim_ref": c["ref"], "type": c["type"], "verdict": verdict, "value": valueOr(c, "value", ""),
+			"issuer_ref": c["issuer_ref"], "issuer_name": valueOr(iss, "name", "unknown issuer"),
+			"evidence_refs": stringSlice(c["evidence_refs"]), "reason_codes": uniqueStrings(rs),
+		})
 	}
 	_ = subject
-	return map[string]any{"subject_ref": ref, "policy_ref": pack["policy_ref"], "policy_version": pack["policy_version"], "policy_status": pack["status"], "policy_digest": s.fileDigest(filepath.Join(s.root, "data", "policy_pack_demo_v1.json")), "data_snapshot": s.seed.SnapshotID(), "dataset_digest": s.fileDigest(filepath.Join(s.root, "data", "demo_seed.json")), "check_results": checks, "claim_results": claimResults}
+	return map[string]any{
+		"subject_ref": ref, "policy_ref": pack["policy_ref"], "policy_version": pack["policy_version"], "policy_status": pack["status"],
+		"policy_digest": s.fileDigest(filepath.Join(s.root, "data", "policy_pack_demo_v1.json")), "data_snapshot": s.seed.SnapshotID(),
+		"dataset_digest": s.fileDigest(filepath.Join(s.root, "data", "demo_seed.json")), "check_results": checks, "claim_results": claimResults,
+	}
 }
 
 var restrict = map[string]int{"allow": 0, "allow_with_warning": 1, "hold": 2, "escalate": 3, "block": 4}

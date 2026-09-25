@@ -19,4 +19,4 @@ This build turns the 15-point client demonstration plan into a dedicated browser
 ## Important scope
 The evidence tamper button is a local synthetic demonstration. It operates on an in-memory byte copy and never edits the shared evidence artefact or persists the tampered assessment receipt.
 
-The testing panel reports the current v11.0.7 regression result (422 passed, 7 explicit environment-dependent skips, 1,316 subtests, 0 failures). Repository commit SHA and clean/dirty state are deliberately not invented in this exported archive; capture those from the team's actual repository before assessed handover.
+The testing panel now reports the final Go parity evidence: 17/17 named scenarios, Quick Proof Pack 5/5, Extended Proof Pack 6/6 and zero final validation failures. Repository commit SHA and clean/dirty state are deliberately not invented in this exported archive; capture those from the team's actual repository before assessed handover.

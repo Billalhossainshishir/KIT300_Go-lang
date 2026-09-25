@@ -1,27 +1,36 @@
 RAMIFY OS v11.0.7 — FINAL GO EDITION
 
-Architecture is intentionally organised like the 21 August Golden Go release:
-- cmd/ramify          one-click local launcher
-- cmd/verify          standalone receipt verifier
-- internal/ramify     modular Go application package
-  - http.go           HTTP surface and request handling
-  - assets.go         pages/assets and build identity
-  - data.go           catalogue/policy/evidence loading helpers
-  - checks.go         RATIFY checks and precedence
-  - engine.go         actor/action/assessment composition
-  - profiles.go       agent policy/profile logic
-  - crypto.go         SHA-256 + Ed25519 receipt sealing/verification
-  - storage.go        receipt/action/review state and signer lifecycle
-  - cart.go           basket/requisition/checkout flows
-  - ai.go             deterministic interpretation/explanation boundary
-  - workflows.go      compare, alternatives, demo proofs and proof-pack routes
-- data/               current synthetic dataset, policy and signed evidence metadata
-- frontend/           latest client UI, including david-demo and UX fixes
-- docs/               project documentation and latest hardening addendum
-- product_images/     current catalogue images
-- demo_runtime_seed/  deterministic synthetic demo signer seed
-- bin/                prebuilt launchers/verifiers
+Architecture follows the 21 August Golden Go organisation while carrying the
+latest supplied FastAPI frontend and subsequent project improvements.
 
-The 21 August ZIP was used as the architecture/organisation reference only. The
-current September project content is retained, including the newer demo routes,
-David meeting page, latest dataset/policy/evidence files and frontend fixes.
+Core modules:
+- cmd/ramify             one-click local launcher
+- cmd/verify             standalone receipt verifier
+- internal/ramify/http.go
+- internal/ramify/assets.go
+- internal/ramify/data.go
+- internal/ramify/checks.go
+- internal/ramify/evidence.go
+- internal/ramify/engine.go
+- internal/ramify/profiles.go
+- internal/ramify/crypto.go
+- internal/ramify/persistence.go
+- internal/ramify/storage.go
+- internal/ramify/cart.go
+- internal/ramify/ai.go
+- internal/ramify/workflows.go
+- internal/ramify/proofpack.go
+
+The final Go runtime preserves:
+- current browser UX/frontend
+- all current /api/v0 routes used by that frontend
+- 17 named synthetic scenarios
+- actor comparison and editable agents
+- human-review successor receipts
+- receipt-backed basket, orders and procurement requisitions
+- local durable state
+- evidence integrity/tamper proof
+- Quick and Extended Proof Packs
+- optional local Ollama/Llama interpretation/explanation
+
+Trust decisions remain deterministic. The optional LLM is presentation-only.

@@ -13,11 +13,12 @@ import (
 )
 
 type Server struct {
-	root    string
-	version string
-	build   string
-	seed    SeedData
-	mux     *http.ServeMux
+	root       string
+	runtimeDir string
+	version    string
+	build      string
+	seed       SeedData
+	mux        *http.ServeMux
 }
 
 func New(root string) (*Server, error) {
@@ -30,8 +31,11 @@ func New(root string) (*Server, error) {
 		return nil, err
 	}
 
-	s := &Server{root: root, version: version, build: frontendBuildID(root), seed: seed, mux: http.NewServeMux()}
+	s := &Server{root: root, runtimeDir: runtimeDirectory(root), version: version, build: frontendBuildID(root), seed: seed, mux: http.NewServeMux()}
 	if err := loadPortableSigner(root); err != nil {
+		return nil, err
+	}
+	if err := s.loadRuntimeState(); err != nil {
 		return nil, err
 	}
 	s.routes()
@@ -55,10 +59,10 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status": "ok", "data_snapshot": s.seed.SnapshotID(), "version": s.version, "build": s.build,
 		"runtime": "go", "configured_endpoint": "127.0.0.1:8000", "core_external_network_calls": false,
-		"migration_status": "phase-1", "default_launcher_loopback_only": true, "documented_launch_loopback_only": true,
+		"migration_status": "complete", "default_launcher_loopback_only": true, "documented_launch_loopback_only": true,
 		"bound_to": "not introspected by the application", "binds_loopback_only": nil,
 		"makes_external_network_calls": false, "makes_outbound_calls": nil,
-		"note": "Go migration build. Core endpoints remain local and deterministic; migration parity is tracked endpoint-by-endpoint.",
+		"note": "Final Go runtime. Current frontend and API behaviour are retained while the deterministic trust path remains local.",
 	})
 }
 

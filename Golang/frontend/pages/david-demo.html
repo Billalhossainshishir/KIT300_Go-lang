@@ -48,8 +48,8 @@
 
   <section class="david-demo-section">
     <div class="david-section-head"><div><span class="eyebrow">13 · TESTING EVIDENCE</span><h2>Show measured release evidence, not “we tested it”.</h2></div></div>
-    <div class="meeting-test-grid"><span><b>422</b><small>tests passed</small></span><span><b>7</b><small>explicit optional/env skips</small></span><span><b>1,316</b><small>subtests passed</small></span><span><b>0</b><small>failures</small></span><span><b id="david-build-id">—</b><small>current UI build ID</small></span></div>
-    <p class="detail-note"><strong>Before the assessed handover:</strong> capture the team's real repository commit SHA, clean/dirty state, timestamp and exact test command. This exported demo does not invent Git provenance that is not present in the archive.</p>
+    <div class="meeting-test-grid"><span><b>17/17</b><small>scenario parity cases</small></span><span><b>5/5</b><small>Quick Pack receipts verify</small></span><span><b>6/6</b><small>Extended Pack receipts verify</small></span><span><b>0</b><small>Go validation failures</small></span><span><b id="david-build-id">—</b><small>current UI build ID</small></span></div>
+    <p class="detail-note"><strong>Release evidence:</strong> the final Go package is validated with <span class="mono">go test ./...</span>, <span class="mono">go vet ./...</span>, JavaScript syntax checks, HTTP flow checks and portable Proof Pack verification. Repository commit SHA/clean state should still be captured from the team's final Git checkout rather than invented by this ZIP.</p>
   </section>
 
   <section class="david-demo-section honest-security">
@@ -60,7 +60,7 @@
     <span class="eyebrow">15 · FINAL STORY</span><h2>Why RAMIFY is more than a shopping interface</h2>
     <div class="meeting-flow final-flow"><span>Verified evidence</span><i>→</i><span>Objective product truth</span><i>→</i><span>Actor may only narrow</span><i>→</i><span>Signed receipt</span><i>→</i><span>Action Gate</span><i>→</i><span>Transaction / human successor</span><i>→</i><span>Later verification</span></div>
   </section>
-  <p class="disclaimer">Synthetic demonstration data only. Not for real purchasing, safety, legal or compliance decisions.</p>
+  
 </main><footer></footer>
 <script src="/shell.js?v=11.0.7-uxfix"></script><script src="/david-demo.js?v=11.0.7-uxfix"></script>
 </body></html>

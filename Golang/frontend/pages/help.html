@@ -16,9 +16,7 @@
     </p>
   </div>
 
-  <p class="disclaimer">Synthetic demonstration data. Brands, sellers, issuers, certificates,
-    advisories and prices are fictional and certify nothing in the real world. Every action is
-    simulated. Not for real purchasing, safety, legal or compliance decisions.</p>
+  
 
   <div class="prose">
 
@@ -208,7 +206,7 @@
       <details>
         <summary>Does the AI decide anything?</summary>
         <p>
-          No. When the local AI layer is ready, LangGraph sends the shopper's words to a Llama 3.1
+          No. When the local AI layer is ready, the native Go adapter sends the shopper's words to a Llama 3.1
           model running through Ollama on this machine. The model may identify a known catalogue
           item and later explain an already-sealed receipt. Every trust judgement, policy decision
           and purchase permission in between comes from deterministic RAMIFY code.
@@ -219,7 +217,7 @@
         <summary>How do I know the local LLM is really running?</summary>
         <p>
           Look at the top-right status badge. <strong>LOCAL AI · LLAMA3.1</strong> means the live
-          LangGraph + Ollama path is ready. <strong>LOCAL · AI FALLBACK</strong> means RAMIFY is
+          Go + Ollama path is ready. <strong>LOCAL · AI FALLBACK</strong> means RAMIFY is
           still working, but request interpretation and receipt explanation are using the safe
           deterministic fallback. The Technical page shows the same boundary in more detail.
         </p>
@@ -228,10 +226,10 @@
       <details>
         <summary>Does this need the internet?</summary>
         <p>
-          After the Python packages and Llama model have been installed, the demo is designed to
+          After the RAMIFY Go release is extracted and the optional Llama model has been installed, the demo is designed to
           operate locally. The RAMIFY server uses loopback, and the optional model connection goes
-          to the local Ollama service on the same machine. Internet access is needed for first-time
-          package/model downloads, not for the intended presentation flow.
+          to the local Ollama service on the same machine. Internet access is only needed for first-time
+          Ollama/model downloads, not for the intended presentation flow.
         </p>
       </details>
 

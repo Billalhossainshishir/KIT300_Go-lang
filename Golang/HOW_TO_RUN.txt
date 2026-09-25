@@ -1,36 +1,77 @@
-RAMIFY OS v11.0.7 - FINAL GO EDITION
-===================================
+RAMIFY OS v11.0.7 - FINAL GO + LATEST FRONTEND
+================================================
 
-WINDOWS - SIMPLEST WAY
-----------------------
-1. Extract the ZIP.
+WINDOWS - ONE CLICK
+-------------------
+1. Extract the complete ZIP.
 2. Open the bin folder.
 3. Double-click RAMIFY.exe.
 
-RAMIFY selects a free loopback port and opens the Shop in your default browser.
-No Python, FastAPI or Uvicorn installation is required for the prebuilt client.
+RAMIFY selects a free 127.0.0.1 port and opens the Shop automatically.
+No Python, FastAPI or Uvicorn installation is required.
+
+LOCAL STATE
+-----------
+Receipts, action history, basket/orders/requisitions and edited/custom agents
+are kept in runtime_data so they survive closing and reopening the application.
+To start with a clean local demo, close RAMIFY and clear the contents of
+runtime_data. Do not remove demo_runtime_seed.
+
+OPTIONAL LIVE LOCAL AI
+----------------------
+RAMIFY works without a model. To enable local free-form interpretation and
+receipt explanation:
+
+  ollama pull llama3.1
+  ollama serve
+
+The Go application talks to Ollama on http://127.0.0.1:11434 by default.
+The LLM never decides trust or transaction authority. If Ollama is unavailable,
+RAMIFY safely falls back to the deterministic catalogue matcher.
+
+Optional environment variables:
+  RAMIFY_LOCAL_MODEL=llama3.1
+  RAMIFY_OLLAMA_BASE_URL=http://127.0.0.1:11434
+  RAMIFY_LOCAL_MODEL_TIMEOUT=5
+  RAMIFY_DISABLE_AGENT=1
+  RAMIFY_DATA_DIR=<custom local state folder>
 
 SOURCE DEVELOPMENT
 ------------------
 Requires Go 1.23+:
 
-    go test ./...
-    go run ./cmd/ramify
+  go test ./...
+  go vet ./...
+  go run ./cmd/ramify
 
-To start without opening a browser:
+Start without opening a browser:
+  go run ./cmd/ramify -no-browser
 
-    go run ./cmd/ramify -no-browser
-
-To force port 8000:
-
-    go run ./cmd/ramify -no-browser -port 8000
+Force port 8000:
+  go run ./cmd/ramify -no-browser -port 8000
 
 STANDALONE RECEIPT VERIFIER
 ---------------------------
+Windows:
+  bin\RAMIFY-Verify.exe receipt.json
 
-    bin\RAMIFY-Verify.exe receipt.json
+Linux/macOS builds are also included in bin.
 
-PROJECT STRUCTURE
------------------
-The layout follows the Golden Go architecture, while carrying the latest project
-frontend, data, API/demo additions, proof-pack routes and September UX changes.
+PROOF PACKS
+-----------
+Quick:
+  /api/v0/proof-pack
+
+Extended:
+  /api/v0/proof-pack/extended
+
+Each pack includes a dependency-free Go verifier:
+  go run verify_receipts.go
+
+HISTORICAL FASTAPI DOCUMENTS
+----------------------------
+The supplied FastAPI release evidence is retained under:
+  docs\fastapi_reference\
+
+Those files document the source release that was ported. Use this HOW_TO_RUN.txt
+for the final Go package.

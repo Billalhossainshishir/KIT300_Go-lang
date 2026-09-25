@@ -1,26 +1,35 @@
-RAMIFY OS v11.0.6 - FastAPI David Meeting Mode v4.2
-Prepared 11 September 2026
+RAMIFY OS v11.0.7-go-final — FINAL GO RELEASE EVIDENCE
+=====================================================
 
-Validated command:
-  PYTHONPATH=backend pytest -q
+Source merge:
+- Golden Go architecture retained.
+- Latest supplied FastAPI frontend/UX used as the current browser source of truth.
+- Historical FastAPI release evidence retained in docs/fastapi_reference/.
 
-Validated result:
-  379 passed
-  4 optional skipped
-  1,312 subtests passed
-  0 failures
+Required final validation commands:
+  go test ./...
+  go vet ./...
+  node --check frontend/scripts/<each .js file>
 
-Additional checks:
-  Frontend JavaScript syntax: node --check passed for demo.js and david-demo.js
-  Reversible evidence-tamper API smoke: PASS (hash_mismatch -> RATIFY fail -> objective block -> artefact restored)
-  Receipt tamper smoke: PASS (tampered signed field rejected)
-  Northbeam Consumer vs Procurement proof: PASS (same objective allow; Procurement narrows to hold)
-  Action Gate / basket / signed checkout smoke: PASS
-  Human review successor receipt smoke: PASS
-  Quick and Extended Proof Pack routes: PASS
+Regression coverage includes:
+- 17/17 named scenario parity.
+- Current frontend pages/assets served by Go.
+- Current API surface used by the frontend.
+- Basket null-array regression and signed checkout verification.
+- Demo cart isolation.
+- Real evidence tamper fail-closed behaviour.
+- Runtime state persistence across restart.
+- Native Go/Ollama interpretation/explanation boundary.
+- Human review successor and procurement requisition flows.
+- Agent editor CRUD/derived policy.
+- Quick and Extended Proof Pack contents.
 
-Repository provenance:
-  Commit SHA: NOT EMBEDDED IN THIS EXPORTED ZIP
-  Clean/dirty state: NOT EMBEDDED IN THIS EXPORTED ZIP
+Proof Packs:
+- Quick: 5 receipts; portable Go verifier must report 5/5 PASS.
+- Extended: 6 receipts; portable Go verifier must report 6/6 PASS.
 
-Before assessed handover, run scripts/capture_release_evidence.py from the team's real final Git checkout and keep the exact commit SHA, clean/dirty state, timestamp and command output. This file deliberately does not invent repository provenance.
+Security scope:
+- Synthetic local demonstration only.
+- SHA-256 and Ed25519 provide tamper evidence/signature mechanics.
+- Not a blockchain, real product certification service, or production-grade key custody.
+- Optional Ollama may interpret/explain only; deterministic RAMIFY remains decision authority.
