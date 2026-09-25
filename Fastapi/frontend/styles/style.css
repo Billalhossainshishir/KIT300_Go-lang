@@ -5177,3 +5177,683 @@ summary:focus-visible {
   .queue-actions a.btn,
   .receipt-more .btn { width:100%; }
 }
+
+
+/* ── QA first-five UX fixes · 25 Sep 2026 ──────────────────────────────
+   Reduce perceived latency, keep action feedback legible, simplify the first
+   screen, and make nav/icon geometry stable at browser zoom levels. */
+.ui-motion-lite .ui-atmosphere,
+.ui-motion-lite .ui-nav-pulse { display:none !important; }
+.ui-motion-lite .ui-motion-item,
+.ui-motion-lite .ui-tilt {
+  animation:none !important;
+  transform:none !important;
+  transition-duration:.12s !important;
+}
+.ui-motion-lite .card:hover,
+.ui-motion-lite .persona:hover,
+.ui-motion-lite .story-card:hover {
+  transform:translateY(-1px) !important;
+}
+
+.topbar nav { gap:4px !important; min-width:0; }
+.topbar nav a {
+  min-width:0;
+  min-height:40px;
+  padding:8px 12px !important;
+  border-radius:999px !important;
+  gap:7px !important;
+  line-height:1.1;
+  overflow:visible;
+}
+.topbar nav a[aria-current="page"] { border-radius:999px !important; }
+.topbar nav a > span:not(.nav-icon):not(.count) {
+  min-width:0;
+  line-height:1.15;
+}
+.nav-icon {
+  width:18px !important;
+  height:18px !important;
+  flex:0 0 18px !important;
+  overflow:visible;
+}
+.nav-icon svg {
+  width:17px !important;
+  height:17px !important;
+  display:block;
+}
+nav .count { flex:none; margin-left:0 !important; }
+.topbar-right { flex:none; }
+
+.btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.card-action,
+.story-card-action,
+.shop-head-actions { align-items:center; }
+.card-action span,
+.story-card-action b { flex:none; }
+
+.shop-head {
+  grid-template-columns:minmax(0,1fr) auto !important;
+  min-height:0 !important;
+  padding:30px 34px !important;
+}
+.shop-head h1 {
+  max-width:18ch !important;
+  font-size:clamp(38px,4.6vw,60px) !important;
+  line-height:1 !important;
+}
+.shop-head .lede { max-width:62ch !important; }
+.shop-intro-details {
+  margin:0 0 18px;
+  border:1px solid rgba(32,75,60,.12);
+  border-radius:16px;
+  background:rgba(249,252,250,.92);
+  overflow:hidden;
+}
+.shop-intro-details > summary {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  padding:12px 15px;
+  cursor:pointer;
+  color:#315348;
+  font-size:12px;
+  font-weight:760;
+  list-style:none;
+}
+.shop-intro-details > summary::-webkit-details-marker { display:none; }
+.shop-intro-details > summary::after {
+  content:"+";
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  flex:none;
+  border-radius:8px;
+  background:#edf5f1;
+  color:#2d725f;
+  font-size:16px;
+}
+.shop-intro-details[open] > summary::after { content:"−"; }
+.shop-intro-details > summary span {
+  margin-left:auto;
+  color:#7a8a83;
+  font-size:10px;
+  font-weight:600;
+}
+.shop-intro-details-body {
+  display:grid;
+  gap:10px;
+  padding:0 14px 14px;
+}
+.shop-intro-details .shop-hero-visual {
+  min-height:0 !important;
+  padding:15px !important;
+  border-radius:14px !important;
+}
+.shop-intro-details .journey-promise { margin:0; }
+
+@media (max-width:1100px) {
+  .topbar-inner { gap:6px; }
+  .topbar nav a { padding:8px 9px !important; gap:5px !important; }
+  .nav-icon { width:17px !important; flex-basis:17px !important; }
+}
+@media (max-width:900px) {
+  .shop-head { grid-template-columns:1fr !important; }
+  .shop-head-actions { justify-content:flex-start; }
+}
+
+
+/* ── QA next-five UX fixes · 25 Sep 2026 ───────────────────────────────
+   Remove duplicated progress chrome, make step changes obvious, and make
+   prepared demo stories easier to understand and scan. */
+.story-helper {
+  max-width:72ch;
+  margin:7px 0 0;
+  color:#66776f;
+  font-size:12px;
+  line-height:1.5;
+}
+.story-featured-grid {
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:14px !important;
+}
+.story-featured-grid .story-card {
+  min-height:190px !important;
+  padding:18px !important;
+  gap:13px !important;
+}
+.story-featured-grid .story-category {
+  font-size:10px !important;
+}
+.story-featured-grid .story-outcome {
+  font-size:10px !important;
+  padding:6px 9px !important;
+}
+.story-featured-grid .story-card-copy strong {
+  font-size:15px !important;
+  line-height:1.28 !important;
+}
+.story-featured-grid .story-card-copy small {
+  font-size:12px !important;
+  line-height:1.5 !important;
+}
+.story-featured-grid .story-card-context {
+  font-size:10.5px !important;
+  line-height:1.45 !important;
+}
+.story-featured-grid .story-card-action {
+  font-size:11px !important;
+}
+.journey-stage-focus {
+  animation:journey-stage-focus .52s ease-out !important;
+}
+@keyframes journey-stage-focus {
+  0% {
+    box-shadow:0 0 0 0 rgba(45,133,144,.22), var(--sh);
+    border-color:#8fc3ca;
+  }
+  55% {
+    box-shadow:0 0 0 7px rgba(45,133,144,.08), var(--sh);
+    border-color:#6faeb7;
+  }
+  100% {
+    box-shadow:var(--sh);
+  }
+}
+@media (max-width:980px) {
+  .story-featured-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-width:620px) {
+  .story-featured-grid { grid-template-columns:1fr !important; }
+  .story-featured-grid .story-card { min-height:0 !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-stage-focus { animation:none !important; }
+}
+
+
+/* ── QA next-five batch 2 · 25 Sep 2026 ────────────────────────────────
+   Improve zoom readability, reduce hand-holding density, simplify journey
+   chrome, remove product-card hover aberrations, and reduce nested borders. */
+
+/* Readability: avoid sub-10px interface text on the main shopping journey. */
+.journey-main .field-label,
+.journey-main .eyebrow,
+.journey-progress button small,
+.journey-nav-copy small,
+.performance-proof small,
+.performance-proof p,
+.trace-evidence-cue,
+.evidence-trail-grid article > span,
+.evidence-trail-grid article > small,
+.risk-path > span small,
+.story-library-foot {
+  font-size:11px !important;
+}
+.journey-progress button strong,
+.risk-path > span b {
+  font-size:12px !important;
+}
+.card .meta,
+.card .inspect {
+  font-size:11.5px !important;
+}
+@media (min-width:1200px) {
+  .journey-main { font-size:15px; }
+}
+
+/* Bottom controls: one compact status line instead of a second step widget. */
+.journey-nav {
+  max-width:680px !important;
+  padding:9px 10px !important;
+  border-radius:999px !important;
+  border-color:#dce7e3 !important;
+  box-shadow:0 12px 34px -26px rgba(20,67,75,.38) !important;
+}
+.journey-nav-copy {
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  min-width:0;
+}
+.journey-nav-copy strong {
+  color:#315348;
+  font-size:12px;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.journey-nav-copy small {
+  margin:0 !important;
+  color:#7f8e88 !important;
+  white-space:nowrap;
+}
+@media (max-width:620px) {
+  .journey-nav { border-radius:18px !important; }
+  .journey-nav-copy { display:grid !important; gap:2px; }
+}
+
+/* Product cards: no moving edge/vertical bar on hover. */
+.journey-main .card {
+  overflow:hidden;
+  transform:none !important;
+}
+.journey-main .card::before {
+  display:none !important;
+}
+.journey-main .card:hover {
+  transform:none !important;
+  border-color:#a9c7bd !important;
+  box-shadow:0 10px 28px rgba(20,52,42,.08) !important;
+}
+.journey-main .card:hover .card-action span {
+  margin-left:4px !important;
+}
+
+/* Calmer hierarchy: the outer stage carries the boundary; inner content relies
+   on spacing/background unless a border communicates a meaningful state. */
+.journey-stage {
+  padding:32px !important;
+  border-color:#e3ebe7 !important;
+}
+.journey-stage > .panel:not(.process-panel):not(.checkout-stage-card),
+.journey-stage .journey-detail > .panel {
+  box-shadow:none !important;
+}
+.journey-detail {
+  border-color:#e7eeea !important;
+  background:#fafcfa !important;
+}
+.journey-detail > .panel {
+  border-top-color:#edf2ef !important;
+}
+.boundary-details {
+  display:block !important;
+  padding:0 !important;
+  overflow:hidden;
+}
+.boundary-details summary {
+  padding:13px 16px;
+  cursor:pointer;
+  font-weight:700;
+  list-style:none;
+}
+.boundary-details summary::-webkit-details-marker { display:none; }
+.boundary-details > span {
+  display:block;
+  padding:0 16px 14px;
+  font-size:13px;
+  line-height:1.5;
+}
+@media (max-width:620px) {
+  .journey-stage { padding:22px 17px !important; }
+}
+
+
+/* ── QA final-five UX polish · 25 Sep 2026 ─────────────────────────────
+   Keep dialogs inside the viewport, make story status treatment consistent,
+   prevent drawer clipping, reduce Step 3 technical density, and improve zoom. */
+
+/* Trust Passport: safe viewport geometry and an always-visible close control. */
+.trust-passport-dialog {
+  position:relative !important;
+  width:min(720px,calc(100vw - 24px)) !important;
+  max-height:calc(100dvh - 24px) !important;
+  overflow:auto !important;
+  scrollbar-gutter:stable;
+}
+.trust-passport-x {
+  position:sticky;
+  top:10px;
+  z-index:10;
+  float:right;
+  margin:10px 10px -48px 0;
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border:1px solid #dbe6e1;
+  border-radius:12px;
+  background:rgba(255,255,255,.96);
+  color:#35564c;
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+  box-shadow:0 7px 20px rgba(21,57,45,.08);
+}
+.trust-passport-x:hover { background:#173f35; color:#fff; }
+.trust-passport-dialog .dialog-actions {
+  position:sticky;
+  bottom:0;
+  margin:0;
+  padding:12px 18px;
+  background:rgba(255,255,255,.96);
+  border-top:1px solid #e7eeea;
+}
+.trust-passport-grid small { font-size:11px !important; }
+.trust-passport-grid b { font-size:12px !important; }
+.trust-passport-proof strong { font-size:12px !important; }
+.trust-passport-proof p { font-size:12px !important; line-height:1.5; }
+
+/* Demo stories: one consistent status edge for every card. */
+.story-card {
+  --story-tone:#68b29d;
+  border-left:4px solid var(--story-tone) !important;
+}
+.story-card.tone-green { --story-tone:#68b29d; }
+.story-card.tone-orange { --story-tone:#d49631; }
+.story-card.tone-red { --story-tone:#c05a3b; }
+.story-card::after { display:none !important; }
+.story-card:hover {
+  border-left-color:var(--story-tone) !important;
+}
+.story-card:focus-visible {
+  outline:3px solid color-mix(in srgb,var(--story-tone) 38%,transparent);
+  outline-offset:2px;
+}
+
+/* Story library: keep header/close control visible and prevent edge clipping. */
+.story-library {
+  width:min(calc(100vw - 24px),1120px) !important;
+  max-height:calc(100dvh - 24px) !important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+.story-library-head {
+  padding:22px 24px 18px !important;
+}
+.story-close {
+  position:sticky;
+  top:0;
+  align-self:start;
+  flex:none;
+}
+.story-featured { padding:20px 24px 24px !important; }
+.story-advanced { margin:0 24px 20px !important; }
+.story-library-foot { padding:0 24px 20px !important; }
+
+/* Step 3: technical evidence is available, but no longer fills the screen by default. */
+.trace-technical-details {
+  margin-top:16px;
+  border:1px solid #e1e9e5;
+  border-radius:14px;
+  background:#fafcfa;
+  overflow:hidden;
+}
+.trace-technical-details > summary {
+  padding:13px 15px;
+  cursor:pointer;
+  color:#36594e;
+  font-size:12.5px;
+  font-weight:750;
+  list-style:none;
+}
+.trace-technical-details > summary::-webkit-details-marker { display:none; }
+.trace-technical-details > summary::after {
+  content:"+";
+  float:right;
+  font-size:16px;
+  color:#618077;
+}
+.trace-technical-details[open] > summary::after { content:"−"; }
+.trace-technical-body { padding:0 14px 14px; }
+
+/* Zoom/smaller viewport behaviour. */
+@media (max-width:760px) {
+  .trust-passport-head { grid-template-columns:76px minmax(0,1fr) !important; }
+  .trust-passport-image { width:76px !important; height:68px !important; }
+  .trust-passport-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  #trust-passport-body { padding:18px 16px 8px !important; }
+  .story-library-head { grid-template-columns:minmax(0,1fr) auto !important; gap:12px !important; }
+  .story-featured-grid,
+  .story-all-grid { grid-template-columns:1fr !important; }
+}
+@media (max-width:480px) {
+  .trust-passport-dialog {
+    width:calc(100vw - 12px) !important;
+    max-height:calc(100dvh - 12px) !important;
+    border-radius:16px !important;
+  }
+  .trust-passport-grid { grid-template-columns:1fr !important; }
+  .trust-passport-head { grid-template-columns:1fr !important; }
+  .story-library {
+    width:calc(100vw - 12px) !important;
+    max-height:calc(100dvh - 12px) !important;
+    border-radius:18px !important;
+  }
+  .story-library-head,
+  .story-featured { padding-left:16px !important; padding-right:16px !important; }
+  .story-advanced { margin-left:16px !important; margin-right:16px !important; }
+  .story-library-foot {
+    padding-left:16px !important;
+    padding-right:16px !important;
+    flex-direction:column;
+  }
+}
+
+
+/* ── QA final visual cleanup · 25 Sep 2026 ─────────────────────────────
+   Clarify the agent handoff, add receipt breathing room, remove nested story
+   scrolling, lift remaining tiny text, and quiet secondary technical chrome. */
+
+/* Agent response: replace the floating symbol with a deliberate handoff cue. */
+.split {
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important;
+  gap:16px !important;
+  padding:20px !important;
+}
+.split-arrow {
+  min-width:88px;
+  padding:0 8px !important;
+  display:flex !important;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  color:#6f8179 !important;
+}
+.split-arrow span {
+  font-size:10.5px;
+  font-weight:750;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.split-arrow b {
+  font-size:18px;
+  line-height:1;
+  font-weight:700;
+}
+.split-arrow.narrowed { color:var(--amber) !important; }
+@media (max-width:780px) {
+  .split-arrow {
+    min-width:0;
+    min-height:48px;
+    transform:none !important;
+    flex-direction:row;
+  }
+  .split-arrow b { transform:rotate(90deg); }
+}
+
+/* Receipt: more breathing room and fewer competing borders. */
+#journey-stage-4 .human {
+  padding:24px 26px !important;
+  border-color:#e7ece9 !important;
+  box-shadow:0 10px 28px rgba(20,52,42,.045) !important;
+}
+.receipt-head {
+  padding-bottom:16px !important;
+  margin-bottom:22px !important;
+  border-bottom:1px solid #d9e2dd !important;
+}
+.receipt-verdict {
+  padding:18px 20px !important;
+  margin-bottom:22px !important;
+}
+.receipt-status-grid {
+  gap:12px !important;
+  margin-bottom:22px !important;
+}
+.receipt-status-grid > span {
+  padding:13px 14px !important;
+  border-color:#e7ece9 !important;
+  box-shadow:none !important;
+}
+.receipt-story-tabs {
+  margin-top:18px !important;
+  background:#f2f5f3 !important;
+}
+.receipt-block-title { font-size:11px !important; }
+.receipt-status-grid small { font-size:11px !important; }
+.receipt-status-grid b { font-size:12.5px !important; }
+.receipt-sub,
+.receipt-notice,
+.written-by { font-size:12px !important; }
+
+/* Story library: one scroll container only; no nested clipped acceptance grid. */
+.story-all-grid {
+  max-height:none !important;
+  overflow:visible !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:12px !important;
+  padding:14px !important;
+}
+.story-advanced {
+  overflow:visible !important;
+}
+.story-filter-bar {
+  position:sticky;
+  top:92px;
+  z-index:3;
+}
+@media (max-width:980px) {
+  .story-all-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-width:620px) {
+  .story-all-grid { grid-template-columns:1fr !important; }
+  .story-filter-bar {
+    position:static;
+    flex-wrap:wrap;
+  }
+}
+
+/* Lift the last undersized labels in the shop/demo experience. */
+.session-summary-grid small,
+.audit-story-row small,
+.audit-story-key small,
+.human-review-story small,
+.persona-fingerprint small,
+.persona-fingerprint b,
+.story-advanced > summary small,
+.story-advanced > summary strong,
+.story-filter-bar button,
+.story-legend span {
+  font-size:11px !important;
+}
+.session-summary-grid b,
+.audit-story-row b {
+  font-size:12px !important;
+}
+
+/* Secondary technical UI should support the result, not compete with it. */
+.primitive-proof-workspace,
+.trace-technical-details,
+.why-drawer,
+.session-summary {
+  box-shadow:none !important;
+  border-color:#e5ece8 !important;
+}
+.primitive-proof-workspace {
+  background:#fbfcfb !important;
+}
+.trace-technical-details,
+.why-drawer {
+  background:#fcfdfc !important;
+}
+.session-summary {
+  background:#fafcfa !important;
+}
+
+
+/* ── Final project-wide readability/performance audit · 25 Sep 2026 ─────
+   Keep Guided Demo / walkthrough labels readable at browser zoom and small
+   widths. The old reveal/ripple classes remain inert because shell.js no
+   longer installs observers or creates ripple nodes. */
+.guided-step small,
+.guided-rail-note span,
+.guided-receipt-ref span,
+.guided-request-copy > span,
+.guided-structured-head span,
+.guided-field-grid small,
+.guided-field-grid b,
+.guided-boundary span,
+.guided-boundary strong,
+.guided-proof-banner span,
+.guided-proof-banner small,
+.guided-trace b,
+.guided-measure-note,
+.guided-locked-line span,
+.guided-policy-grid strong,
+.guided-policy-grid small,
+.policy-outcome,
+.guided-selected-policy span,
+.guided-selected-policy b,
+.guided-action-chips span,
+.guided-receipt-head > b,
+.guided-receipt-stats span,
+.guided-receipt-card summary,
+.guided-position strong,
+.guided-position span,
+.guided-preview-label,
+.guided-scenario-preview small,
+.guided-empty-flow span,
+.guided-rail-kicker {
+  font-size:11px !important;
+  line-height:1.4 !important;
+}
+.guided-field-grid b,
+.guided-policy-grid strong,
+.guided-policy-grid small,
+.guided-receipt-head > b,
+.guided-scenario-preview small {
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  overflow-wrap:anywhere;
+}
+.walkthrough-persona-top,
+.walkthrough-persona > small,
+.walkthrough-decision-split span,
+.walkthrough-decision-split small,
+.walkthrough-human-receipt header span,
+.walkthrough-receipt-summary span,
+.walkthrough-human-receipt code,
+.walkthrough-verify-banner small,
+.walkthrough-json pre,
+.walkthrough-checkout-boundary span,
+.walkthrough-checkout-boundary code,
+.walkthrough-finish-grid span,
+.walkthrough-finish-grid strong,
+.walkthrough-timing-panel > small,
+.walkthrough-check-row small {
+  font-size:11px !important;
+  line-height:1.4 !important;
+}
+.walkthrough-persona h3,
+.walkthrough-receipt-summary strong,
+.walkthrough-human-receipt p,
+.walkthrough-checkout-boundary p {
+  font-size:12px !important;
+}
+@media (max-width:620px) {
+  .guided-field-grid { grid-template-columns:1fr !important; }
+  .guided-context-row span { font-size:11px !important; }
+}
