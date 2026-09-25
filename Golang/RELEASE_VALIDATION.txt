@@ -11,9 +11,12 @@ PASS  41/41 current FastAPI API routes (excluding the page catch-all) are presen
 
 STATIC / SOURCE CHECKS
 ----------------------
-PASS  go test -count=1 ./...
-PASS  go vet ./...
-PASS  every frontend/scripts/*.js passes node --check
+PASS  GitHub Actions workflow is active at repository root (.github/workflows/go-test.yml).
+PASS  GitHub Actions run #7 succeeded on source head 8cbb23e37c5d377eec2eb33915bfe3c4d65a0b85.
+PASS  go test -count=1 ./... (GitHub Actions run #7)
+PASS  go vet ./... (GitHub Actions run #7)
+PASS  every frontend/scripts/*.js passes node --check (GitHub Actions run #7)
+PASS  frontend serving/UX regression guards cover all current pages, page scripts, and key Aymen-feedback fixes
 PASS  no Python runtime files (.py / requirements.txt / pyproject.toml) remain in the final Go project
 
 FUNCTIONAL REGRESSION
@@ -47,7 +50,8 @@ PASS  macOS arm64: launcher + verifier
 
 BROWSER RUNNER NOTE
 -------------------
-NOT COUNTED AS PASS: headless Chromium navigation to the local server was attempted,
+NOT COUNTED AS PASS: the final visual browser walkthrough remains a manual acceptance step.
+Earlier headless Chromium navigation to the local server was attempted,
 but this execution environment blocks 127.0.0.1 browser navigation with
 ERR_BLOCKED_BY_ADMINISTRATOR. The product flow itself passed via HTTP regression,
 Go tests and current frontend JavaScript contract checks. Perform the final visual
