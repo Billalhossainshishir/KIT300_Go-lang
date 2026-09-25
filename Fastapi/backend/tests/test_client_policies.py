@@ -355,15 +355,19 @@ class Direction9_HonestyBoundary(unittest.TestCase):
         self.assertIn("Synthetic", receipt["notice"])
         self.assertIn("certifies nothing", receipt["notice"])
 
-    def test_every_page_carries_a_visible_disclaimer(self):
-        # Static markup rather than something injected at runtime, so a page
-        # that fails to reach the API still tells the reader what it is.
+    def test_every_page_exposes_the_shared_scope_notice(self):
+        # The current UX deliberately removed repeated disclaimer banners.
+        # Every page still mounts the shared footer, and that footer carries
+        # the synthetic/not-for-real-purchasing boundary in one consistent place.
+        shell = (WEB_DIR / "scripts" / "shell.js").read_text(encoding="utf-8").lower()
+        self.assertIn("synthetic data. not for real purchasing", shell)
+        self.assertIn("function mountfooter", shell)
+
         for page in WEB_DIR.glob("pages/*.html"):
             body = page.read_text(encoding="utf-8").lower()
             with self.subTest(page=page.name):
-                self.assertIn('class="disclaimer"', body)
-                self.assertIn("synthetic", body)
-                self.assertIn("not for real purchasing", body)
+                self.assertIn("<footer", body)
+                self.assertIn("/shell.js", body)
 
     def test_signatures_are_real_rather_than_simulated(self):
         source = (PACKAGE_ROOT / "crypto" / "sign.py").read_text(encoding="utf-8")
