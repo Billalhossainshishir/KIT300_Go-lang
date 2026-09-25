@@ -280,7 +280,12 @@ function goJourney(step) {
   if (journeyStep >= 3) void refreshBadges();
 
   const stage = $(`journey-stage-${journeyStep}`);
-  if (stage && journeyStep > 0) stage.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (stage && journeyStep > 0) {
+    stage.classList.remove("journey-stage-focus");
+    requestAnimationFrame(() => stage.classList.add("journey-stage-focus"));
+    stage.addEventListener("animationend", () => stage.classList.remove("journey-stage-focus"), { once: true });
+    stage.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 // The cases are an operator's tool, not shop furniture, so they live in a
@@ -1181,6 +1186,14 @@ async function tamperTest() {
 
 
 function startFresh() {
+  const hasJourney = Boolean(current || selectedProductRef || $("query")?.value.trim());
+  if (hasJourney) {
+    const confirmed = window.confirm(
+      "Start a fresh journey? Your current product and request will be cleared. Saved receipts and audit history will stay."
+    );
+    if (!confirmed) return;
+  }
+
   clearPreparedProduct({ keepQuery: false, preserveActor: false });
   $("qty").value = "1";
   setDrawer(false);
