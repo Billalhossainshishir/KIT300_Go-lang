@@ -265,9 +265,10 @@ function goJourney(step) {
   const nav = $("journey-nav");
   nav.hidden = journeyStep === 0 || !current;
   if (!nav.hidden) {
-    $("journey-position").textContent = `Step ${journeyStep + 1} of 6`;
-    const labels = ["", "Next: RAMIFY checks", "Next: Agent response", "Next: Receipt summary", "Next: Checkout", ""];
-    $("journey-next-label").textContent = labels[journeyStep] || "Final step";
+    const stepNames = ["Product", "Request", "RAMIFY", "Agent", "Receipt", "Checkout"];
+    const nextNames = ["", "RAMIFY", "Agent", "Receipt", "Checkout", ""];
+    $("journey-position").textContent = `${stepNames[journeyStep]} · ${journeyStep + 1}/6`;
+    $("journey-next-label").textContent = nextNames[journeyStep] ? `Next: ${nextNames[journeyStep]}` : "Final step";
     $("journey-back").disabled = journeyStep <= 1;
     $("journey-next").hidden = journeyStep >= 5;
   }
