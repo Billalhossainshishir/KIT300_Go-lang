@@ -5781,3 +5781,79 @@ nav .count { flex:none; margin-left:0 !important; }
 .session-summary {
   background:#fafcfa !important;
 }
+
+
+/* ── Final project-wide readability/performance audit · 25 Sep 2026 ─────
+   Keep Guided Demo / walkthrough labels readable at browser zoom and small
+   widths. The old reveal/ripple classes remain inert because shell.js no
+   longer installs observers or creates ripple nodes. */
+.guided-step small,
+.guided-rail-note span,
+.guided-receipt-ref span,
+.guided-request-copy > span,
+.guided-structured-head span,
+.guided-field-grid small,
+.guided-field-grid b,
+.guided-boundary span,
+.guided-boundary strong,
+.guided-proof-banner span,
+.guided-proof-banner small,
+.guided-trace b,
+.guided-measure-note,
+.guided-locked-line span,
+.guided-policy-grid strong,
+.guided-policy-grid small,
+.policy-outcome,
+.guided-selected-policy span,
+.guided-selected-policy b,
+.guided-action-chips span,
+.guided-receipt-head > b,
+.guided-receipt-stats span,
+.guided-receipt-card summary,
+.guided-position strong,
+.guided-position span,
+.guided-preview-label,
+.guided-scenario-preview small,
+.guided-empty-flow span,
+.guided-rail-kicker {
+  font-size:11px !important;
+  line-height:1.4 !important;
+}
+.guided-field-grid b,
+.guided-policy-grid strong,
+.guided-policy-grid small,
+.guided-receipt-head > b,
+.guided-scenario-preview small {
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  overflow-wrap:anywhere;
+}
+.walkthrough-persona-top,
+.walkthrough-persona > small,
+.walkthrough-decision-split span,
+.walkthrough-decision-split small,
+.walkthrough-human-receipt header span,
+.walkthrough-receipt-summary span,
+.walkthrough-human-receipt code,
+.walkthrough-verify-banner small,
+.walkthrough-json pre,
+.walkthrough-checkout-boundary span,
+.walkthrough-checkout-boundary code,
+.walkthrough-finish-grid span,
+.walkthrough-finish-grid strong,
+.walkthrough-timing-panel > small,
+.walkthrough-check-row small {
+  font-size:11px !important;
+  line-height:1.4 !important;
+}
+.walkthrough-persona h3,
+.walkthrough-receipt-summary strong,
+.walkthrough-human-receipt p,
+.walkthrough-checkout-boundary p {
+  font-size:12px !important;
+}
+@media (max-width:620px) {
+  .guided-field-grid { grid-template-columns:1fr !important; }
+  .guided-context-row span { font-size:11px !important; }
+}
