@@ -156,9 +156,14 @@ function toast(message, kind) {
   if (!node) {
     node = document.createElement("div");
     node.id = "toast";
+    node.setAttribute("role", "status");
+    node.setAttribute("aria-live", "polite");
+    node.setAttribute("aria-atomic", "true");
     document.body.appendChild(node);
   }
   node.className = `toast${kind ? " " + kind : ""}`;
+  node.setAttribute("role", kind === "bad" ? "alert" : "status");
+  node.setAttribute("aria-live", kind === "bad" ? "assertive" : "polite");
   node.textContent = message;
   requestAnimationFrame(() => node.classList.add("show"));
   clearTimeout(node._timer);
@@ -188,7 +193,6 @@ const NAV_ICON = Object.freeze({
   about: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.2"/></svg>`,
   help: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.4 2.35c-.8.35-1.1.9-1.1 1.65v.3M12 17h.01"/></svg>`,
 });
-
 function navLink([href, label, badgeId, icon]) {
   const active = href === document.body.dataset.route ? ' aria-current="page"' : "";
   const badge = badgeId ? ` <span class="count" id="${badgeId}" hidden></span>` : "";
@@ -337,6 +341,7 @@ function personaFingerprint(profile) {
 }
 
 async function openTrustPassport(subjectRef, assessment = null) {
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const cat = await catalogue();
   const product = cat.products.find((p) => p.subject_ref === subjectRef);
   if (!product) return;
@@ -344,11 +349,21 @@ async function openTrustPassport(subjectRef, assessment = null) {
   let dialog = $("trust-passport-dialog");
   if (!dialog) {
     document.body.insertAdjacentHTML("beforeend", `<dialog id="trust-passport-dialog" class="trust-passport-dialog">
+      <button class="trust-passport-x" type="button" id="trust-passport-x" aria-label="Close trust passport">×</button>
       <div id="trust-passport-body"></div>
       <div class="dialog-actions"><button class="btn btn-ghost" type="button" id="trust-passport-close">Close</button></div>
     </dialog>`);
     dialog = $("trust-passport-dialog");
+    $("trust-passport-x").addEventListener("click", () => dialog.close());
     $("trust-passport-close").addEventListener("click", () => dialog.close());
+  }
+  dialog._returnFocus = opener;
+  if (!dialog.dataset.focusReturnBound) {
+    dialog.addEventListener("close", () => {
+      const target = dialog._returnFocus;
+      if (target && document.contains(target)) target.focus();
+    });
+    dialog.dataset.focusReturnBound = "1";
   }
   const status = source.status || {};
   const evidence = (source.evidence || []).filter(Boolean);
@@ -383,7 +398,6 @@ async function openTrustPassport(subjectRef, assessment = null) {
     <details class="trust-passport-sources"><summary>View source records</summary><pre>${esc(JSON.stringify(source, null, 2))}</pre></details>`;
   dialog.showModal();
 }
-
 function initBeforeAfter() {
   const root = $("before-after");
   if (!root) return;
@@ -459,7 +473,10 @@ function renderVerdictSplit(result) {
         <div class="split-value tone-${esc(objective.colour)}">${esc(objective.machine_posture)}</div>
         <div class="split-user">${esc(objective.label)}</div>
       </div>
-      <div class="split-arrow ${narrowed ? "narrowed" : ""}">${narrowed ? "↓" : "="}</div>
+      <div class="split-arrow ${narrowed ? "narrowed" : ""}" aria-label="Agent policy handoff">
+        <span>Agent policy</span>
+        <b aria-hidden="true">→</b>
+      </div>
       <div class="split-half split-agent ${personaClass(result.actor_ref)}">
         <div class="split-label"><span class="persona-dot" aria-hidden="true"></span>${esc(result.actor_label)} response</div>
         <div class="split-sub">What this agent is allowed to do with the product result</div>
@@ -680,72 +697,10 @@ function installFinalPolish() {
   if (document.documentElement.dataset.finalPolish === "1") return;
   document.documentElement.dataset.finalPolish = "1";
 
-  // A tiny reading-progress line helps long About/Help/Technical pages without
-  // adding another navigation control.
-  const progress = document.createElement("div");
-  progress.className = "ui-scroll-progress";
-  progress.setAttribute("aria-hidden", "true");
-  document.body.appendChild(progress);
-  const updateProgress = () => {
-    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-    progress.style.width = `${Math.min(100, (scrollY / max) * 100)}%`;
-  };
-  addEventListener("scroll", updateProgress, { passive: true });
-  addEventListener("resize", updateProgress, { passive: true });
-  requestAnimationFrame(updateProgress);
-
-  // Gentle reveal for page sections. Reduced-motion users receive no motion.
-  const seen = new WeakSet();
-  const observer = "IntersectionObserver" in window
-    ? new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add("ui-visible");
-          observer.unobserve(entry.target);
-        });
-      }, { threshold: 0.06, rootMargin: "0px 0px -18px 0px" })
-    : null;
-
-  const decorate = (root = document) => {
-    root.querySelectorAll?.("main > .page-head, main > .disclaimer, main > section, main > .panel, main > .prose, main > #result").forEach((el) => {
-      if (seen.has(el)) return;
-      seen.add(el);
-      el.classList.add("ui-reveal");
-      if (observer) observer.observe(el); else el.classList.add("ui-visible");
-    });
-  };
-  decorate();
-
-  const mutation = new MutationObserver((records) => {
-    for (const record of records) {
-      for (const node of record.addedNodes) {
-        if (node.nodeType === 1) decorate(node);
-      }
-    }
-  });
-  mutation.observe(document.body, { childList: true, subtree: true });
-
-  // Small tactile feedback on normal buttons. Does not delay or replace clicks.
-  document.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
-    const button = event.target.closest?.(".btn, .welcome-option, .card, .scenario");
-    if (!button || button.disabled) return;
-    button.classList.add("ui-ripple-host");
-    const r = button.getBoundingClientRect();
-    const dot = document.createElement("span");
-    dot.className = "ui-ripple";
-    dot.style.left = `${event.clientX - r.left}px`;
-    dot.style.top = `${event.clientY - r.top}px`;
-    button.appendChild(dot);
-    dot.addEventListener("animationend", () => dot.remove(), { once: true });
-  }, { passive: true });
-
-  // Fade the document in only after the shared shell is mounted. This makes
-  // the multi-page interface feel continuous without changing navigation or data flow.
+  // Mark the shared shell as ready without observing or mutating every section.
   requestAnimationFrame(() => document.documentElement.classList.add("ui-ready"));
 
-  // Make keyboard focus easy to follow during a live demo. Pointer users keep
-  // the clean visual treatment; keyboard users get an explicit focus ring.
+  // Keep a clear keyboard focus mode for live demos and accessibility.
   let keyboardMode = false;
   document.addEventListener("keydown", (event) => {
     if (event.key === "Tab") {
@@ -759,190 +714,15 @@ function installFinalPolish() {
     document.documentElement.classList.remove("ui-keyboard");
   }, { passive: true });
 
-  // Advanced presentation motion layer. It is intentionally cosmetic: no API
-  // call, form value, receipt, decision or navigation rule is changed here.
   installAdvancedMotion();
 }
-
 function installAdvancedMotion() {
   if (document.documentElement.dataset.advancedMotion === "1") return;
   document.documentElement.dataset.advancedMotion = "1";
 
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const coarsePointer = matchMedia("(pointer: coarse)").matches;
   const saveData = !!navigator.connection?.saveData;
   const motionOK = !reduceMotion && !saveData;
   document.documentElement.classList.toggle("ui-motion-ok", motionOK);
-
-  // Quiet ambient light follows the pointer on desktop. It sits behind all
-  // content and exists only to add depth to the otherwise white interface.
-  const atmosphere = document.createElement("div");
-  atmosphere.className = "ui-atmosphere";
-  atmosphere.setAttribute("aria-hidden", "true");
-  atmosphere.innerHTML = '<span class="ui-orb ui-orb-a"></span><span class="ui-orb ui-orb-b"></span><span class="ui-pointer-glow"></span>';
-  document.body.prepend(atmosphere);
-
-  if (motionOK && !coarsePointer) {
-    let px = innerWidth * .5;
-    let py = innerHeight * .22;
-    let frame = 0;
-    const paintPointer = () => {
-      frame = 0;
-      document.documentElement.style.setProperty("--ui-pointer-x", `${px}px`);
-      document.documentElement.style.setProperty("--ui-pointer-y", `${py}px`);
-    };
-    addEventListener("pointermove", (event) => {
-      px = event.clientX; py = event.clientY;
-      if (!frame) frame = requestAnimationFrame(paintPointer);
-    }, { passive: true });
-  }
-
-  // Add staggered reveal timing to repeating visual groups, including content
-  // rendered after API responses. MutationObserver is already used above; this
-  // observer complements it without changing the generated markup.
-  const motionSeen = new WeakSet();
-  const motionSelector = [
-    ".grid > .card", ".persona-grid > .persona", ".story-card",
-    ".guided-policy-grid > article", ".tour-agent-grid > article",
-    ".queue-item", ".cart-line", ".receipt-doc", ".human-receipt-card",
-    ".journey-promise > span", ".journey-progress > button"
-  ].join(",");
-
-  const decorateMotion = (root = document) => {
-    const nodes = [];
-    if (root.matches?.(motionSelector)) nodes.push(root);
-    root.querySelectorAll?.(motionSelector).forEach((node) => nodes.push(node));
-    nodes.forEach((node, index) => {
-      if (motionSeen.has(node)) return;
-      motionSeen.add(node);
-      node.classList.add("ui-motion-item");
-      node.style.setProperty("--ui-stagger", `${Math.min(index, 10) * 38}ms`);
-    });
-  };
-  decorateMotion();
-  const motionMutation = new MutationObserver((records) => {
-    records.forEach((record) => record.addedNodes.forEach((node) => {
-      if (node.nodeType === 1) decorateMotion(node);
-    }));
-  });
-  motionMutation.observe(document.body, { childList: true, subtree: true });
-
-  // Subtle depth tilt for large interactive cards. Product ARTWORK itself is
-  // deliberately not transformed, preserving the v10.7.1 full-image fix.
-  if (motionOK && !coarsePointer) {
-    const tiltSelector = ".card, .persona, .welcome-option, .story-card, .guided-policy-grid article, .tour-agent-grid article";
-    let tiltFrame = 0;
-    let tiltTarget = null;
-    let tiltX = 0;
-    let tiltY = 0;
-
-    const paintTilt = () => {
-      tiltFrame = 0;
-      const target = tiltTarget;
-      if (!target || !target.isConnected || target.hasAttribute("disabled")) return;
-      const r = target.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      const x = (tiltX - r.left) / r.width - .5;
-      const y = (tiltY - r.top) / r.height - .5;
-      target.classList.add("ui-tilt");
-      target.style.setProperty("--ui-tilt-x", `${(-y * 2.2).toFixed(2)}deg`);
-      target.style.setProperty("--ui-tilt-y", `${(x * 2.6).toFixed(2)}deg`);
-      target.style.setProperty("--ui-shine-x", `${((x + .5) * 100).toFixed(1)}%`);
-      target.style.setProperty("--ui-shine-y", `${((y + .5) * 100).toFixed(1)}%`);
-    };
-
-    document.addEventListener("pointermove", (event) => {
-      const next = event.target.closest?.(tiltSelector);
-      if (!next || next.hasAttribute("disabled")) return;
-      tiltTarget = next;
-      tiltX = event.clientX;
-      tiltY = event.clientY;
-      if (!tiltFrame) tiltFrame = requestAnimationFrame(paintTilt);
-    }, { passive: true });
-
-    document.addEventListener("pointerout", (event) => {
-      const target = event.target.closest?.(tiltSelector);
-      if (!target || target.contains(event.relatedTarget)) return;
-      if (tiltTarget === target) tiltTarget = null;
-      target.classList.remove("ui-tilt");
-      target.style.removeProperty("--ui-tilt-x");
-      target.style.removeProperty("--ui-tilt-y");
-      target.style.removeProperty("--ui-shine-x");
-      target.style.removeProperty("--ui-shine-y");
-    }, { passive: true });
-  }
-
-  // The active navigation item gets a soft moving glass indicator. It is a
-  // visual echo of the existing aria-current state, not a second nav system.
-  const activeLink = document.querySelector('.topbar a[aria-current="page"]');
-  if (activeLink) {
-    activeLink.classList.add("ui-nav-current");
-    const pulse = document.createElement("span");
-    pulse.className = "ui-nav-pulse";
-    pulse.setAttribute("aria-hidden", "true");
-    activeLink.appendChild(pulse);
-  }
-
-  // Dialogs and newly displayed journey stages get a one-shot entrance cue.
-  document.addEventListener("toggle", (event) => {
-    if (event.target.matches?.("details[open]")) {
-      event.target.classList.remove("ui-details-open");
-      requestAnimationFrame(() => event.target.classList.add("ui-details-open"));
-    }
-  }, true);
-
-  // Visual-architecture layer: major surfaces receive a very light pointer
-  // spotlight. This is deliberately a CSS-coordinate effect only; it never
-  // changes data, focus, navigation or click behaviour.
-  const spotlightSelector = ".journey-stage, .panel, .page-head, .persona, .story-card, .walkthrough-stage, .guided-stage-card";
-  const spotlightSeen = new WeakSet();
-  const decorateSpotlights = (root = document) => {
-    const nodes = [];
-    if (root.matches?.(spotlightSelector)) nodes.push(root);
-    root.querySelectorAll?.(spotlightSelector).forEach((node) => nodes.push(node));
-    nodes.forEach((node) => {
-      if (spotlightSeen.has(node)) return;
-      spotlightSeen.add(node);
-      node.classList.add("vx-spotlight");
-    });
-  };
-  decorateSpotlights();
-  const spotlightMutation = new MutationObserver((records) => {
-    records.forEach((record) => record.addedNodes.forEach((node) => {
-      if (node.nodeType === 1) decorateSpotlights(node);
-    }));
-  });
-  spotlightMutation.observe(document.body, { childList: true, subtree: true });
-
-  if (motionOK && !coarsePointer) {
-    let spotFrame = 0;
-    let spotTarget = null;
-    let spotX = 0;
-    let spotY = 0;
-    const paintSpot = () => {
-      spotFrame = 0;
-      if (!spotTarget || !spotTarget.isConnected) return;
-      const rect = spotTarget.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      spotTarget.style.setProperty("--vx-x", `${spotX - rect.left}px`);
-      spotTarget.style.setProperty("--vx-y", `${spotY - rect.top}px`);
-    };
-    document.addEventListener("pointermove", (event) => {
-      const target = event.target.closest?.(spotlightSelector);
-      if (!target) return;
-      spotTarget = target;
-      spotX = event.clientX;
-      spotY = event.clientY;
-      if (!spotFrame) spotFrame = requestAnimationFrame(paintSpot);
-    }, { passive: true });
-  }
-
-  // The floating shell becomes slightly denser once content is moving beneath
-  // it. The transition improves orientation on long pages without hiding nav.
-  const topbar = document.querySelector(".topbar");
-  if (topbar) {
-    const updateShellDensity = () => topbar.classList.toggle("vx-condensed", scrollY > 28);
-    addEventListener("scroll", updateShellDensity, { passive: true });
-    requestAnimationFrame(updateShellDensity);
-  }
+  document.documentElement.classList.add("ui-motion-lite");
 }
