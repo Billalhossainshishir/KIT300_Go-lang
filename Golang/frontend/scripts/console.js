@@ -417,6 +417,25 @@ function setDrawer(open) {
       scrim.classList.add("shown");
       drawer.classList.add("shown");
     });
+    if (!drawer._focusTrap) {
+      drawer._focusTrap = (event) => {
+        if (event.key !== "Tab" || drawer.hidden) return;
+        const focusable = [...drawer.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )].filter((el) => !el.hidden && el.offsetParent !== null);
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      };
+      drawer.addEventListener("keydown", drawer._focusTrap);
+    }
     $("close-cases").focus();
   } else {
     scrim.classList.remove("shown");
@@ -465,6 +484,8 @@ async function run(requestText, options = {}) {
   }
   $("run").disabled = true;
   $("continue-ramify").disabled = true;
+  $("run").setAttribute("aria-busy", "true");
+  $("continue-ramify").setAttribute("aria-busy", "true");
   $("run").textContent = "Understanding…";
   $("continue-ramify").textContent = "Checking…";
 
@@ -522,6 +543,8 @@ async function run(requestText, options = {}) {
   } finally {
     $("run").disabled = false;
     $("continue-ramify").disabled = false;
+    $("run").removeAttribute("aria-busy");
+    $("continue-ramify").removeAttribute("aria-busy");
     $("run").textContent = "Use this request";
     $("continue-ramify").textContent = "Continue with RAMIFY →";
   }
