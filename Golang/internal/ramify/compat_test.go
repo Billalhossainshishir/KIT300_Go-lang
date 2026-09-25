@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -44,13 +45,67 @@ func request(t *testing.T, s *Server, method, path string, body any) *httptest.R
 }
 func TestCurrentFrontendAndAssetsServe(t *testing.T) {
 	s := newTestServer(t)
-	for _, p := range []string{"/", "/shop", "/demo", "/david-demo", "/cart", "/agents", "/review", "/activity", "/technical", "/proof-pack", "/about", "/help", "/style.css", "/shell.js", "/console.js", "/david-demo.js", "/apex-magnesium-glycinate.png"} {
+	for _, p := range []string{
+		"/", "/shop", "/demo", "/david-demo", "/tour", "/cart", "/agents", "/review",
+		"/activity", "/human-receipt", "/technical", "/proof-pack", "/about", "/help",
+		"/style.css", "/shell.js", "/console.js", "/activity.js", "/agents.js", "/cart.js",
+		"/david-demo.js", "/demo.js", "/human-receipt.js", "/review.js", "/technical.js",
+		"/tour.js", "/apex-magnesium-glycinate.png",
+	} {
 		w := request(t, s, http.MethodGet, p, nil)
 		if w.Code != 200 {
 			t.Fatalf("%s status=%d", p, w.Code)
 		}
 	}
 }
+
+func TestCurrentFrontendUXRegressionMarkers(t *testing.T) {
+	root := repoRoot(t)
+	read := func(rel string) string {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil {
+			t.Fatalf("read %s: %v", rel, err)
+		}
+		return string(b)
+	}
+
+	html := read("frontend/pages/console.html")
+	consoleJS := read("frontend/scripts/console.js")
+	shellJS := read("frontend/scripts/shell.js")
+	css := read("frontend/styles/style.css")
+
+	for _, forbidden := range []string{
+		`id="trust-timeline"`,
+		"new MutationObserver(",
+		"new IntersectionObserver(",
+		`dot.className = "ui-ripple"`,
+	} {
+		if strings.Contains(html+"\n"+shellJS, forbidden) {
+			t.Fatalf("frontend regression marker still present: %s", forbidden)
+		}
+	}
+
+	for _, required := range []struct {
+		name, source, marker string
+	}{
+		{"empty request validation", consoleJS, "Enter a product name or select a product first."},
+		{"start fresh confirmation", consoleJS, "Start a fresh journey?"},
+		{"request busy state", consoleJS, `setAttribute("aria-busy", "true")`},
+		{"story keyboard focus trap", consoleJS, "drawer._focusTrap"},
+		{"demo story explanation", html, "Demo stories are prepared examples"},
+		{"trust passport close control", shellJS, `id="trust-passport-x"`},
+		{"toast live feedback", shellJS, `aria-live`},
+		{"agent policy handoff", shellJS, "Agent policy handoff"},
+		{"guided readability audit", css, "Final project-wide readability/performance audit"},
+		{"story drawer viewport safety", css, "max-height:calc(100dvh - 24px)"},
+	} {
+		if !strings.Contains(required.source, required.marker) {
+			t.Fatalf("%s marker missing: %s", required.name, required.marker)
+		}
+	}
+}
+
 func TestSeventeenScenarioParityAndReceiptVerification(t *testing.T) {
 	s := newTestServer(t)
 	for _, raw := range arr(s.seedMap()["scenarios"]) {
