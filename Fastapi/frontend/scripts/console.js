@@ -129,7 +129,10 @@ async function boot() {
 
   $("run").addEventListener("click", () => run($("query").value.trim()));
   $("query").addEventListener("keydown", (e) => e.key === "Enter" && run($("query").value.trim()));
-  $("query").addEventListener("input", handleRequestEdit);
+  $("query").addEventListener("input", () => {
+    $("query").setCustomValidity("");
+    handleRequestEdit();
+  });
   $("qty").addEventListener("change", () => current && run(current.request_text || current.subject_ref, { preserveStep: journeyStep }));
   $("continue-ramify").addEventListener("click", () => {
     const request = selectedRequestText || selectedProductRef;
@@ -238,10 +241,12 @@ function goJourney(step) {
   if (journeyStep > journeyMax) journeyMax = journeyStep;
 
   const shopHeader = document.querySelector(".shop-head");
+  const introDetails = document.querySelector(".shop-intro-details");
   const productLine = document.querySelector(".ramify-product-line");
   const journeyPromise = document.querySelector(".journey-promise");
   const shopOnlyVisible = journeyStep === 0;
   if (shopHeader) shopHeader.hidden = !shopOnlyVisible;
+  if (introDetails) introDetails.hidden = !shopOnlyVisible;
   if (productLine) productLine.hidden = !shopOnlyVisible;
   if (journeyPromise) journeyPromise.hidden = !shopOnlyVisible;
 
@@ -260,9 +265,10 @@ function goJourney(step) {
   const nav = $("journey-nav");
   nav.hidden = journeyStep === 0 || !current;
   if (!nav.hidden) {
-    $("journey-position").textContent = `Step ${journeyStep + 1} of 6`;
-    const labels = ["", "Next: RAMIFY checks", "Next: Agent response", "Next: Receipt summary", "Next: Checkout", ""];
-    $("journey-next-label").textContent = labels[journeyStep] || "Final step";
+    const stepNames = ["Product", "Request", "RAMIFY", "Agent", "Receipt", "Checkout"];
+    const nextNames = ["", "RAMIFY", "Agent", "Receipt", "Checkout", ""];
+    $("journey-position").textContent = `${stepNames[journeyStep]} · ${journeyStep + 1}/6`;
+    $("journey-next-label").textContent = nextNames[journeyStep] ? `Next: ${nextNames[journeyStep]}` : "Final step";
     $("journey-back").disabled = journeyStep <= 1;
     $("journey-next").hidden = journeyStep >= 5;
   }
@@ -275,7 +281,12 @@ function goJourney(step) {
   if (journeyStep >= 3) void refreshBadges();
 
   const stage = $(`journey-stage-${journeyStep}`);
-  if (stage && journeyStep > 0) stage.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (stage && journeyStep > 0) {
+    stage.classList.remove("journey-stage-focus");
+    requestAnimationFrame(() => stage.classList.add("journey-stage-focus"));
+    stage.addEventListener("animationend", () => stage.classList.remove("journey-stage-focus"), { once: true });
+    stage.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 // The cases are an operator's tool, not shop furniture, so they live in a
@@ -406,6 +417,25 @@ function setDrawer(open) {
       scrim.classList.add("shown");
       drawer.classList.add("shown");
     });
+    if (!drawer._focusTrap) {
+      drawer._focusTrap = (event) => {
+        if (event.key !== "Tab" || drawer.hidden) return;
+        const focusable = [...drawer.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )].filter((el) => !el.hidden && el.offsetParent !== null);
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      };
+      drawer.addEventListener("keydown", drawer._focusTrap);
+    }
     $("close-cases").focus();
   } else {
     scrim.classList.remove("shown");
@@ -429,8 +459,17 @@ async function showProfileNote() {
 }
 
 async function run(requestText, options = {}) {
-  if (!requestText) return;
-  const originalRequest = String(requestText).trim();
+  const originalRequest = String(requestText || "").trim();
+  if (!originalRequest) {
+    const query = $("query");
+    if (query) {
+      query.setCustomValidity("Enter a product name or select a product first.");
+      query.reportValidity();
+      query.focus();
+    }
+    toast("Enter a product name or select a product first.", "bad");
+    return;
+  }
   // Constrain the LLM only when this run came from the product the shopper
   // explicitly selected. A newly typed request must be free to match another
   // catalogue item instead of inheriting a stale card selection.
@@ -445,6 +484,8 @@ async function run(requestText, options = {}) {
   }
   $("run").disabled = true;
   $("continue-ramify").disabled = true;
+  $("run").setAttribute("aria-busy", "true");
+  $("continue-ramify").setAttribute("aria-busy", "true");
   $("run").textContent = "Understanding…";
   $("continue-ramify").textContent = "Checking…";
 
@@ -496,11 +537,14 @@ async function run(requestText, options = {}) {
 
     if (options.preserveStep == null) journeyMax = 1;
     goJourney(options.preserveStep != null ? options.preserveStep : 1);
+    toast("Request checked. Follow the highlighted steps to review the result.", "good");
   } catch (error) {
     toast(error.message, "bad");
   } finally {
     $("run").disabled = false;
     $("continue-ramify").disabled = false;
+    $("run").removeAttribute("aria-busy");
+    $("continue-ramify").removeAttribute("aria-busy");
     $("run").textContent = "Use this request";
     $("continue-ramify").textContent = "Continue with RAMIFY →";
   }
@@ -786,23 +830,28 @@ function renderTrace(result) {
     .join('<u aria-hidden="true">→</u>');
 
   $("trace").innerHTML = `
-    <div class="performance-proof">
-      <span><small>Interpretation</small><b>${Number.isFinite(aiMs) ? `${aiMs.toFixed(3)} ms` : "not measured"}</b></span>
-      <span><small>Deterministic RAMIFY</small><b>${totalMs.toFixed(3)} ms</b></span>
-      <span><small>Local total</small><b>${combinedMs.toFixed(3)} ms</b></span>
-      <span><small>Receipt</small><b>signed + checkable</b></span>
-      <p>AI latency is kept separate from deterministic trust-engine latency. These are local demo measurements, not production benchmarks.</p>
-    </div>
     <div class="primitive-proof-workspace">
-      <div class="trust-timeline-title"><span class="eyebrow">FIVE RESOLVE PRIMITIVES</span><strong>The deterministic proof at the centre of RAMIFY</strong></div>
+      <div class="trust-timeline-title"><span class="eyebrow">FIVE RESOLVE PRIMITIVES</span><strong>What RAMIFY checked</strong></div>
       <div class="primitive-proof-track">${primitiveCards}</div>
-      <p class="detail-note">The seven detailed evidence checks sit inside the verify stage. The model does not create any primitive output.</p>
+      <p class="detail-note">This is the main trust-check path. Open the technical details only when you need the evidence and timing breakdown.</p>
     </div>
-    ${rows}
-    <div class="checks">
-      <div class="field-label" style="margin-bottom:10px;">The seven detailed checks under verify()</div>
-      ${checks}
-    </div>`;
+    <details class="trace-technical-details">
+      <summary>View timing and detailed evidence checks</summary>
+      <div class="trace-technical-body">
+        <div class="performance-proof">
+          <span><small>Interpretation</small><b>${Number.isFinite(aiMs) ? `${aiMs.toFixed(3)} ms` : "not measured"}</b></span>
+          <span><small>Deterministic RAMIFY</small><b>${totalMs.toFixed(3)} ms</b></span>
+          <span><small>Local total</small><b>${combinedMs.toFixed(3)} ms</b></span>
+          <span><small>Receipt</small><b>signed + checkable</b></span>
+          <p>AI latency is kept separate from deterministic trust-engine latency. These are local demo measurements, not production benchmarks.</p>
+        </div>
+        ${rows}
+        <div class="checks">
+          <div class="field-label" style="margin-bottom:10px;">Seven detailed checks under verify()</div>
+          ${checks}
+        </div>
+      </div>
+    </details>`;
   $$("[data-evidence-index]", $("trace")).forEach((button) =>
     button.addEventListener("click", () => openEvidenceTrail(Number(button.dataset.evidenceIndex)))
   );
@@ -1053,7 +1102,7 @@ function renderReceipt(result) {
       <footer class="receipt-foot">
         <div><strong>Sealed and checkable.</strong> Any later change to this receipt is
           detectable from the hash and signature it carries. Check it with the button above
-          or with <span class="mono">scripts/ramify_verify.py</span> on any machine.</div>
+          or with <span class="mono">bin/RAMIFY-Verify</span> (or <span class="mono">RAMIFY-Verify.exe</span> on Windows).</div>
         <div class="receipt-notice">${esc(r.notice)}</div>
       </footer>
     </div>`;
@@ -1140,7 +1189,7 @@ async function renderExplanation(receipt) {
 
 async function copyReceipt() {
   await copyText(JSON.stringify(current.receipt, null, 2), () =>
-    toast("Copied. Check it yourself with: python scripts/ramify_verify.py receipt.json")
+    toast("Copied. Check it yourself with: bin\\RAMIFY-Verify.exe receipt.json")
   );
 }
 
@@ -1166,6 +1215,14 @@ async function tamperTest() {
 
 
 function startFresh() {
+  const hasJourney = Boolean(current || selectedProductRef || $("query")?.value.trim());
+  if (hasJourney) {
+    const confirmed = window.confirm(
+      "Start a fresh journey? Your current product and request will be cleared. Saved receipts and audit history will stay."
+    );
+    if (!confirmed) return;
+  }
+
   clearPreparedProduct({ keepQuery: false, preserveActor: false });
   $("qty").value = "1";
   setDrawer(false);
