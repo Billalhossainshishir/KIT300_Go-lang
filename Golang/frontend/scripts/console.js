@@ -241,10 +241,12 @@ function goJourney(step) {
   if (journeyStep > journeyMax) journeyMax = journeyStep;
 
   const shopHeader = document.querySelector(".shop-head");
+  const introDetails = document.querySelector(".shop-intro-details");
   const productLine = document.querySelector(".ramify-product-line");
   const journeyPromise = document.querySelector(".journey-promise");
   const shopOnlyVisible = journeyStep === 0;
   if (shopHeader) shopHeader.hidden = !shopOnlyVisible;
+  if (introDetails) introDetails.hidden = !shopOnlyVisible;
   if (productLine) productLine.hidden = !shopOnlyVisible;
   if (journeyPromise) journeyPromise.hidden = !shopOnlyVisible;
 
@@ -508,6 +510,7 @@ async function run(requestText, options = {}) {
 
     if (options.preserveStep == null) journeyMax = 1;
     goJourney(options.preserveStep != null ? options.preserveStep : 1);
+    toast("Request checked. Follow the highlighted steps to review the result.", "good");
   } catch (error) {
     toast(error.message, "bad");
   } finally {
