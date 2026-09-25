@@ -1,14 +1,29 @@
 RAMIFY OS v11.0.7 - FINAL GO + LATEST FRONTEND
 ================================================
 
-WINDOWS - ONE CLICK
--------------------
-1. Extract the complete ZIP.
+PACKAGED WINDOWS RELEASE - ONE CLICK
+------------------------------------
+The packaged release ZIP includes generated binaries that are intentionally
+not committed to GitHub.
+
+1. Extract the packaged release ZIP completely.
 2. Open the bin folder.
 3. Double-click RAMIFY.exe.
 
 RAMIFY selects a free 127.0.0.1 port and opens the Shop automatically.
 No Python, FastAPI or Uvicorn installation is required.
+
+GITHUB SOURCE CHECKOUT
+----------------------
+The GitHub repository does not contain bin/RAMIFY.exe because /bin and *.exe
+are generated build artefacts and are ignored.
+
+From the repository root:
+
+  cd Golang
+  go test ./...
+  go vet ./...
+  go run ./cmd/ramify
 
 LOCAL STATE
 -----------
@@ -38,7 +53,7 @@ Optional environment variables:
 
 SOURCE DEVELOPMENT
 ------------------
-Requires Go 1.23+:
+Requires Go 1.23+. Run these commands from the Golang directory:
 
   go test ./...
   go vet ./...
@@ -52,10 +67,14 @@ Force port 8000:
 
 STANDALONE RECEIPT VERIFIER
 ---------------------------
-Windows:
+Packaged Windows release:
   bin\RAMIFY-Verify.exe receipt.json
 
-Linux/macOS builds are also included in bin.
+From GitHub source:
+  go run ./cmd/verify receipt.json
+
+Packaged Linux/macOS release builds are generated separately and are not
+committed to this source repository.
 
 PROOF PACKS
 -----------
