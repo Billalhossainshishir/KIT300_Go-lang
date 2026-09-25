@@ -5177,3 +5177,135 @@ summary:focus-visible {
   .queue-actions a.btn,
   .receipt-more .btn { width:100%; }
 }
+
+
+/* ── QA first-five UX fixes · 25 Sep 2026 ──────────────────────────────
+   Reduce perceived latency, keep action feedback legible, simplify the first
+   screen, and make nav/icon geometry stable at browser zoom levels. */
+.ui-motion-lite .ui-atmosphere,
+.ui-motion-lite .ui-nav-pulse { display:none !important; }
+.ui-motion-lite .ui-motion-item,
+.ui-motion-lite .ui-tilt {
+  animation:none !important;
+  transform:none !important;
+  transition-duration:.12s !important;
+}
+.ui-motion-lite .card:hover,
+.ui-motion-lite .persona:hover,
+.ui-motion-lite .story-card:hover {
+  transform:translateY(-1px) !important;
+}
+
+.topbar nav { gap:4px !important; min-width:0; }
+.topbar nav a {
+  min-width:0;
+  min-height:40px;
+  padding:8px 12px !important;
+  border-radius:999px !important;
+  gap:7px !important;
+  line-height:1.1;
+  overflow:visible;
+}
+.topbar nav a[aria-current="page"] { border-radius:999px !important; }
+.topbar nav a > span:not(.nav-icon):not(.count) {
+  min-width:0;
+  line-height:1.15;
+}
+.nav-icon {
+  width:18px !important;
+  height:18px !important;
+  flex:0 0 18px !important;
+  overflow:visible;
+}
+.nav-icon svg {
+  width:17px !important;
+  height:17px !important;
+  display:block;
+}
+nav .count { flex:none; margin-left:0 !important; }
+.topbar-right { flex:none; }
+
+.btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.card-action,
+.story-card-action,
+.shop-head-actions { align-items:center; }
+.card-action span,
+.story-card-action b { flex:none; }
+
+.shop-head {
+  grid-template-columns:minmax(0,1fr) auto !important;
+  min-height:0 !important;
+  padding:30px 34px !important;
+}
+.shop-head h1 {
+  max-width:18ch !important;
+  font-size:clamp(38px,4.6vw,60px) !important;
+  line-height:1 !important;
+}
+.shop-head .lede { max-width:62ch !important; }
+.shop-intro-details {
+  margin:0 0 18px;
+  border:1px solid rgba(32,75,60,.12);
+  border-radius:16px;
+  background:rgba(249,252,250,.92);
+  overflow:hidden;
+}
+.shop-intro-details > summary {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  padding:12px 15px;
+  cursor:pointer;
+  color:#315348;
+  font-size:12px;
+  font-weight:760;
+  list-style:none;
+}
+.shop-intro-details > summary::-webkit-details-marker { display:none; }
+.shop-intro-details > summary::after {
+  content:"+";
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  flex:none;
+  border-radius:8px;
+  background:#edf5f1;
+  color:#2d725f;
+  font-size:16px;
+}
+.shop-intro-details[open] > summary::after { content:"−"; }
+.shop-intro-details > summary span {
+  margin-left:auto;
+  color:#7a8a83;
+  font-size:10px;
+  font-weight:600;
+}
+.shop-intro-details-body {
+  display:grid;
+  gap:10px;
+  padding:0 14px 14px;
+}
+.shop-intro-details .shop-hero-visual {
+  min-height:0 !important;
+  padding:15px !important;
+  border-radius:14px !important;
+}
+.shop-intro-details .journey-promise { margin:0; }
+
+@media (max-width:1100px) {
+  .topbar-inner { gap:6px; }
+  .topbar nav a { padding:8px 9px !important; gap:5px !important; }
+  .nav-icon { width:17px !important; flex-basis:17px !important; }
+}
+@media (max-width:900px) {
+  .shop-head { grid-template-columns:1fr !important; }
+  .shop-head-actions { justify-content:flex-start; }
+}
