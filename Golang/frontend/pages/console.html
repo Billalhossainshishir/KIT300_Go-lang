@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop · RAMIFY OS</title>
-<link rel="stylesheet" href="/style.css?v=11.0.7-uxfix2">
+<link rel="stylesheet" href="/style.css?v=11.0.7-uxfix3">
 </head>
 <body>
 
@@ -56,7 +56,7 @@
   <section class="journey-stage active" id="journey-stage-0" data-stage="0">
     <div class="journey-stage-head">
       <div class="journey-step-number">01</div>
-      <div><div class="eyebrow">START HERE</div><h2>Choose what you want to buy</h2><p>Pick a product card, or type a normal request. You can also choose which agent is shopping for you.</p></div>
+      <div><div class="eyebrow">START HERE</div><h2>Choose what you want to buy</h2><p>Select a product or type a request, then continue.</p></div>
     </div>
 
     <div class="controls shop-controls">
@@ -105,18 +105,18 @@
     <section class="journey-stage" id="journey-stage-1" data-stage="1" hidden>
       <div class="journey-stage-head">
         <div class="journey-step-number">02</div>
-        <div><div class="eyebrow">REQUEST INTERPRETATION</div><h2>First, the request is understood</h2><p>An exact catalogue selection is matched directly. Genuine free-form text can use the local AI. Neither path decides whether the product is trusted.</p></div>
+        <div><div class="eyebrow">REQUEST INTERPRETATION</div><h2>RAMIFY understands the request</h2><p>Your request is matched to the product before trust checks begin.</p></div>
       </div>
       <div class="interpretation-strip" id="interpretation" hidden></div>
       <div id="ai-fallback-banner" class="ai-fallback-banner" hidden></div>
-      <div class="boundary-card"><strong>Important boundary</strong><span>AI interprets and explains. The deterministic RAMIFY engine makes the product-trust decision.</span></div>
+      <details class="boundary-card boundary-details"><summary>How AI is used</summary><span>AI can interpret and explain. RAMIFY makes the trust decision deterministically.</span></details>
     </section>
 
     <!-- STEP 3 · DETERMINISTIC CHECKS -->
     <section class="journey-stage" id="journey-stage-2" data-stage="2" hidden>
       <div class="journey-stage-head">
         <div class="journey-step-number">03</div>
-        <div><div class="eyebrow">RAMIFY CHECK</div><h2>Now RAMIFY checks the product facts</h2><p>Identity, seller, evidence, validity, claims, conflicts and recall status are checked before any agent policy is applied.</p></div>
+        <div><div class="eyebrow">RAMIFY CHECK</div><h2>RAMIFY checks the product facts</h2><p>Evidence and product risks are checked before agent policy is applied.</p></div>
       </div>
       <div class="panel process-panel" id="trace"></div>
       <div class="evidence-trail-panel" id="evidence-trail-panel" hidden></div>
@@ -126,17 +126,17 @@
     <section class="journey-stage" id="journey-stage-3" data-stage="3" hidden>
       <div class="journey-stage-head">
         <div class="journey-step-number">04</div>
-        <div><div class="eyebrow">AGENT RESPONSE</div><h2>One product result. Your agent decides what it may do next.</h2><p>The product result stays locked. Your selected agent can only make the next step stricter.</p></div>
+        <div><div class="eyebrow">AGENT RESPONSE</div><h2>Your agent responds to the result</h2><p>The agent may make the next action stricter, never less safe.</p></div>
       </div>
       <div id="verdict"></div>
       <div id="risk-path" class="risk-path-shell"></div>
       <div id="why-panel" class="why-panel"></div>
 
-      <details class="journey-detail" open>
+      <details class="journey-detail">
         <summary>Your agent's buying rules</summary>
         <div class="panel" id="conditions"></div>
       </details>
-      <details class="journey-detail" open>
+      <details class="journey-detail">
         <summary>What can happen next</summary>
         <div class="panel" id="gate"></div>
       </details>
@@ -150,7 +150,7 @@
     <section class="journey-stage" id="journey-stage-4" data-stage="4" hidden>
       <div class="journey-stage-head">
         <div class="journey-step-number">05</div>
-        <div><div class="eyebrow">FINAL SUMMARY</div><h2>Read the decision like a normal customer</h2><p>The human-friendly receipt explains what RAMIFY found and what the agent decided. The complete signed JSON stays available underneath for audit.</p></div>
+        <div><div class="eyebrow">FINAL SUMMARY</div><h2>Your decision summary</h2><p>See the result first. Signed audit details remain available below.</p></div>
       </div>
       <div class="human" id="human"></div>
       <div class="terminal" id="terminal" hidden></div>
@@ -160,7 +160,7 @@
     <section class="journey-stage" id="journey-stage-5" data-stage="5" hidden>
       <div class="journey-stage-head">
         <div class="journey-step-number">06</div>
-        <div><div class="eyebrow">FINISH THE JOURNEY</div><h2 id="checkout-stage-title">Ready for the next step</h2><p id="checkout-stage-copy">If the recorded decision permits purchase, the checked product can move to the simulated basket and checkout.</p></div>
+        <div><div class="eyebrow">FINISH THE JOURNEY</div><h2 id="checkout-stage-title">Ready for the next step</h2><p id="checkout-stage-copy">Continue only if the recorded decision permits it.</p></div>
       </div>
       <div class="panel checkout-stage-card" id="buy-strip" hidden></div>
       <div class="checkout-blocked" id="checkout-blocked" hidden></div>
@@ -169,7 +169,7 @@
 
     <div class="journey-nav" id="journey-nav" hidden>
       <button class="btn btn-ghost" id="journey-back">← Back</button>
-      <div class="journey-nav-copy"><span id="journey-position">Step 2 of 6</span><small id="journey-next-label">Next: RAMIFY checks</small></div>
+      <div class="journey-nav-copy"><strong id="journey-position">Request · 2/6</strong><small id="journey-next-label">Next: RAMIFY</small></div>
       <button class="btn btn-lg" id="journey-next">Next →</button>
     </div>
   </div>
@@ -210,6 +210,6 @@
 
 <footer></footer>
 <script src="/shell.js?v=11.0.7-uxfix"></script>
-<script src="/console.js?v=11.0.7-uxfix2"></script>
+<script src="/console.js?v=11.0.7-uxfix3"></script>
 </body>
 </html>
