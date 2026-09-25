@@ -17,9 +17,11 @@ This is the reconciled final Go release built from the Golden Go architecture an
 
 ## Measured validation
 
-- `go test -count=1 ./...` — PASS
-- `go vet ./...` — PASS
-- JavaScript syntax for all current scripts — PASS
+Post-UX audit validation was rerun by GitHub Actions on 25 September 2026. Workflow **Go validation**, run #7, completed successfully on source head `8cbb23e37c5d377eec2eb33915bfe3c4d65a0b85`. That run includes the expanded frontend-serving/UX regression suite added during the final project audit.
+
+- `go test -count=1 ./...` — PASS (GitHub Actions run #7)
+- `go vet ./...` — PASS (GitHub Actions run #7)
+- JavaScript syntax for all current frontend scripts — PASS (GitHub Actions run #7)
 - API route parity — 41/41
 - named scenarios — 17/17
 - Quick Pack — 5/5 receipts verified
