@@ -348,10 +348,12 @@ async function openTrustPassport(subjectRef, assessment = null) {
   let dialog = $("trust-passport-dialog");
   if (!dialog) {
     document.body.insertAdjacentHTML("beforeend", `<dialog id="trust-passport-dialog" class="trust-passport-dialog">
+      <button class="trust-passport-x" type="button" id="trust-passport-x" aria-label="Close trust passport">×</button>
       <div id="trust-passport-body"></div>
       <div class="dialog-actions"><button class="btn btn-ghost" type="button" id="trust-passport-close">Close</button></div>
     </dialog>`);
     dialog = $("trust-passport-dialog");
+    $("trust-passport-x").addEventListener("click", () => dialog.close());
     $("trust-passport-close").addEventListener("click", () => dialog.close());
   }
   const status = source.status || {};
