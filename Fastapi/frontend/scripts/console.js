@@ -268,6 +268,12 @@ function goJourney(step) {
   }
 
   renderTrustTimeline();
+
+  // A purchase assessment may already have created a human-review item on the
+  // backend, but do not reveal that new Needs me count while the user is still
+  // reading Request or RAMIFY. Surface it once the journey reaches Agent.
+  if (journeyStep >= 3) void refreshBadges();
+
   const stage = $(`journey-stage-${journeyStep}`);
   if (stage && journeyStep > 0) stage.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -487,7 +493,6 @@ async function run(requestText, options = {}) {
     renderCheckoutState(result);
     renderTrustTimeline();
     renderSessionSummary(result);
-    refreshBadges();
 
     if (options.preserveStep == null) journeyMax = 1;
     goJourney(options.preserveStep != null ? options.preserveStep : 1);
