@@ -1,14 +1,14 @@
 # RAMIFY OS v11.0.7 - FastAPI/Python Deep-Audit Build
 
-Synthetic local KIT300 demonstration. This build includes the 26-28 August FastAPI client-feedback hardening plus a second code-and-logic audit of transaction authority, linked-record verification, deterministic resolution, evidence/claim binding, optional AI adapter boundaries, signer continuity and Proof Pack portability.
+Synthetic local KIT300 demonstration. The FastAPI release now includes the final 25 September 2026 UX/accessibility/performance sync used by the Go release, while retaining the FastAPI/LangGraph/Ollama backend path and deterministic trust boundary. Earlier client-feedback hardening and the deep audit of transaction authority, linked-record verification, deterministic resolution, evidence/claim binding, signer continuity and Proof Pack portability remain in place.
 
 Run instructions are in `HOW_TO_RUN.txt`. Detailed changes are in `CLIENT_FEEDBACK_FIXES.md`. The formal regression evidence is in `docs/03_Test_Report.pdf`.
 
 Core boundary: a local LLM may interpret free-form text or explain an already sealed result. RESOLVE, RATIFY, actor policy, Action Gate, human review, transaction authority and receipt signing remain deterministic.
 
-Final deterministic/regression QA result for this build: **422 passed, 7 skipped, 1,316 subtests passed, 0 failures**.
+Current automated validation after the final UX sync: **434 passed, 7 skipped, 1,329 subtests passed, 0 failures** on GitHub Actions Project validation run #17. The same run also passes frontend JavaScript syntax checks; the Go validation job remains green in parallel.
 
-The 7 skips are explicit environment-dependent evidence: 2 optional live-model tests, 4 Chromium browser journeys blocked by the current runner's local-browser policy, and 1 live-model browser test. They are not counted as proof of live inference or browser execution. Re-run those optional checks on the presentation machine before final handover.
+The 7 skips are explicit environment-dependent evidence: optional live-model/browser checks are not counted as proof of live inference or real visual browser execution. Re-run the optional live-model checks and perform the final visual walkthrough on the presentation machine before handover.
 
 ## David meeting verification demo
 
