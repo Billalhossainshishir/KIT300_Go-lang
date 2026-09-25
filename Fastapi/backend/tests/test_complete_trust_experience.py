@@ -23,11 +23,12 @@ def test_shop_uses_curated_story_library_without_scenario_lab_or_manual_ai_mode(
     assert '$("no-ai-mode")' not in js
 
 
-def test_trust_timeline_and_session_summary_are_present():
+def test_primary_journey_progress_replaces_duplicate_trust_timeline():
     page = read("pages/console.html")
     js = read("scripts/console.js")
-    assert 'id="trust-timeline"' in page
-    assert "RAMIFY TRUST TIMELINE" in js
+    assert 'id="journey-progress"' in page
+    assert 'id="trust-timeline"' not in page
+    assert "Request · 2/6" in page
     assert 'id="session-summary"' in page
     assert "SESSION SUMMARY" in js
 
