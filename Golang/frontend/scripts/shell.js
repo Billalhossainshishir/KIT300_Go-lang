@@ -703,72 +703,10 @@ function installFinalPolish() {
   if (document.documentElement.dataset.finalPolish === "1") return;
   document.documentElement.dataset.finalPolish = "1";
 
-  // A tiny reading-progress line helps long About/Help/Technical pages without
-  // adding another navigation control.
-  const progress = document.createElement("div");
-  progress.className = "ui-scroll-progress";
-  progress.setAttribute("aria-hidden", "true");
-  document.body.appendChild(progress);
-  const updateProgress = () => {
-    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-    progress.style.width = `${Math.min(100, (scrollY / max) * 100)}%`;
-  };
-  addEventListener("scroll", updateProgress, { passive: true });
-  addEventListener("resize", updateProgress, { passive: true });
-  requestAnimationFrame(updateProgress);
-
-  // Gentle reveal for page sections. Reduced-motion users receive no motion.
-  const seen = new WeakSet();
-  const observer = "IntersectionObserver" in window
-    ? new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add("ui-visible");
-          observer.unobserve(entry.target);
-        });
-      }, { threshold: 0.06, rootMargin: "0px 0px -18px 0px" })
-    : null;
-
-  const decorate = (root = document) => {
-    root.querySelectorAll?.("main > .page-head, main > .disclaimer, main > section, main > .panel, main > .prose, main > #result").forEach((el) => {
-      if (seen.has(el)) return;
-      seen.add(el);
-      el.classList.add("ui-reveal");
-      if (observer) observer.observe(el); else el.classList.add("ui-visible");
-    });
-  };
-  decorate();
-
-  const mutation = new MutationObserver((records) => {
-    for (const record of records) {
-      for (const node of record.addedNodes) {
-        if (node.nodeType === 1) decorate(node);
-      }
-    }
-  });
-  mutation.observe(document.body, { childList: true, subtree: true });
-
-  // Small tactile feedback on normal buttons. Does not delay or replace clicks.
-  document.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
-    const button = event.target.closest?.(".btn, .welcome-option, .card, .scenario");
-    if (!button || button.disabled) return;
-    button.classList.add("ui-ripple-host");
-    const r = button.getBoundingClientRect();
-    const dot = document.createElement("span");
-    dot.className = "ui-ripple";
-    dot.style.left = `${event.clientX - r.left}px`;
-    dot.style.top = `${event.clientY - r.top}px`;
-    button.appendChild(dot);
-    dot.addEventListener("animationend", () => dot.remove(), { once: true });
-  }, { passive: true });
-
-  // Fade the document in only after the shared shell is mounted. This makes
-  // the multi-page interface feel continuous without changing navigation or data flow.
+  // Mark the shared shell as ready without observing or mutating every section.
   requestAnimationFrame(() => document.documentElement.classList.add("ui-ready"));
 
-  // Make keyboard focus easy to follow during a live demo. Pointer users keep
-  // the clean visual treatment; keyboard users get an explicit focus ring.
+  // Keep a clear keyboard focus mode for live demos and accessibility.
   let keyboardMode = false;
   document.addEventListener("keydown", (event) => {
     if (event.key === "Tab") {
@@ -782,8 +720,6 @@ function installFinalPolish() {
     document.documentElement.classList.remove("ui-keyboard");
   }, { passive: true });
 
-  // Advanced presentation motion layer. It is intentionally cosmetic: no API
-  // call, form value, receipt, decision or navigation rule is changed here.
   installAdvancedMotion();
 }
 
