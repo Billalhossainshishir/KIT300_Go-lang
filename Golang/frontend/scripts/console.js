@@ -129,7 +129,10 @@ async function boot() {
 
   $("run").addEventListener("click", () => run($("query").value.trim()));
   $("query").addEventListener("keydown", (e) => e.key === "Enter" && run($("query").value.trim()));
-  $("query").addEventListener("input", handleRequestEdit);
+  $("query").addEventListener("input", () => {
+    $("query").setCustomValidity("");
+    handleRequestEdit();
+  });
   $("qty").addEventListener("change", () => current && run(current.request_text || current.subject_ref, { preserveStep: journeyStep }));
   $("continue-ramify").addEventListener("click", () => {
     const request = selectedRequestText || selectedProductRef;
@@ -429,8 +432,17 @@ async function showProfileNote() {
 }
 
 async function run(requestText, options = {}) {
-  if (!requestText) return;
-  const originalRequest = String(requestText).trim();
+  const originalRequest = String(requestText || "").trim();
+  if (!originalRequest) {
+    const query = $("query");
+    if (query) {
+      query.setCustomValidity("Enter a product name or select a product first.");
+      query.reportValidity();
+      query.focus();
+    }
+    toast("Enter a product name or select a product first.", "bad");
+    return;
+  }
   // Constrain the LLM only when this run came from the product the shopper
   // explicitly selected. A newly typed request must be free to match another
   // catalogue item instead of inheriting a stale card selection.
