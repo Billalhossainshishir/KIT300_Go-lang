@@ -360,8 +360,19 @@ def _validate(fields: dict) -> dict:
     return clean
 
 
+def _assert_name_not_borrowed(label: str, own_ref: str | None) -> None:
+    """Refuse a custom/display name that belongs to a different built-in agent."""
+    wanted = str(label).strip().casefold()
+    for ref, shipped in _seed_profiles().items():
+        if ref != own_ref and shipped["label"].strip().casefold() == wanted:
+            raise InvalidProfile(
+                f"{shipped['label']!r} is the name of a built-in agent. Choose another name."
+            )
+
+
 def save(ref: str, fields: dict) -> dict:
     """Create or edit an agent without risking a lost concurrent update."""
+    _assert_name_not_borrowed(fields.get("label", ""), ref)
     with _PROFILE_LOCK:
         custom = _load_custom()
         custom[ref] = {**_validate(fields), "ref": ref}
@@ -374,6 +385,7 @@ def create(fields: dict) -> dict:
     label = str(fields.get("label", "")).strip()
     if not label:
         raise InvalidProfile("An agent needs a name.")
+    _assert_name_not_borrowed(label, None)
     slug = "".join(c if c.isalnum() else "_" for c in label.lower()).strip("_")[:40]
     if not slug:
         raise InvalidProfile("That name has no letters or numbers in it.")

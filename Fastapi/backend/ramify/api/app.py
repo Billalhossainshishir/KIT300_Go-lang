@@ -629,9 +629,11 @@ def api_receipt_review(request: ReviewRequest) -> dict:
         "reviewed_at": reviewed_at,
         "reviewed_decision": original["actor_decision"],
         "decision_scope": "this simulated transaction only",
+        "identity_verified": False,
         "reviewer_attestation": (
-            "The named reviewer made this simulated decision. This field is a "
-            "recorded acknowledgement, not a personal cryptographic signature."
+            "Reviewer name and role are recorded as supplied with the request. The "
+            "reviewer's identity was not authenticated, and this is not a personal "
+            "cryptographic signature."
         ),
     }
     superseding["human_review"] = human_review
@@ -645,12 +647,16 @@ def api_receipt_review(request: ReviewRequest) -> dict:
         # persona must remain a requisition workflow rather than silently turning
         # into a consumer basket purchase after human review. The successor is
         # separate authority; it never rewrites the machine decision.
-        profile = profiles.profile(original["actor_ref"]) or {}
-        transaction_action = (
-            "create_mock_requisition"
-            if profile.get("purchase_style") == "requisition"
-            else "add_to_mock_cart"
-        )
+        style = original.get("actor_purchase_style")
+        if style not in profiles.PURCHASE_STYLES:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "This receipt does not record which transaction path its agent "
+                    "uses, so it cannot be authorised. Run the product check again."
+                ),
+            )
+        transaction_action = profiles.PURCHASE_STYLES[style]
         superseding["selected_action"] = (
             "human_authorised_requisition"
             if transaction_action == "create_mock_requisition"
@@ -674,6 +680,7 @@ def api_receipt_review(request: ReviewRequest) -> dict:
         "reviewer": {
             "name": request.reviewer_name,
             "role": request.reviewer_role,
+            "identity_verified": False,
         },
         "what_ramify_found": (
             f"Objective posture {original['objective_posture']} — {human_meaning}. "

@@ -16,7 +16,7 @@ import time
 
 from ramify.action import gate
 from ramify.data import seed
-from ramify.policy import actor as actor_policy, vocabulary
+from ramify.policy import actor as actor_policy, profiles, vocabulary
 from ramify.ratify import precedence, verify as ratify_verify
 from ramify.receipt import builder, store
 from ramify.resolve import primitives
@@ -391,6 +391,7 @@ def assess(
         call_trace=trace,
         order=order,
         context=context,
+        purchase_style=(profiles.profile(actor_ref) or {}).get("purchase_style", "cart"),
     )
     signing_us = max(0, (time.perf_counter_ns() - signing_started_ns) // 1000)
     persistence_us = 0

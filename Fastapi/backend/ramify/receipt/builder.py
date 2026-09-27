@@ -63,6 +63,7 @@ def build(
     order: dict | None = None,
     context: str = "decision",
     supersedes_receipt: str | None = None,
+    purchase_style: str | None = None,
 ) -> dict:
     """Assemble a receipt from finished values, then seal it."""
     issued_at = now()
@@ -127,6 +128,10 @@ def build(
         receipt["substitution"] = action_result["substitution"]
     if supersedes_receipt:
         receipt["supersedes_receipt"] = supersedes_receipt
+    if purchase_style:
+        # Seal the transaction path used when the agent decided so a later
+        # profile edit cannot change what a human review is allowed to grant.
+        receipt["actor_purchase_style"] = purchase_style
 
     # Nothing may be written into `receipt` past this point.
     return seal(receipt)
