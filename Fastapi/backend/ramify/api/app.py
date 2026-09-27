@@ -127,6 +127,61 @@ async def no_store(request, call_next):
     return response
 
 
+# This is a loopback-only demo. Refuse DNS-rebound hostnames and browser
+# state-changing requests that were initiated by another site. ``testserver``
+# is the hostname used by FastAPI's in-process TestClient.
+LOCAL_HOSTNAMES = frozenset({"127.0.0.1", "localhost", "::1", "testserver"})
+UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def _hostname(netloc: str) -> str:
+    """Return a hostname without its port, including bracketed IPv6 hosts."""
+    netloc = netloc.strip().lower()
+    if netloc.startswith("["):
+        return netloc[1:netloc.find("]")] if "]" in netloc else netloc
+    return netloc.rsplit(":", 1)[0] if netloc.count(":") == 1 else netloc
+
+
+@app.middleware("http")
+async def refuse_parity_mode(request, call_next):
+    """Never expose HTTP while deterministic hash-parity mode is enabled.
+
+    That mode deliberately pins time/receipt identifiers for reproducible
+    comparisons. It is safe for direct engine tests, not for a serving demo.
+    """
+    if seed.deterministic_mode():
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": (
+                    "RAMIFY_DEMO_DETERMINISTIC is set. It is for hash-parity "
+                    "tests only and cannot serve the application. Unset it and restart."
+                )
+            },
+        )
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def local_same_origin_only(request, call_next):
+    """Protect the unauthenticated loopback demo from cross-site state changes."""
+    host = request.headers.get("host", "")
+    if _hostname(host) not in LOCAL_HOSTNAMES:
+        return JSONResponse(status_code=400, content={"detail": "Unrecognised Host header."})
+
+    if request.method in UNSAFE_METHODS:
+        origin = request.headers.get("origin")
+        if origin is not None:
+            authority = origin.split("://", 1)[1] if "://" in origin else ""
+            if origin == "null" or authority.lower() != host.strip().lower():
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Requests that change local state must come from this page."},
+                )
+
+    return await call_next(request)
+
+
 @app.get("/healthz")
 def healthz() -> dict:
     """What the server can honestly say about its own configuration.
