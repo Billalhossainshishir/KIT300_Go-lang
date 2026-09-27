@@ -7,6 +7,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 from ramify.crypto import keys  # noqa: E402
 from ramify.data import seed  # noqa: E402
 from ramify.engine import assess  # noqa: E402
+from ramify.receipt import proof_pack  # noqa: E402
 
 OUT_DIR = PROJECT_ROOT / "extended-proof-pack"
 SAMPLES = [
@@ -20,7 +21,7 @@ SAMPLES = [
 README = """RAMIFY OS Extended Proof Pack - six-receipt leave-behind
 
 This pack is distinct from the browser Quick Proof Pack. It contains six signed
-synthetic decision receipts, an explicit manifest, a standalone verifier and
+synthetic decision receipts, a signed manifest, a standalone verifier and
 public verification keys only. It contains no RAMIFY application and no private
 signing key.
 
@@ -52,19 +53,20 @@ def main() -> int:
                 path.write_bytes(raw)
                 entries.append({"filename": f"receipts/{path.name}", "sha256": "sha256:" + hashlib.sha256(raw).hexdigest(), "receipt_id": receipt["receipt_id"]})
             public_keys = keys.public_keys()
+            signer = public_keys.get("ramify:demo:signer:receipt", "")
+            fingerprint = keys.fingerprint(signer) if signer else None
+            manifest = {
+                "schema": "ramify-proof-pack-manifest-v1", "pack_type": "extended", "app_version": version,
+                "data_snapshot": seed.snapshot_id(), "dataset_digest": seed.dataset_digest(),
+                "policy_ref": seed.policy_pack()["policy_ref"], "policy_digest": seed.policy_digest(),
+                "verifier_version": "portable-verify-v2", "signer_key_fingerprint": fingerprint,
+                "expected_receipts": entries,
+                "verification_scope": "Historical sealed-record integrity against included public demonstration keys; not current purchase authority or evidence revalidation.",
+            }
+            manifest = proof_pack.sign_manifest(manifest)
         finally:
             if old is None: os.environ.pop("RAMIFY_DATA_DIR", None)
             else: os.environ["RAMIFY_DATA_DIR"] = old
-    signer = public_keys.get("ramify:demo:signer:receipt", "")
-    fingerprint = "sha256:" + hashlib.sha256(bytes.fromhex(signer)).hexdigest() if signer else None
-    manifest = {
-        "schema": "ramify-proof-pack-manifest-v1", "pack_type": "extended", "app_version": version,
-        "data_snapshot": seed.snapshot_id(), "dataset_digest": seed.dataset_digest(),
-        "policy_ref": seed.policy_pack()["policy_ref"], "policy_digest": seed.policy_digest(),
-        "verifier_version": "portable-verify-v2", "signer_key_fingerprint": fingerprint,
-        "expected_receipts": entries,
-        "verification_scope": "Historical sealed-record integrity against included public demonstration keys; not current purchase authority or evidence revalidation.",
-    }
     (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     (OUT_DIR / "README.txt").write_text(README)
     (OUT_DIR / "verify_receipts.py").write_text((PROJECT_ROOT / "scripts" / "portable_verify.py").read_text())

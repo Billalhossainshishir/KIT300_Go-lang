@@ -20,7 +20,7 @@ def command(*args: str, env=None) -> dict:
         run = subprocess.run(args, cwd=ROOT, text=True, capture_output=True, check=False, env=env)
     except FileNotFoundError:
         return {"available": False, "command": list(args), "error": f"{args[0]} not installed"}
-    return {"available": True, "command": list(args), "returncode": run.returncode, "stdout": run.stdout.strip(), "stderr": run.stderr.strip()}
+    return {"available": True, "command": list(args), "returncode": run.returncode, "stdout": run.stdout.rstrip(), "stderr": run.stderr.strip()}
 
 
 def git_result(*args: str) -> dict:
@@ -65,7 +65,8 @@ def main() -> int:
     git_available = status_result.get("available") and status_result.get("returncode") == 0 and commit is not None
     status = status_result.get("stdout", "") if git_available else None
 
-    test = command(sys.executable, "-m", "pytest", "-q")
+    test_env = dict(os.environ, PYTHONPATH="backend")
+    test = command(sys.executable, "-m", "pytest", "backend/tests", "-q", "-rs", env=test_env)
     live = command(sys.executable, "scripts/live_llm_smoke.py")
     record = {
         "captured_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -76,13 +77,14 @@ def main() -> int:
         "assessed_commit_sha": commit if git_available else None,
         "commit_date": commit_date if git_available else None,
         "working_tree_clean": (status == "") if git_available else None,
+        "working_tree_changes": status.splitlines() if status else [],
         "environment": {
             "python": sys.version.split()[0], "platform": sys.platform,
             "pytest": package_version("pytest"), "fastapi": package_version("fastapi"),
             "pydantic": package_version("pydantic"), "cryptography": package_version("cryptography"),
             "playwright": package_version("playwright"),
         },
-        "full_test_command": f"{sys.executable} -m pytest -q",
+        "full_test_command": f"PYTHONPATH=backend {sys.executable} -m pytest backend/tests -q -rs",
         "full_test_result": test,
         "benchmark": benchmark(),
         "optional_live_model_evidence": {

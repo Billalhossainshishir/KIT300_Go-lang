@@ -21,6 +21,7 @@ UNSIGNED_FIELDS = {"payload_hash", "signature"}
 ROOT = Path(__file__).resolve().parent
 VERIFIER_VERSION = "portable-verify-v2"
 MANIFEST_SCHEMA = "ramify-proof-pack-manifest-v1"
+MANIFEST_SIGNATURE_FIELD = "manifest_signature"
 
 
 def _reject_floats(value, path="receipt"):
@@ -44,6 +45,23 @@ def canonical_bytes(receipt: dict) -> bytes:
 
 def _fingerprint(public_hex: str) -> str:
     return "sha256:" + hashlib.sha256(bytes.fromhex(public_hex)).hexdigest()
+
+
+def _manifest_bytes(manifest: dict) -> bytes:
+    body = {key: value for key, value in manifest.items() if key != MANIFEST_SIGNATURE_FIELD}
+    return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def _verify_manifest_signature(manifest: dict, signer_hex: str) -> None:
+    encoded = manifest.get(MANIFEST_SIGNATURE_FIELD)
+    if not isinstance(encoded, str) or not encoded:
+        raise ValueError("manifest signature is missing")
+    try:
+        signature = base64.b64decode(encoded, validate=True)
+        digest = hashlib.sha256(_manifest_bytes(manifest)).digest()
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(signer_hex)).verify(signature, digest)
+    except (ValueError, TypeError, InvalidSignature) as exc:
+        raise ValueError("manifest signature does not verify") from exc
 
 
 def _load_json_object(path: Path, label: str) -> dict:
@@ -110,6 +128,7 @@ def main(argv: list[str] | None = None) -> int:
         signer_fingerprint = _fingerprint(signer)
         if manifest.get("signer_key_fingerprint") != signer_fingerprint:
             raise ValueError("signer-key fingerprint does not match trust/public_keys.json")
+        _verify_manifest_signature(manifest, signer)
         declared = _declared_receipts(manifest)
     except ValueError as exc:
         print(f"FAIL package metadata: {exc}")

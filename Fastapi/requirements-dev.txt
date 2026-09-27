@@ -1,0 +1,7 @@
+# Test and release-evidence dependencies. Install with:
+#   python -m pip install -r requirements-dev.txt
+-r requirements.txt
+pytest>=8
+
+# Optional browser journeys skip explicitly when Playwright is unavailable.
+# playwright>=1.40

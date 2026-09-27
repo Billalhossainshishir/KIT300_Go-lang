@@ -46,7 +46,7 @@ from ramify.action import alternatives
 from ramify.policy import profiles, vocabulary
 from ramify.ratify import verify as ratify_verify
 from ramify.ratify import checks as ratify_checks
-from ramify.receipt import builder, store
+from ramify.receipt import builder, proof_pack, store
 from ramify.resolve import primitives
 from ramify.timing import now
 from ramify.storage import StoreCorrupt
@@ -815,6 +815,7 @@ def api_proof_pack() -> StreamingResponse:
             "expected_receipts": receipt_entries,
             "verification_scope": "Historical sealed-record integrity against included public demonstration keys; not current purchase authority or evidence revalidation.",
         }
+        manifest = proof_pack.sign_manifest(manifest)
         zf.writestr("manifest.json", json.dumps(manifest, indent=2, sort_keys=True) + "\n")
         zf.writestr(
             "README.txt",
@@ -822,7 +823,7 @@ def api_proof_pack() -> StreamingResponse:
             f"Version: {VERSION}\n"
             f"Data snapshot: {seed.snapshot_id()}\n\n"
             "Synthetic demonstration evidence only. These receipts do not certify a real product, seller, regulator or laboratory.\n"
-            "The manifest declares the expected files, build/data/policy identity, verifier version and signer-key fingerprint.\n"
+            "The manifest declares the expected files, build/data/policy identity, verifier version and signer-key fingerprint, and is signed by the same runtime signer as the receipts.\n"
             f"Signer fingerprint: {signer_fingerprint}\n"
             "A proof pack cannot vouch for its own included signer key. Compare this fingerprint with GET /healthz on the issuing RAMIFY instance before attributing authorship.\n"
             f"Example receipt: {receipt_entries[0]['filename']}\n"
@@ -842,6 +843,7 @@ def api_proof_pack() -> StreamingResponse:
         zf.writestr("trust/public_keys.json", json.dumps(public_keys, indent=2, sort_keys=True) + "\n")
         zf.writestr("policy/policy_pack_demo_v1.json", json.dumps(seed.policy_pack(), indent=2, sort_keys=True) + "\n")
         zf.writestr("evidence/evidence_signatures.json", json.dumps(seed.evidence_signatures(), indent=2, sort_keys=True) + "\n")
+        zf.writestr("evidence/record_signatures.json", json.dumps(seed.record_signatures(), indent=2, sort_keys=True) + "\n")
         for evidence_ref, signature_meta in seed.evidence_signatures().items():
             storage_path = signature_meta.get("storage_path")
             if storage_path:

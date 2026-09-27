@@ -9,6 +9,7 @@ normal basket/ledger.
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
 import sys
 import tempfile
 from copy import deepcopy
@@ -36,11 +37,24 @@ def result(label: str, ok: bool, detail: str = "") -> None:
     print(f"[{'PASS' if ok else 'FAIL'}] {label}" + (f" - {detail}" if detail else ""))
 
 
+@contextmanager
+def isolated_data_store():
+    previous = os.environ.get("RAMIFY_DATA_DIR")
+    try:
+        with tempfile.TemporaryDirectory(prefix="ramify-david-demo-") as temp_store:
+            os.environ["RAMIFY_DATA_DIR"] = temp_store
+            yield temp_store
+    finally:
+        if previous is None:
+            os.environ.pop("RAMIFY_DATA_DIR", None)
+        else:
+            os.environ["RAMIFY_DATA_DIR"] = previous
+
+
 def main() -> int:
     global FAILURES
     FAILURES = 0
-    with tempfile.TemporaryDirectory(prefix="ramify-david-demo-") as temp_store:
-        os.environ["RAMIFY_DATA_DIR"] = temp_store
+    with isolated_data_store() as temp_store:
         from ramify.action import cart
         from ramify.crypto.sign import verify_receipt
         from ramify.data import seed

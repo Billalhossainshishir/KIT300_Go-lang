@@ -1,0 +1,22 @@
+# Keep text stable across Windows/macOS/Linux checkouts.
+* text=auto eol=lf
+
+# Windows entry points keep native CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files are never transformed.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.pdf  binary
+*.pptx binary
+*.docx binary
+*.zip  binary
+*.exe  binary
+
+# These files are hashed/signed byte-for-byte. Never rewrite their line endings.
+backend/ramify/data/generated/artefacts/** -text
+backend/ramify/data/generated/evidence_signatures.json -text
+backend/ramify/data/generated/record_signatures.json -text
