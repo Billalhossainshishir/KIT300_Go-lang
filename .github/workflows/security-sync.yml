@@ -1,0 +1,10 @@
+name: Sync Nomaan security backend
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Payload staging in progress."
