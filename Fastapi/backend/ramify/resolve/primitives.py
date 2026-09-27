@@ -163,4 +163,6 @@ def status(subject_ref: str) -> dict:
     }
     if record.get("batch_ref"):
         result["batch_ref"] = record["batch_ref"]
+    from ramify.ratify.checks import evaluate_record_integrity
+    result["integrity"] = evaluate_record_integrity("statuses", subject_ref, record)["state"]
     return result

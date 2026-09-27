@@ -69,9 +69,30 @@ def write_artefacts_and_sign() -> dict[str, dict[str, str]]:
 
     seed_data.GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     seed_data.EVIDENCE_SIGNATURES_PATH.write_text(
-        json.dumps(signatures, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(signatures, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
     )
     return signatures
+
+
+def sign_records() -> dict[str, dict[str, dict[str, str]]]:
+    """Sign recall-status and seller-authority records with their demo issuers."""
+    from ramify.ratify.checks import SELLER_AUTHORITY_ISSUER
+    dataset = _load_raw_seed()
+    signed = {"statuses": {}, "sellers": {}}
+    for kind, records in (("statuses", dataset["statuses"]), ("sellers", dataset["sellers"])):
+        for ref, record in sorted(records.items()):
+            issuer_ref = record["issuer_ref"] if kind == "statuses" else SELLER_AUTHORITY_ISSUER
+            canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            digest = hashlib.sha256(canonical.encode("utf-8")).digest()
+            signed[kind][ref] = {
+                "issuer_ref": issuer_ref,
+                "content_hash": "sha256:" + digest.hex(),
+                "signature": base64.b64encode(keys.load_issuer_private_key(issuer_ref).sign(digest)).decode("ascii"),
+            }
+    seed_data.RECORD_SIGNATURES_PATH.write_text(
+        json.dumps(signed, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+    )
+    return signed
 
 
 def do_seed() -> None:
@@ -93,8 +114,11 @@ def _generate() -> None:
     print(f"Wrote public keys to {keys.EMBEDDED_PUBKEYS_PATH.name}")
 
     seed_data.evidence_signatures.cache_clear()
+    seed_data.record_signatures.cache_clear()
     signatures = write_artefacts_and_sign()
     print(f"Signed {len(signatures)} evidence artefacts")
+    records = sign_records()
+    print(f"Signed {len(records['statuses'])} status and {len(records['sellers'])} seller records")
     print(f"Installed the runtime signing key in {keys.local_data_store()}")
 
 

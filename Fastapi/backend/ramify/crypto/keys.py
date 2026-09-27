@@ -112,7 +112,7 @@ def _write_embedded_pubkeys(keypairs: dict[str, dict[str, str]]) -> None:
     for ref in sorted(keypairs):
         lines.append(f'    "{ref}": "{keypairs[ref]["public_hex"]}",')
     lines.append("}")
-    EMBEDDED_PUBKEYS_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    EMBEDDED_PUBKEYS_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
 def _sync_runtime_signer_public(private: Ed25519PrivateKey) -> Path:

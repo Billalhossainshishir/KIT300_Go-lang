@@ -20,6 +20,7 @@ SEED_PATH = DATA_DIR / "demo_seed.json"
 POLICY_PACK_PATH = DATA_DIR / "policy_pack_demo_v1.json"
 GENERATED_DIR = DATA_DIR / "generated"
 EVIDENCE_SIGNATURES_PATH = GENERATED_DIR / "evidence_signatures.json"
+RECORD_SIGNATURES_PATH = GENERATED_DIR / "record_signatures.json"
 
 
 def deterministic_mode() -> bool:
@@ -46,6 +47,14 @@ def evidence_signatures() -> dict[str, dict[str, str]]:
     if not EVIDENCE_SIGNATURES_PATH.exists():
         return {}
     return json.loads(EVIDENCE_SIGNATURES_PATH.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=1)
+def record_signatures() -> dict[str, dict[str, dict[str, str]]]:
+    """Issuer signatures over recall-status and seller-authority records."""
+    if not RECORD_SIGNATURES_PATH.exists():
+        return {"statuses": {}, "sellers": {}}
+    return json.loads(RECORD_SIGNATURES_PATH.read_text(encoding="utf-8"))
 
 
 def parse_timestamp(value: str) -> datetime:
@@ -79,8 +88,13 @@ def policy_digest() -> str:
 
 
 def dataset_digest() -> str:
-    """Digest of the exact synthetic dataset bytes evaluated by this build."""
-    return _sha256_file(SEED_PATH)
+    """Digest the seed plus the manifests that authenticate decision inputs."""
+    digest = hashlib.sha256()
+    for path in (SEED_PATH, EVIDENCE_SIGNATURES_PATH, RECORD_SIGNATURES_PATH):
+        digest.update(path.name.encode("utf-8") + b"\0")
+        digest.update(path.read_bytes() if path.exists() else b"")
+        digest.update(b"\0")
+    return "sha256:" + digest.hexdigest()
 
 
 def subjects() -> dict:

@@ -36,6 +36,10 @@ REASON_SENTENCE = {
     "procurement_policy_requires_review_of_warned_outcome": "procurement policy sends any warned outcome to a person",
     "seller_not_on_approved_vendor_list": "the seller is not on the procurement approved-vendor list",
     "not_run_identity_unresolved": "the remaining checks could not run without a resolved product",
+    "status_record_integrity_failed": "the recall status record does not match what the regulator signed",
+    "status_record_unsigned": "the recall status record carries no issuer signature",
+    "seller_record_integrity_failed": "the seller's authority record does not match what the issuer signed",
+    "seller_record_unsigned": "the seller's authority record carries no issuer signature",
 }
 
 

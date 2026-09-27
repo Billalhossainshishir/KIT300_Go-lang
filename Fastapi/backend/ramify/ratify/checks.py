@@ -103,6 +103,20 @@ def check_standing(status_result: dict) -> CheckResult:
     standing = status_result.get("standing")
     detail = status_result.get("detail") or ""
 
+    integrity = status_result.get("integrity")
+    if integrity in RECORD_TAMPER_STATES:
+        return CheckResult(
+            "standing", "Recall and advisory standing", FAIL, HARD_STOP,
+            "The recall status record does not match what the issuer signed, so its standing cannot be relied on.",
+            reason_codes=["status_record_integrity_failed"],
+        )
+    if integrity == "missing_signature":
+        return CheckResult(
+            "standing", "Recall and advisory standing", INCOMPLETE, INCOMPLETE_SEVERITY,
+            "The recall status record carries no issuer signature, so its standing is unconfirmed.",
+            reason_codes=["status_record_unsigned"],
+        )
+
     if standing == "recalled":
         return CheckResult(
             "standing",
@@ -149,6 +163,20 @@ def check_seller_authority(subject: dict) -> CheckResult:
             INCOMPLETE_SEVERITY,
             "No seller record is held for this listing.",
             reason_codes=["seller_unknown"],
+        )
+
+    integrity = evaluate_record_integrity("sellers", subject.get("seller_ref", ""), seller)["state"]
+    if integrity in RECORD_TAMPER_STATES:
+        return CheckResult(
+            "seller_authority", "Seller authority", FAIL, HARD_STOP,
+            f"The seller record for {seller.get('name', 'this seller')} does not match what the issuer signed.",
+            reason_codes=["seller_record_integrity_failed"],
+        )
+    if integrity == "missing_signature":
+        return CheckResult(
+            "seller_authority", "Seller authority", INCOMPLETE, INCOMPLETE_SEVERITY,
+            f"The seller record for {seller.get('name', 'this seller')} carries no issuer signature.",
+            reason_codes=["seller_record_unsigned"],
         )
 
     category = subject["category"]
@@ -302,6 +330,32 @@ def evaluate_evidence_integrity_bytes(
         "detail": "artefact hash and issuer Ed25519 signature verify; signed metadata/claim binding is consistent",
         "content_hash": computed_hash,
     }
+
+
+SELLER_AUTHORITY_ISSUER = "ramify:demo:issuer:Regulator_AU_demo"
+RECORD_TAMPER_STATES = frozenset({"hash_mismatch", "signature_invalid", "issuer_mismatch", "unknown_issuer_key"})
+
+
+def evaluate_record_integrity(kind: str, ref: str, record: dict) -> dict:
+    """Verify recall-status or seller-authority data against its issuer signature."""
+    meta = (seed.record_signatures().get(kind) or {}).get(ref)
+    if not meta:
+        return {"state": "missing_signature", "detail": f"no issuer signature is held for this {kind[:-1]} record"}
+    canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    digest = hashlib.sha256(canonical).digest()
+    if "sha256:" + digest.hex() != meta.get("content_hash"):
+        return {"state": "hash_mismatch", "detail": f"the {kind[:-1]} record differs from what the issuer signed"}
+    expected_issuer = record.get("issuer_ref") if kind == "statuses" else SELLER_AUTHORITY_ISSUER
+    if meta.get("issuer_ref") != expected_issuer:
+        return {"state": "issuer_mismatch", "detail": "the record was signed by a different issuer"}
+    public_key = keys.load_public_key(meta.get("issuer_ref", ""))
+    if public_key is None:
+        return {"state": "unknown_issuer_key", "detail": "issuer public key is not in the embedded trust material"}
+    try:
+        public_key.verify(base64.b64decode(meta.get("signature", ""), validate=True), digest)
+    except (InvalidSignature, ValueError, TypeError):
+        return {"state": "signature_invalid", "detail": "issuer Ed25519 signature does not verify"}
+    return {"state": "verified", "detail": "record hash and issuer Ed25519 signature verify"}
 
 
 def evaluate_evidence_integrity(
