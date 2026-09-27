@@ -198,6 +198,7 @@ def healthz() -> dict:
         "default_launcher_loopback_only": True,  # legacy compatibility field
         "documented_launch_loopback_only": True,
         "core_external_network_calls": False,
+        "signer_key_fingerprint": keys.signer_fingerprint(),
         # Legacy fields remain for older UI/tests, but deliberately do not claim
         # the application can introspect Uvicorn's actual bind/network behaviour.
         "bound_to": "not introspected by the application",
@@ -822,6 +823,8 @@ def api_proof_pack() -> StreamingResponse:
             f"Data snapshot: {seed.snapshot_id()}\n\n"
             "Synthetic demonstration evidence only. These receipts do not certify a real product, seller, regulator or laboratory.\n"
             "The manifest declares the expected files, build/data/policy identity, verifier version and signer-key fingerprint.\n"
+            f"Signer fingerprint: {signer_fingerprint}\n"
+            "A proof pack cannot vouch for its own included signer key. Compare this fingerprint with GET /healthz on the issuing RAMIFY instance before attributing authorship.\n"
             f"Example receipt: {receipt_entries[0]['filename']}\n"
             "Portable verification: python -m pip install cryptography ; python verify_receipts.py\n"
             "Successful verification establishes historical sealed-record integrity, not current purchase authority.\n",

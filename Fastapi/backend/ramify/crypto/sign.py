@@ -12,12 +12,17 @@ import hashlib
 from datetime import datetime, timezone
 
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from ramify.crypto import keys
 from ramify.crypto.canonical import canonicalise_receipt, rfc3339_nano
 
 HASH_PREFIX = "sha256:"
 PERMITTED_SCOPES = ("product", "batch", "serial", "jurisdiction")
+RECORD_ACTIONS = {
+    "order_record": frozenset({"add_to_mock_cart", "purchase_autonomously"}),
+    "requisition_record": frozenset({"create_mock_requisition"}),
+}
 
 
 def payload_digest(receipt: dict) -> bytes:
@@ -54,18 +59,41 @@ def _check_hash(receipt: dict) -> tuple[bool, str]:
     return True, "content matches the sealed hash"
 
 
-def _check_signature(receipt: dict) -> tuple[bool, str]:
+def _signature_key(receipt: dict) -> tuple[str | None, str | None]:
+    """Return (public-key hex, label) for the key that actually verifies this receipt."""
     encoded = receipt.get("signature")
     if not encoded:
-        return False, "receipt carries no signature"
-    public_key = keys.load_public_key(keys.RAMIFY_SIGNER)
-    if public_key is None:
-        return False, "no RAMIFY signer public key is embedded in this verifier"
+        return None, None
     try:
-        public_key.verify(base64.b64decode(encoded), payload_digest(receipt))
-    except (InvalidSignature, ValueError):
-        return False, "Ed25519 signature does not verify against the embedded key"
-    return True, "Ed25519 signature verifies against the embedded RAMIFY key"
+        signature = base64.b64decode(encoded, validate=True)
+        digest = payload_digest(receipt)
+    except (ValueError, TypeError):
+        return None, None
+
+    current_hex = keys.public_keys().get(keys.RAMIFY_SIGNER)
+    candidates = []
+    if isinstance(current_hex, str):
+        candidates.append((current_hex, "current"))
+    candidates.extend((raw, "retired") for raw in keys.retired_signer_keys())
+    for raw, label in candidates:
+        try:
+            Ed25519PublicKey.from_public_bytes(bytes.fromhex(raw)).verify(signature, digest)
+            return raw, label
+        except (InvalidSignature, ValueError):
+            continue
+    return None, None
+
+
+def _check_signature(receipt: dict) -> tuple[bool, str]:
+    if not receipt.get("signature"):
+        return False, "receipt carries no signature"
+    raw, label = _signature_key(receipt)
+    if raw is None:
+        return False, "Ed25519 signature does not verify against the current or retained RAMIFY signer keys"
+    fp = keys.fingerprint(raw)
+    if label == "retired":
+        return True, f"Ed25519 signature verifies against retained RAMIFY signer key {fp}"
+    return True, f"Ed25519 signature verifies against current RAMIFY signer key {fp}"
 
 
 def _check_issuer_refs_known(receipt: dict) -> tuple[bool, str]:
@@ -127,6 +155,7 @@ def _check_order_lines(record: dict) -> tuple[bool, str]:
 
     problems: list[str] = []
     seen_receipts: set[str] = set()
+    permitted_for_record = RECORD_ACTIONS.get(record.get("record_type"), frozenset())
     for index, line in enumerate(lines, start=1):
         if not isinstance(line, dict):
             problems.append(f"line {index} is not an object")
@@ -139,6 +168,10 @@ def _check_order_lines(record: dict) -> tuple[bool, str]:
         receipt = store.get(ref)
         if receipt is None:
             problems.append(f"line {index} names a receipt not in the ledger")
+            continue
+        granted = set(receipt.get("permitted_actions", [])) | set(receipt.get("human_authorised_actions", []))
+        if not granted & permitted_for_record:
+            problems.append(f"line {index} links to a receipt whose decision did not permit this transaction")
             continue
         report = verify_receipt(receipt)
         if not report.get("integrity_verified"):
@@ -231,5 +264,7 @@ def verify_receipt(receipt: dict, now: datetime | None = None) -> dict:
         report["purchase_authority_valid"] = None
         report["verified"] = report["integrity_verified"]
     report["verified_at"] = rfc3339_nano(now)
+    raw, _ = _signature_key(receipt)
+    report["signer_key_fingerprint"] = keys.fingerprint(raw) if raw else None
     return report
 

@@ -103,7 +103,7 @@ def do_seed() -> None:
 
 
 def do_rekey() -> None:
-    print("Regenerating keys. Every receipt issued by the previous keys stops verifying.")
+    print("Regenerating demo keys. The previous runtime signer public key will be retained for historical verification.")
     _generate()
 
 
@@ -132,7 +132,7 @@ def do_reset() -> None:
     # instead of silently rotating identity and invalidating old receipts.
     keys.load_signer_private_key()
 
-    preserved = {"signer_key.json", "signer_public_key.json"}
+    preserved = set(keys.SIGNER_FILES)
     for child in list(store.iterdir()):
         if child.name in preserved:
             continue

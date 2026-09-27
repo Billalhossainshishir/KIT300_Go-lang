@@ -28,6 +28,7 @@ ISSUER_REFS = (
     "ramify:demo:issuer:GMP_AU_demo",
 )
 RAMIFY_SIGNER = "ramify:demo:signer:receipt"
+SIGNER_FILES = ("signer_key.json", "signer_public_key.json", "signer_history.json")
 
 
 class SignerKeyError(RuntimeError):
@@ -143,10 +144,51 @@ def _sync_runtime_signer_public(private: Ed25519PrivateKey) -> Path:
     return public_target
 
 
+def _current_signer_public_hex() -> str | None:
+    """Return the public half of the signer this store currently knows, if any."""
+    store = local_data_store()
+    try:
+        raw = read_json(store / "signer_key.json", dict).get(RAMIFY_SIGNER)
+        if isinstance(raw, str):
+            private = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(raw))
+            return _to_raw_public(private.public_key()).hex()
+    except (StoreCorrupt, AttributeError, TypeError, ValueError):
+        pass
+    try:
+        value = read_json(store / "signer_public_key.json", dict).get(RAMIFY_SIGNER)
+        if isinstance(value, str) and len(value) == 64:
+            return value.lower()
+    except (StoreCorrupt, AttributeError):
+        pass
+    return None
+
+
+def retired_signer_keys() -> list[str]:
+    """Public keys retained from signers this installation used previously."""
+    try:
+        value = read_json(local_data_store() / "signer_history.json", list)
+    except StoreCorrupt:
+        return []
+    if not isinstance(value, list):
+        return []
+    return [key.lower() for key in value if isinstance(key, str) and len(key) == 64]
+
+
+def _retire_signer_being_replaced(new_public_hex: str) -> None:
+    current = _current_signer_public_hex()
+    if current is None or current == new_public_hex:
+        return
+    history = retired_signer_keys()
+    if current not in history:
+        history.append(current)
+        write_json_atomic(local_data_store() / "signer_history.json", history)
+
+
 def _write_runtime_signer(private: Ed25519PrivateKey) -> Path:
-    """Persist one machine-local synthetic signer and its public half."""
+    """Persist a signer, retaining the public half of any signer it replaces."""
     store = local_data_store()
     store.mkdir(parents=True, exist_ok=True)
+    _retire_signer_being_replaced(_to_raw_public(private.public_key()).hex())
     private_target = store / "signer_key.json"
     write_json_atomic(private_target, {RAMIFY_SIGNER: _to_raw_private(private).hex()})
     _sync_runtime_signer_public(private)
@@ -290,6 +332,18 @@ def public_keys() -> dict[str, str]:
         except StoreCorrupt:
             pass
     return merged
+
+
+def fingerprint(public_hex: str) -> str:
+    """Stable SHA-256 fingerprint over the raw Ed25519 public key bytes."""
+    import hashlib
+    return "sha256:" + hashlib.sha256(bytes.fromhex(public_hex)).hexdigest()
+
+
+def signer_fingerprint() -> str | None:
+    """Fingerprint of the signer currently trusted by this installation."""
+    raw = public_keys().get(RAMIFY_SIGNER)
+    return fingerprint(raw) if raw else None
 
 
 def load_public_key(ref: str) -> Ed25519PublicKey | None:

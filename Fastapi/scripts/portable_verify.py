@@ -107,12 +107,18 @@ def main(argv: list[str] | None = None) -> int:
         signer = public_keys.get(RAMIFY_SIGNER)
         if not isinstance(signer, str) or not signer:
             raise ValueError("RAMIFY signer public key missing")
-        if manifest.get("signer_key_fingerprint") != _fingerprint(signer):
+        signer_fingerprint = _fingerprint(signer)
+        if manifest.get("signer_key_fingerprint") != signer_fingerprint:
             raise ValueError("signer-key fingerprint does not match trust/public_keys.json")
         declared = _declared_receipts(manifest)
     except ValueError as exc:
         print(f"FAIL package metadata: {exc}")
         return 2
+
+    print(f"Signer key {signer_fingerprint}")
+    print("This key came from the pack itself. Compare it with the fingerprint published")
+    print("by the issuing RAMIFY instance before treating PASS as proof of who signed.")
+    print()
 
     declared_by_name = {row["filename"]: row for row in declared}
     if argv:
