@@ -1,0 +1,20 @@
+name: Export FastAPI source
+
+on:
+  push:
+    branches:
+      - security-ux-integration
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security-ux-integration
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fastapi-current-source
+          path: Fastapi
+          include-hidden-files: true
+          retention-days: 1
