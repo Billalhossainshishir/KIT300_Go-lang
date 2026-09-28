@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: Fastapi
+        working-directory: Fastapi/Fastapi
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: Fastapi/requirements.txt
+          cache-dependency-path: Fastapi/Fastapi/requirements.txt
 
       - name: Install FastAPI project
         run: |
