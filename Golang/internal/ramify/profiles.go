@@ -345,6 +345,22 @@ func (s *Server) agentsHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"agents": agents, "autonomy_levels": levels, "brands": brands, "sellers": sellers})
 }
 
+func (s *Server) assertAgentNameNotBorrowed(label, ownRef string) error {
+	wanted := strings.ToLower(strings.TrimSpace(label))
+	if wanted == "" {
+		return nil
+	}
+	for ref, shipped := range s.seedProfileInputs() {
+		if ref == ownRef {
+			continue
+		}
+		if strings.ToLower(strings.TrimSpace(str(shipped["label"]))) == wanted {
+			return fmt.Errorf("%q is the name of a built-in agent. Choose another name.", str(shipped["label"]))
+		}
+	}
+	return nil
+}
+
 func (s *Server) validateAgentFields(q map[string]any) error {
 	label := strings.TrimSpace(str(q["label"]))
 	if label == "" {
@@ -469,6 +485,10 @@ func (s *Server) agentCreateHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"detail": err.Error()})
 		return
 	}
+	if err := s.assertAgentNameNotBorrowed(str(q["label"]), ""); err != nil {
+		writeJSON(w, 400, map[string]any{"detail": err.Error()})
+		return
+	}
 	slug := agentSlug(str(q["label"]))
 	if slug == "" {
 		writeJSON(w, 400, map[string]any{"detail": "That name has no letters or numbers in it."})
@@ -496,6 +516,10 @@ func (s *Server) agentSaveHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.validateAgentFields(q); err != nil {
+		writeJSON(w, 400, map[string]any{"detail": err.Error()})
+		return
+	}
+	if err := s.assertAgentNameNotBorrowed(str(q["label"]), ref); err != nil {
 		writeJSON(w, 400, map[string]any{"detail": err.Error()})
 		return
 	}
