@@ -1147,3 +1147,86 @@ func TestOmega3ClaimComparisonNormalizesServingBasis(t *testing.T) {
 		t.Fatal("incompatible serving bases were silently treated as comparable")
 	}
 }
+
+
+func TestKnownLegacyRuntimeMigratesWithoutRestoringPrivateSeed(t *testing.T) {
+	resetTestState()
+	dir := t.TempDir()
+
+	legacyRecord := map[string]any{
+		"record_type": "order_record",
+		"receipt_id": "legacy-migration-test",
+		"payload_hash": "sha256:b91bbdd90e4697cc66a9d1c21a149444fe847a48f2906bbcd0b5673e713270c9",
+		"signature": "Iyy7OD6mqgvODitGJaB8xLzUzxGaecv6h0fX9cFQm9S7u6bmd8RWEzl5N812e13nFa41UFoLjA8OniNyCzAEBQ==",
+	}
+	cart := map[string]any{
+		"lines": []any{},
+		"orders": []any{legacyRecord},
+		"requisitions": []any{},
+	}
+	raw, err := encodeJSON(cart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "cart.json"), raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := loadRuntimeSigner(dir); err != nil {
+		t.Fatalf("known legacy runtime should migrate safely: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "signer_key.json")); err != nil {
+		t.Fatalf("new machine-local signer was not created: %v", err)
+	}
+
+	legacyPub, err := decodePublicHex(legacyReceiptSignerPublicHex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if currentSignerFingerprint() == signerFingerprint(legacyPub) {
+		t.Fatal("migration reused the historical private signing identity")
+	}
+
+	foundLegacy := false
+	state.mu.Lock()
+	for _, pub := range state.retiredPubs {
+		if bytes.Equal(pub, legacyPub) {
+			foundLegacy = true
+			break
+		}
+	}
+	state.mu.Unlock()
+	if !foundLegacy {
+		t.Fatal("legacy public key was not retained for historical verification")
+	}
+
+	_, sigOK, fp, label := (&Server{}).hashAndSignature(legacyRecord)
+	if !sigOK || fp != signerFingerprint(legacyPub) || label != "retired" {
+		t.Fatalf("legacy record did not verify after migration: sig=%v fp=%q label=%q", sigOK, fp, label)
+	}
+}
+
+func TestUnknownMissingSignerStillFailsClosed(t *testing.T) {
+	resetTestState()
+	dir := t.TempDir()
+	unknown := map[string]any{
+		"record_type": "order_record",
+		"receipt_id": "unknown-history",
+		"payload_hash": "sha256:deadbeef",
+		"signature": "not-a-valid-signature",
+	}
+	raw, err := encodeJSON(map[string]any{
+		"lines": []any{},
+		"orders": []any{unknown},
+		"requisitions": []any{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "cart.json"), raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := loadRuntimeSigner(dir); err == nil || !strings.Contains(err.Error(), "refusing silent signer rotation") {
+		t.Fatalf("unknown history must still fail closed, got %v", err)
+	}
+}
