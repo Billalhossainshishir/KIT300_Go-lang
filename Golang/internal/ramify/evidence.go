@@ -16,9 +16,9 @@ import (
 )
 
 var issuerPublicKeysHex = map[string]string{
-	"ramify:demo:issuer:Concordia_Labs_AU": "1cc857a02abc5c386ff8dad04f7f5b61bfe075dde1739a18a61dd00922fe69c3",
-	"ramify:demo:issuer:GMP_AU_demo":       "2b80c71d16b30042d72e5d7e9f35600fe36b1a2064323237b46c30e4c964032a",
-	"ramify:demo:issuer:Regulator_AU_demo": "3b633daf869fd8fcbcced3f707a69c201c4e3d01410c07fb9473a9100f8a75e2",
+	"ramify:demo:issuer:Concordia_Labs_AU": "600a62c40c0bfaa7411679228ea11e9ac5fa81d8e2dfbd1a4ed0c90d6967acb6",
+	"ramify:demo:issuer:GMP_AU_demo":       "e54a76537c2112765a1f0cc07194c6389a25baf69c6881dd05961fed6e33239e",
+	"ramify:demo:issuer:Regulator_AU_demo": "da329d78ccc50b0332365b26764865b506814b8572bb76a224b7095b5ce821c3",
 }
 
 const sellerAuthorityIssuer = "ramify:demo:issuer:Regulator_AU_demo"
