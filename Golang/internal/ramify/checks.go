@@ -31,26 +31,41 @@ func (s *Server) ratify(subjectRef string, idr, status map[string]any) map[strin
 	}
 	checks = append(checks, check("identity", "Identity resolution", "pass", "informational", "Identifier resolves to exactly one subject using "+str(idr["match_method"])+".", nil, nil, nil))
 	standing := str(status["standing"])
-	switch standing {
-	case "recalled":
-		checks = append(checks, check("standing", "Recall and advisory standing", "fail", "hard_stop", str(status["detail"]), []string{"active_recall_on_batch"}, nil, nil))
-	case "advisory":
-		checks = append(checks, check("standing", "Recall and advisory standing", "review", "hard_stop", str(status["detail"]), []string{"active_advisory_on_batch"}, nil, nil))
-	case "no_active_recall":
-		checks = append(checks, check("standing", "Recall and advisory standing", "pass", "informational", "No recall or advisory is recorded against this subject.", nil, nil, nil))
-	default:
-		checks = append(checks, check("standing", "Recall and advisory standing", "incomplete", "incomplete", "No status record is held, so recall standing is unknown.", []string{"status_unknown"}, nil, nil))
+	statusIntegrity := str(status["integrity"])
+	if recordTamperStates[statusIntegrity] {
+		checks = append(checks, check("standing", "Recall and advisory standing", "fail", "hard_stop", "The recall status record does not match what the issuer signed, so its standing cannot be relied on.", []string{"status_record_integrity_failed"}, nil, nil))
+	} else if statusIntegrity == "missing_signature" {
+		checks = append(checks, check("standing", "Recall and advisory standing", "incomplete", "incomplete", "The recall status record carries no issuer signature, so its standing is unconfirmed.", []string{"status_record_unsigned"}, nil, nil))
+	} else {
+		switch standing {
+		case "recalled":
+			checks = append(checks, check("standing", "Recall and advisory standing", "fail", "hard_stop", str(status["detail"]), []string{"active_recall_on_batch"}, nil, nil))
+		case "advisory":
+			checks = append(checks, check("standing", "Recall and advisory standing", "review", "hard_stop", str(status["detail"]), []string{"active_advisory_on_batch"}, nil, nil))
+		case "no_active_recall":
+			checks = append(checks, check("standing", "Recall and advisory standing", "pass", "informational", "No recall or advisory is recorded against this subject.", nil, nil, nil))
+		default:
+			checks = append(checks, check("standing", "Recall and advisory standing", "incomplete", "incomplete", "No status record is held, so recall standing is unknown.", []string{"status_unknown"}, nil, nil))
+		}
 	}
-	seller := s.seller(str(subject["seller_ref"]))
+	sellerRef := str(subject["seller_ref"])
+	seller := s.seller(sellerRef)
 	cat := str(subject["category"])
 	if seller == nil {
 		checks = append(checks, check("seller_authority", "Seller authority", "incomplete", "incomplete", "No seller record is held for this listing.", []string{"seller_unknown"}, nil, nil))
-	} else if str(seller["authority"]) == "revoked" {
-		checks = append(checks, check("seller_authority", "Seller authority", "fail", "hard_stop", str(seller["name"])+" has had its supply authority revoked.", []string{"seller_authority_revoked"}, nil, nil))
-	} else if str(seller["authority"]) != "verified" || !contains(stringSlice(seller["authorised_categories"]), cat) {
-		checks = append(checks, check("seller_authority", "Seller authority", "review", "policy_dependent", str(seller["name"])+" has no established authority to supply "+strings.ReplaceAll(cat, "_", " ")+".", []string{"seller_authority_unverified_for_category"}, nil, nil))
 	} else {
-		checks = append(checks, check("seller_authority", "Seller authority", "pass", "informational", str(seller["name"])+" is verified to supply "+strings.ReplaceAll(cat, "_", " ")+".", nil, nil, nil))
+		sellerIntegrity := str(s.evaluateRecordIntegrity("sellers", sellerRef, seller)["state"])
+		if recordTamperStates[sellerIntegrity] {
+			checks = append(checks, check("seller_authority", "Seller authority", "fail", "hard_stop", "The seller record for "+str(seller["name"])+" does not match what the issuer signed.", []string{"seller_record_integrity_failed"}, nil, nil))
+		} else if sellerIntegrity == "missing_signature" {
+			checks = append(checks, check("seller_authority", "Seller authority", "incomplete", "incomplete", "The seller record for "+str(seller["name"])+" carries no issuer signature.", []string{"seller_record_unsigned"}, nil, nil))
+		} else if str(seller["authority"]) == "revoked" {
+			checks = append(checks, check("seller_authority", "Seller authority", "fail", "hard_stop", str(seller["name"])+" has had its supply authority revoked.", []string{"seller_authority_revoked"}, nil, nil))
+		} else if str(seller["authority"]) != "verified" || !contains(stringSlice(seller["authorised_categories"]), cat) {
+			checks = append(checks, check("seller_authority", "Seller authority", "review", "policy_dependent", str(seller["name"])+" has no established authority to supply "+strings.ReplaceAll(cat, "_", " ")+".", []string{"seller_authority_unverified_for_category"}, nil, nil))
+		} else {
+			checks = append(checks, check("seller_authority", "Seller authority", "pass", "informational", str(seller["name"])+" is verified to supply "+strings.ReplaceAll(cat, "_", " ")+".", nil, nil, nil))
+		}
 	}
 	refs := s.evidenceRefs(subject)
 	present := map[string]bool{}
@@ -205,7 +220,31 @@ func (s *Server) ratify(subjectRef string, idr, status map[string]any) map[strin
 	} else {
 		checks = append(checks, check("conflicting_information", "Conflicting information", "pass", "informational", "No two issuers state different values for the same claim type.", nil, nil, nil))
 	}
-	return s.verifyResult(subjectRef, checks, claims)
+	result := s.verifyResult(subjectRef, checks, claims)
+	claimResults := arr(result["claim_results"])
+	for _, raw := range claimResults {
+		cr := obj(raw)
+		if verdict := str(cr["verdict"]); verdict == "rejected" || verdict == "revoked" {
+			for i := range checks {
+				if str(checks[i]["check_id"]) == "claims_and_category" {
+					checks[i] = check(
+						"claims_and_category",
+						"Claims and category requirements",
+						"fail",
+						"hard_stop",
+						"A claim failed evidence, issuer, or revocation validation and cannot support this decision.",
+						append([]string{"claim_evidence_validation_failed"}, stringSlice(cr["reason_codes"])...),
+						stringSlice(cr["evidence_refs"]),
+						nil,
+					)
+					break
+				}
+			}
+			break
+		}
+	}
+	result["check_results"] = checks
+	return result
 }
 
 func (s *Server) verifyResult(ref string, checks []map[string]any, claims []any) map[string]any {
@@ -292,7 +331,7 @@ func (s *Server) verifyResult(ref string, checks []map[string]any, claims []any)
 	return map[string]any{
 		"subject_ref": ref, "policy_ref": pack["policy_ref"], "policy_version": pack["policy_version"], "policy_status": pack["status"],
 		"policy_digest": s.fileDigest(filepath.Join(s.root, "data", "policy_pack_demo_v1.json")), "data_snapshot": s.seed.SnapshotID(),
-		"dataset_digest": s.fileDigest(filepath.Join(s.root, "data", "demo_seed.json")), "check_results": checks, "claim_results": claimResults,
+		"dataset_digest": s.datasetDigest(), "check_results": checks, "claim_results": claimResults,
 	}
 }
 
@@ -301,6 +340,33 @@ var restrict = map[string]int{"allow": 0, "allow_with_warning": 1, "hold": 2, "e
 func (s *Server) objective(checks []map[string]any, standing string) (string, int, int, string, []map[string]any, []string) {
 	reasons := []string{}
 	hasFail, hasHard, hasReview, hasIncomplete := false, false, false, false
+	requiredChecks := map[string]bool{
+		"identity": false, "standing": false, "seller_authority": false, "mandatory_evidence": false,
+		"evidence_freshness": false, "claims_and_category": false, "conflicting_information": false,
+	}
+	validOutcome := map[string]bool{"pass": true, "review": true, "fail": true, "incomplete": true}
+	validSeverity := map[string]bool{"informational": true, "policy_dependent": true, "hard_stop": true, "incomplete": true}
+	checkSetValid := len(checks) == len(requiredChecks)
+	for _, c := range checks {
+		id := str(c["check_id"])
+		if _, ok := requiredChecks[id]; !ok || requiredChecks[id] {
+			checkSetValid = false
+		} else {
+			requiredChecks[id] = true
+		}
+		if !validOutcome[str(c["outcome"])] || !validSeverity[str(c["severity"])] {
+			checkSetValid = false
+		}
+	}
+	for _, seen := range requiredChecks {
+		if !seen {
+			checkSetValid = false
+		}
+	}
+	if !checkSetValid {
+		hasIncomplete = true
+		reasons = append(reasons, "ratify_check_set_invalid")
+	}
 	for _, c := range checks {
 		switch str(c["outcome"]) {
 		case "fail":
