@@ -1,6 +1,7 @@
 package ramify
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -93,14 +94,19 @@ func claimValuesConflict(policy map[string]any, claimType string, group []map[st
 			case int:
 				tolerance = float64(v)
 			}
-			minEPA, maxEPA := parsed[0].epa, parsed[0].epa
-			minDHA, maxDHA := parsed[0].dha, parsed[0].dha
-			for _, item := range parsed {
+			normalize := func(item omega3Value) (float64, float64) {
 				epa, dha := item.epa, item.dha
 				if item.hasDenominator {
 					epa /= item.denominatorCount
 					dha /= item.denominatorCount
 				}
+				return epa, dha
+			}
+			firstEPA, firstDHA := normalize(parsed[0])
+			minEPA, maxEPA := firstEPA, firstEPA
+			minDHA, maxDHA := firstDHA, firstDHA
+			for _, item := range parsed[1:] {
+				epa, dha := normalize(item)
 				if epa < minEPA { minEPA = epa }
 				if epa > maxEPA { maxEPA = epa }
 				if dha < minDHA { minDHA = dha }
