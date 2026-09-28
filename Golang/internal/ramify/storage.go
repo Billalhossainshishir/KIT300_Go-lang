@@ -259,7 +259,19 @@ func (s *Server) receiptReviewHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 409, map[string]any{"detail": "This review has already been answered. The original receipt remains unchanged."})
 		return
 	}
-	if !boolv(s.verifyReceipt(orig)["purchase_authority_valid"]) {
+	outcome := str(q["outcome"])
+	report := s.verifyReceipt(orig)
+	if outcome == "confirmed" {
+		// Declining creates no purchase authority. Allow a person to close an
+		// old/expired review request as long as the signed machine record is
+		// still intact. The linked human receipt preserves the original.
+		if !boolv(report["integrity_verified"]) {
+			writeJSON(w, 409, map[string]any{"detail": "This review record is not intact, so it cannot be closed. Run the product check again."})
+			return
+		}
+	} else if !boolv(report["purchase_authority_valid"]) {
+		// Authorising a transaction still requires current, intact purchase
+		// authority. Expired or legacy receipts cannot mint fresh authority.
 		writeJSON(w, 409, map[string]any{"detail": "This review request is no longer current and intact. Run the product check again."})
 		return
 	}
@@ -273,7 +285,6 @@ func (s *Server) receiptReviewHTTP(w http.ResponseWriter, r *http.Request) {
 	reviewedAt := rfc3339Nano(now)
 	next["timestamp"] = reviewedAt
 	next["expires_at"] = rfc3339Nano(now.Add(time.Hour))
-	outcome := str(q["outcome"])
 	label := "Approved once for this simulated transaction"
 	consequence := "This successor receipt may admit one simulated basket line. The objective posture and original agent decision remain unchanged."
 	if outcome == "confirmed" {
