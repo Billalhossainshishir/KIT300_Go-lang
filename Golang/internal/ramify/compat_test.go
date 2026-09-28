@@ -1230,3 +1230,57 @@ func TestUnknownMissingSignerStillFailsClosed(t *testing.T) {
 		t.Fatalf("unknown history must still fail closed, got %v", err)
 	}
 }
+
+
+func TestLegacyReceiptWithoutPurchaseStyleCanStillBeDeclined(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+
+	hold := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+		"identifier": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+		"actor_ref": "consumer_v1",
+		"quantity": 1,
+		"context": "purchase",
+	}))
+	legacy := copyMap(obj(hold["receipt"]))
+	delete(legacy, "payload_hash")
+	delete(legacy, "signature")
+	delete(legacy, "actor_purchase_style")
+	legacy["receipt_id"] = str(legacy["receipt_id"]) + "-legacy-decline"
+	legacy = s.seal(legacy)
+
+	state.mu.Lock()
+	state.receipts = append(state.receipts, legacy)
+	state.mu.Unlock()
+
+	review := request(t, s, http.MethodPost, "/api/v0/receipt/review", map[string]any{
+		"receipt_id": legacy["receipt_id"],
+		"outcome": "confirmed",
+		"reviewer_note": "Declined from legacy receipt.",
+	})
+	if review.Code != http.StatusOK {
+		t.Fatalf("legacy receipt should still be declinable, got %d %s", review.Code, review.Body.String())
+	}
+	successor := obj(decodeResponse(t, review)["receipt"])
+	if str(obj(successor["human_review"])["outcome"]) != "confirmed" {
+		t.Fatalf("legacy decline outcome was not recorded: %#v", successor["human_review"])
+	}
+}
+
+func TestNeedsMeScriptRecoversFromLegacyReviewErrors(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(repoRoot(t), "frontend", "scripts", "review.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	js := string(raw)
+	for _, required := range []string{
+		"function needsFreshAssessment",
+		"Run product check again",
+		"cardButtons.forEach((b) => (b.disabled = false))",
+		"toast(error?.message ||",
+	} {
+		if !strings.Contains(js, required) {
+			t.Fatalf("Needs Me legacy recovery guard missing %q", required)
+		}
+	}
+}
