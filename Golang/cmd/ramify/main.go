@@ -70,6 +70,24 @@ func openBrowser(url string) error {
 	return cmd.Start()
 }
 
+func runtimeDirForRoot(root string) string {
+	if override := os.Getenv("RAMIFY_DATA_DIR"); override != "" {
+		if abs, err := filepath.Abs(override); err == nil {
+			return abs
+		}
+		return override
+	}
+	return filepath.Join(root, "runtime_data")
+}
+
+func revealStartupLog(runtimeDir string) {
+	if runtime.GOOS != "windows" {
+		return
+	}
+	path := filepath.Join(runtimeDir, "ramify.log")
+	_ = exec.Command("notepad.exe", path).Start()
+}
+
 func setupLogging(runtimeDir string) io.Closer {
 	path := filepath.Join(runtimeDir, "ramify.log")
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
@@ -97,12 +115,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	runtimeDir := runtimeDirForRoot(abs)
+	_ = os.MkdirAll(runtimeDir, 0o700)
+	if closer := setupLogging(runtimeDir); closer != nil {
+		defer closer.Close()
+	}
 	srv, err := ramify.New(abs)
 	if err != nil {
-		log.Fatalf("RAMIFY startup failed: %v", err)
-	}
-	if closer := setupLogging(srv.RuntimeDir()); closer != nil {
-		defer closer.Close()
+		log.Printf("RAMIFY startup failed: %v", err)
+		revealStartupLog(runtimeDir)
+		return
 	}
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", *host, *port))
 	if err != nil {
