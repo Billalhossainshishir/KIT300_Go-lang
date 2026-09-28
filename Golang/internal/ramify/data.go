@@ -260,6 +260,7 @@ func (s *Server) statusResult(ref string) map[string]any {
 	if v, ok := r["batch_ref"]; ok {
 		out["batch_ref"] = v
 	}
+	out["integrity"] = str(s.evaluateRecordIntegrity("statuses", ref, r)["state"])
 	return out
 }
 
@@ -285,22 +286,36 @@ func (s *Server) seller(ref string) map[string]any { return obj(section(s.seedMa
 
 func (s *Server) issuer(ref string) map[string]any { return obj(section(s.seedMap(), "issuers")[ref]) }
 
+func loadGeneratedMapping(path string, fallback map[string]any) map[string]any {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return copyMap(fallback)
+	}
+	var out map[string]any
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.UseNumber()
+	if err := d.Decode(&out); err != nil || out == nil {
+		return copyMap(fallback)
+	}
+	return out
+}
+
+func (s *Server) recordSignatures() map[string]any {
+	return loadGeneratedMapping(
+		filepath.Join(s.root, "data", "record_signatures.json"),
+		map[string]any{"statuses": map[string]any{}, "sellers": map[string]any{}},
+	)
+}
+
 func (s *Server) evidence(ref string) map[string]any {
 	base := obj(section(s.seedMap(), "evidence")[ref])
 	if base == nil {
 		return nil
 	}
 	out := copyMap(base)
-	raw, err := os.ReadFile(filepath.Join(s.root, "data", "evidence_signatures.json"))
-	if err == nil {
-		var sig map[string]any
-		d := json.NewDecoder(bytes.NewReader(raw))
-		d.UseNumber()
-		if d.Decode(&sig) == nil {
-			for k, v := range obj(sig[ref]) {
-				out[k] = v
-			}
-		}
+	sig := loadGeneratedMapping(filepath.Join(s.root, "data", "evidence_signatures.json"), map[string]any{})
+	for k, v := range obj(sig[ref]) {
+		out[k] = v
 	}
 	return out
 }
@@ -328,4 +343,18 @@ func (s *Server) fileDigest(path string) string {
 	}
 	h := sha256.Sum256(b)
 	return "sha256:" + hex.EncodeToString(h[:])
+}
+
+func (s *Server) datasetDigest() string {
+	h := sha256.New()
+	for _, name := range []string{"demo_seed.json", "evidence_signatures.json", "record_signatures.json"} {
+		_, _ = h.Write([]byte(name))
+		_, _ = h.Write([]byte{0})
+		raw, err := os.ReadFile(filepath.Join(s.root, "data", name))
+		if err == nil {
+			_, _ = h.Write(raw)
+		}
+		_, _ = h.Write([]byte{0})
+	}
+	return "sha256:" + hex.EncodeToString(h.Sum(nil))
 }
