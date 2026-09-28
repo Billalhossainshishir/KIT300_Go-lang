@@ -28,13 +28,32 @@ func (s *Server) seal(m map[string]any) map[string]any {
 	return out
 }
 
-func (s *Server) hashAndSignature(m map[string]any) (bool, bool) {
+func (s *Server) hashAndSignature(m map[string]any) (bool, bool, string, string) {
 	b := canonical(m)
 	h := sha256.Sum256(b)
 	hashOK := str(m["payload_hash"]) == "sha256:"+hex.EncodeToString(h[:])
 	sig, err := base64.StdEncoding.DecodeString(str(m["signature"]))
-	sigOK := err == nil && ed25519.Verify(state.pub, h[:], sig)
-	return hashOK, sigOK
+	if err != nil {
+		return hashOK, false, "", ""
+	}
+
+	state.mu.Lock()
+	current := append(ed25519.PublicKey(nil), state.pub...)
+	retired := make([]ed25519.PublicKey, 0, len(state.retiredPubs))
+	for _, pub := range state.retiredPubs {
+		retired = append(retired, append(ed25519.PublicKey(nil), pub...))
+	}
+	state.mu.Unlock()
+
+	if len(current) == ed25519.PublicKeySize && ed25519.Verify(current, h[:], sig) {
+		return hashOK, true, signerFingerprint(current), "current"
+	}
+	for _, pub := range retired {
+		if len(pub) == ed25519.PublicKeySize && ed25519.Verify(pub, h[:], sig) {
+			return hashOK, true, signerFingerprint(pub), "retired"
+		}
+	}
+	return hashOK, false, "", ""
 }
 
 func verifyCheck(name string, passed bool, detail string) map[string]any {
@@ -138,8 +157,14 @@ func (s *Server) verifyReceipt(m map[string]any) map[string]any {
 	if m == nil {
 		m = map[string]any{}
 	}
-	hashOK, sigOK := s.hashAndSignature(m)
+	hashOK, sigOK, signerFP, signerLabel := s.hashAndSignature(m)
 	now := time.Now().UTC()
+	signatureDetail := "Ed25519 signature does not verify against the current or retained RAMIFY signer keys"
+	if sigOK && signerLabel == "retired" {
+		signatureDetail = "Ed25519 signature verifies against retained RAMIFY signer key " + signerFP
+	} else if sigOK {
+		signatureDetail = "Ed25519 signature verifies against current RAMIFY signer key " + signerFP
+	}
 
 	if rt := str(m["record_type"]); rt == "order_record" || rt == "requisition_record" {
 		linesOK, linesDetail := s.verifyTransactionLines(m)
@@ -151,18 +176,13 @@ func (s *Server) verifyReceipt(m map[string]any) map[string]any {
 				}
 				return "content does not match the sealed hash"
 			}()),
-			verifyCheck("signature_valid", sigOK, func() string {
-				if sigOK {
-					return "Ed25519 signature verifies against the RAMIFY signer"
-				}
-				return "Ed25519 signature does not verify"
-			}()),
+			verifyCheck("signature_valid", sigOK, signatureDetail),
 			verifyCheck("lines_intact", linesOK, linesDetail),
 		}
 		return map[string]any{
 			"hash_valid": hashOK, "signature_valid": sigOK, "lines_intact": linesOK,
 			"checks": checks, "integrity_verified": integrity, "purchase_authority_valid": nil,
-			"verified": integrity, "verified_at": rfc3339Nano(now),
+			"verified": integrity, "verified_at": rfc3339Nano(now), "signer_key_fingerprint": signerFP,
 		}
 	}
 
@@ -213,12 +233,7 @@ func (s *Server) verifyReceipt(m map[string]any) map[string]any {
 			}
 			return "content does not match the sealed hash"
 		}()),
-		verifyCheck("signature_valid", sigOK, func() string {
-			if sigOK {
-				return "Ed25519 signature verifies against the RAMIFY signer"
-			}
-			return "Ed25519 signature does not verify"
-		}()),
+		verifyCheck("signature_valid", sigOK, signatureDetail),
 		verifyCheck("issuer_refs_known", issuerOK, issuerDetail),
 		verifyCheck("scope_valid", scopeOK, scopeDetail),
 		verifyCheck("fresh", fresh, freshDetail),
@@ -227,6 +242,7 @@ func (s *Server) verifyReceipt(m map[string]any) map[string]any {
 		"hash_valid": hashOK, "signature_valid": sigOK, "issuer_refs_known": issuerOK, "issuer_chain_valid": issuerOK,
 		"scope_valid": scopeOK, "fresh": fresh, "checks": checks, "integrity_verified": integrity,
 		"purchase_authority_valid": authority, "verified": authority, "verified_at": rfc3339Nano(now),
+		"signer_key_fingerprint": signerFP,
 	}
 }
 
