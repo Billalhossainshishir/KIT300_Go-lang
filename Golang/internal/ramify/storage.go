@@ -1,6 +1,7 @@
 package ramify
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -24,6 +25,7 @@ type runtimeState struct {
 	customAgents map[string]map[string]any
 	pub          ed25519.PublicKey
 	priv         ed25519.PrivateKey
+	retiredPubs  []ed25519.PublicKey
 }
 
 var state = func() *runtimeState {
@@ -406,27 +408,182 @@ func (s *Server) ledgerVerifyHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func loadPortableSigner(root string) error {
-	path := filepath.Join(root, "demo_runtime_seed", "signer_key.json")
-	raw, err := os.ReadFile(path)
+const ramifySignerRef = "ramify:demo:signer:receipt"
+
+func signerFingerprint(pub ed25519.PublicKey) string {
+	h := sha256.Sum256(pub)
+	return "sha256:" + hex.EncodeToString(h[:])
+}
+
+func currentSignerFingerprint() string {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if len(state.pub) != ed25519.PublicKeySize {
+		return ""
+	}
+	return signerFingerprint(state.pub)
+}
+
+func runtimeSigningHistoryExists(dir string) bool {
+	for _, name := range []string{"receipts.jsonl", "actions.jsonl"} {
+		if info, err := os.Stat(filepath.Join(dir, name)); err == nil && info.Size() > 0 {
+			return true
+		}
+	}
+	var cart map[string]any
+	if err := readJSONFile(filepath.Join(dir, "cart.json"), &cart); err != nil {
+		return true
+	}
+	if cart != nil {
+		for _, key := range []string{"lines", "orders", "requisitions"} {
+			if len(arr(cart[key])) > 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func decodePublicHex(raw string) (ed25519.PublicKey, error) {
+	b, err := hex.DecodeString(strings.TrimSpace(raw))
+	if err != nil || len(b) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("invalid Ed25519 public key")
+	}
+	return ed25519.PublicKey(b), nil
+}
+
+func loadSignerHistory(dir string) ([]ed25519.PublicKey, error) {
+	var values []string
+	if err := readJSONFile(filepath.Join(dir, "signer_history.json"), &values); err != nil {
+		return nil, fmt.Errorf("read signer history: %w", err)
+	}
+	out := make([]ed25519.PublicKey, 0, len(values))
+	for _, raw := range values {
+		pub, err := decodePublicHex(raw)
+		if err != nil {
+			return nil, fmt.Errorf("signer history is corrupt: %w", err)
+		}
+		out = append(out, pub)
+	}
+	return out, nil
+}
+
+func persistSignerHistory(dir string, pubs []ed25519.PublicKey) error {
+	values := make([]string, 0, len(pubs))
+	seen := map[string]bool{}
+	for _, pub := range pubs {
+		if len(pub) != ed25519.PublicKeySize {
+			continue
+		}
+		hexPub := hex.EncodeToString(pub)
+		if !seen[hexPub] {
+			seen[hexPub] = true
+			values = append(values, hexPub)
+		}
+	}
+	b, err := encodeJSON(values)
 	if err != nil {
-		return fmt.Errorf("read demo signer: %w", err)
+		return err
+	}
+	return atomicWrite(filepath.Join(dir, "signer_history.json"), b)
+}
+
+func installRuntimeSigner(dir string, priv ed25519.PrivateKey, retireCurrent bool) error {
+	if len(priv) != ed25519.PrivateKeySize {
+		return fmt.Errorf("invalid RAMIFY signer private key")
+	}
+	pub := priv.Public().(ed25519.PublicKey)
+	history, err := loadSignerHistory(dir)
+	if err != nil {
+		return err
+	}
+	state.mu.Lock()
+	current := append(ed25519.PublicKey(nil), state.pub...)
+	state.mu.Unlock()
+	if retireCurrent && len(current) == ed25519.PublicKeySize && !bytes.Equal(current, pub) {
+		history = append(history, current)
+		if err := persistSignerHistory(dir, history); err != nil {
+			return err
+		}
+	}
+	payload := map[string]string{ramifySignerRef: hex.EncodeToString(priv.Seed())}
+	b, err := encodeJSON(payload)
+	if err != nil {
+		return err
+	}
+	keyPath := filepath.Join(dir, "signer_key.json")
+	if err := atomicWrite(keyPath, b); err != nil {
+		return err
+	}
+	_ = os.Chmod(keyPath, 0o600)
+	pubPayload := map[string]string{ramifySignerRef: hex.EncodeToString(pub)}
+	b, err = encodeJSON(pubPayload)
+	if err != nil {
+		return err
+	}
+	if err := atomicWrite(filepath.Join(dir, "signer_public_key.json"), b); err != nil {
+		return err
+	}
+	state.mu.Lock()
+	state.priv = append(ed25519.PrivateKey(nil), priv...)
+	state.pub = append(ed25519.PublicKey(nil), pub...)
+	state.retiredPubs = history
+	state.mu.Unlock()
+	return nil
+}
+
+func loadRuntimeSigner(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	keyPath := filepath.Join(dir, "signer_key.json")
+	raw, err := os.ReadFile(keyPath)
+	if os.IsNotExist(err) {
+		if runtimeSigningHistoryExists(dir) {
+			return fmt.Errorf("RAMIFY signing material is missing while receipt/transaction history exists; refusing silent signer rotation")
+		}
+		_, priv, genErr := ed25519.GenerateKey(rand.Reader)
+		if genErr != nil {
+			return genErr
+		}
+		return installRuntimeSigner(dir, priv, false)
+	}
+	if err != nil {
+		return fmt.Errorf("read runtime signer: %w", err)
 	}
 	var payload map[string]string
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		return fmt.Errorf("decode demo signer: %w", err)
+		return fmt.Errorf("existing RAMIFY signer is corrupt; explicit recovery/rekey is required: %w", err)
 	}
-	hexSeed := payload["ramify:demo:signer:receipt"]
-	seed, err := hex.DecodeString(hexSeed)
+	seed, err := hex.DecodeString(payload[ramifySignerRef])
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return fmt.Errorf("demo signer seed is invalid")
+		return fmt.Errorf("existing RAMIFY signer is corrupt; explicit recovery/rekey is required")
 	}
 	priv := ed25519.NewKeyFromSeed(seed)
+	history, err := loadSignerHistory(dir)
+	if err != nil {
+		return err
+	}
+	pub := priv.Public().(ed25519.PublicKey)
+	pubPayload := map[string]string{ramifySignerRef: hex.EncodeToString(pub)}
+	b, _ := encodeJSON(pubPayload)
+	if err := atomicWrite(filepath.Join(dir, "signer_public_key.json"), b); err != nil {
+		return err
+	}
 	state.mu.Lock()
 	state.priv = priv
-	state.pub = priv.Public().(ed25519.PublicKey)
+	state.pub = pub
+	state.retiredPubs = history
 	state.mu.Unlock()
 	return nil
+}
+
+func rotateRuntimeSigner(dir string) error {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return err
+	}
+	return installRuntimeSigner(dir, priv, true)
 }
 
 func (s *Server) RuntimeDir() string {
