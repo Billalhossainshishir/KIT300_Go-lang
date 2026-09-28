@@ -3,8 +3,119 @@ package ramify
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
+
+var (
+	omegaEPARe = regexp.MustCompile(`(?i)\bEPA\s*([0-9]+(?:\.[0-9]+)?)\s*mg\b`)
+	omegaDHARe = regexp.MustCompile(`(?i)\bDHA\s*([0-9]+(?:\.[0-9]+)?)\s*mg\b`)
+	servingRe  = regexp.MustCompile(`(?i)(?:per|/)\s*([0-9]+(?:\.[0-9]+)?)?\s*(capsule|capsules|softgel|softgels|tablet|tablets|serving|servings)\b`)
+)
+
+type omega3Value struct {
+	epa, dha          float64
+	denominatorCount  float64
+	denominatorBasis  string
+	hasDenominator    bool
+}
+
+func parseOmega3Value(value any) (omega3Value, bool) {
+	text := str(value)
+	epaMatch := omegaEPARe.FindStringSubmatch(text)
+	dhaMatch := omegaDHARe.FindStringSubmatch(text)
+	if len(epaMatch) < 2 || len(dhaMatch) < 2 {
+		return omega3Value{}, false
+	}
+	epa, err1 := strconv.ParseFloat(epaMatch[1], 64)
+	dha, err2 := strconv.ParseFloat(dhaMatch[1], 64)
+	if err1 != nil || err2 != nil {
+		return omega3Value{}, false
+	}
+	out := omega3Value{epa: epa, dha: dha}
+	if serving := servingRe.FindStringSubmatch(text); len(serving) >= 3 {
+		count := 1.0
+		if serving[1] != "" {
+			parsed, err := strconv.ParseFloat(serving[1], 64)
+			if err != nil || parsed <= 0 {
+				return omega3Value{}, false
+			}
+			count = parsed
+		}
+		basis := strings.ToLower(serving[2])
+		basis = strings.TrimSuffix(basis, "s")
+		out.denominatorCount = count
+		out.denominatorBasis = basis
+		out.hasDenominator = true
+	}
+	return out, true
+}
+
+func claimValuesConflict(policy map[string]any, claimType string, group []map[string]any) (bool, string) {
+	rule := obj(obj(policy["claim_comparison"])[claimType])
+	mode := str(rule["mode"])
+	if mode == "omega3_mg_components" {
+		parsed := make([]omega3Value, 0, len(group))
+		allParsed := true
+		for _, claim := range group {
+			v, ok := parseOmega3Value(claim["value"])
+			if !ok {
+				allParsed = false
+				break
+			}
+			parsed = append(parsed, v)
+		}
+		if allParsed && len(parsed) > 1 {
+			basis := ""
+			hasExplicit, hasMissing := false, false
+			for _, item := range parsed {
+				if item.hasDenominator {
+					hasExplicit = true
+					if basis == "" {
+						basis = item.denominatorBasis
+					} else if basis != item.denominatorBasis {
+						return true, "policy comparison incomplete: incompatible or missing serving denominator"
+					}
+				} else {
+					hasMissing = true
+				}
+			}
+			if hasExplicit && hasMissing {
+				return true, "policy comparison incomplete: incompatible or missing serving denominator"
+			}
+			tolerance := 0.0
+			switch v := rule["absolute_tolerance_mg"].(type) {
+			case json.Number:
+				tolerance, _ = strconv.ParseFloat(string(v), 64)
+			case float64:
+				tolerance = v
+			case int:
+				tolerance = float64(v)
+			}
+			minEPA, maxEPA := parsed[0].epa, parsed[0].epa
+			minDHA, maxDHA := parsed[0].dha, parsed[0].dha
+			for _, item := range parsed {
+				epa, dha := item.epa, item.dha
+				if item.hasDenominator {
+					epa /= item.denominatorCount
+					dha /= item.denominatorCount
+				}
+				if epa < minEPA { minEPA = epa }
+				if epa > maxEPA { maxEPA = epa }
+				if dha < minDHA { minDHA = dha }
+				if dha > maxDHA { maxDHA = dha }
+			}
+			return maxEPA-minEPA > tolerance || maxDHA-minDHA > tolerance,
+				fmt.Sprintf("policy comparison: EPA/DHA absolute tolerance %g mg on a compatible serving basis", tolerance)
+		}
+	}
+	normalised := map[string]bool{}
+	for _, claim := range group {
+		normalised[strings.ToLower(strings.TrimSpace(str(claim["value"])))] = true
+	}
+	return len(normalised) > 1, "policy comparison: exact normalised value"
+}
 
 func check(id, label, outcome, severity, detail string, codes []string, evidence []string, findings []any) map[string]any {
 	if codes == nil {
@@ -198,23 +309,30 @@ func (s *Server) ratify(subjectRef string, idr, status map[string]any) map[strin
 	} else {
 		checks = append(checks, check("claims_and_category", "Claims and category requirements", "pass", "informational", fmt.Sprintf("All %d required claim type(s) present and asserted within issuer authority.", len(requiredClaims)), nil, refs, nil))
 	}
-	byType := map[string]map[string]bool{}
+	byType := map[string][]map[string]any{}
 	for _, cv := range claims {
-		c := obj(cv)
-		t := str(c["type"])
-		if byType[t] == nil {
-			byType[t] = map[string]bool{}
-		}
-		byType[t][strings.ToLower(strings.TrimSpace(str(c["value"])))] = true
+		claim := obj(cv)
+		t := str(claim["type"])
+		byType[t] = append(byType[t], claim)
 	}
 	conflict := false
-	for _, vals := range byType {
-		if len(vals) > 1 {
+	comparisonDetail := ""
+	for claimType, group := range byType {
+		if len(group) < 2 {
+			continue
+		}
+		if differs, detail := claimValuesConflict(s.policyPack(), claimType, group); differs {
 			conflict = true
+			comparisonDetail = detail
+			break
 		}
 	}
 	if conflict {
-		checks = append(checks, check("conflicting_information", "Conflicting information", "review", "policy_dependent", "Issuers disagree on a claim value.", []string{"issuers_state_conflicting_values"}, refs, nil))
+		detail := "Issuers disagree on a claim value."
+		if comparisonDetail != "" {
+			detail += " " + comparisonDetail + "."
+		}
+		checks = append(checks, check("conflicting_information", "Conflicting information", "review", "policy_dependent", detail, []string{"issuers_state_conflicting_values"}, refs, nil))
 	} else if len(claims) == 0 {
 		checks = append(checks, check("conflicting_information", "Conflicting information", "incomplete", "incomplete", "There are no claims to compare.", []string{"no_claims_to_compare"}, nil, nil))
 	} else {
