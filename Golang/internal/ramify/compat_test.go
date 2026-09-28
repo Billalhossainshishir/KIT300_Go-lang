@@ -614,3 +614,127 @@ func TestDeterministicParityModeRefusesHTTPHealth(t *testing.T) {
 		t.Fatalf("deterministic parity mode health should be 503, got %d %s", w.Code, w.Body.String())
 	}
 }
+
+
+func TestReceiptSealsPurchaseStyleAndReviewUsesSealedStyle(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+
+	hold := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+		"identifier": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+		"actor_ref": "procurement_v1",
+		"quantity": 1,
+		"context": "purchase",
+	}))
+	receipt := obj(hold["receipt"])
+	if str(receipt["actor_purchase_style"]) != "requisition" {
+		t.Fatalf("purchase style was not sealed into receipt: %#v", receipt["actor_purchase_style"])
+	}
+
+	// Simulate a later profile edit. Human review must still use the style
+	// sealed into the original receipt, not the actor profile's current value.
+	changed := copyMap(s.profiles()["procurement_v1"])
+	changed["purchase_style"] = "cart"
+	state.mu.Lock()
+	state.customAgents["procurement_v1"] = changed
+	state.mu.Unlock()
+
+	review := request(t, s, http.MethodPost, "/api/v0/receipt/review", map[string]any{
+		"receipt_id": receipt["receipt_id"],
+		"outcome": "overridden",
+		"reviewer_name": "Demo reviewer",
+		"reviewer_role": "Reviewer",
+	})
+	if review.Code != http.StatusOK {
+		t.Fatalf("review failed: %d %s", review.Code, review.Body.String())
+	}
+	successor := obj(decodeResponse(t, review)["receipt"])
+	if !contains(stringSlice(successor["human_authorised_actions"]), "create_mock_requisition") {
+		t.Fatalf("review ignored sealed requisition style: %#v", successor["human_authorised_actions"])
+	}
+	humanReview := obj(successor["human_review"])
+	if boolv(humanReview["identity_verified"]) {
+		t.Fatalf("reviewer identity must be explicitly unverified: %#v", humanReview)
+	}
+	if !strings.Contains(str(humanReview["reviewer_attestation"]), "not authenticated") {
+		t.Fatalf("reviewer attestation should disclose identity limitation: %#v", humanReview)
+	}
+	reviewer := obj(obj(successor["human_receipt"])["reviewer"])
+	if boolv(reviewer["identity_verified"]) {
+		t.Fatalf("human receipt reviewer identity must be unverified: %#v", reviewer)
+	}
+}
+
+func TestLegacyReceiptWithoutPurchaseStyleCannotBeHumanAuthorised(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+
+	hold := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+		"identifier": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+		"actor_ref": "consumer_v1",
+		"quantity": 1,
+		"context": "purchase",
+	}))
+	legacy := copyMap(obj(hold["receipt"]))
+	delete(legacy, "payload_hash")
+	delete(legacy, "signature")
+	delete(legacy, "actor_purchase_style")
+	legacy["receipt_id"] = str(legacy["receipt_id"]) + "-legacy"
+	legacy = s.seal(legacy)
+
+	state.mu.Lock()
+	state.receipts = append(state.receipts, legacy)
+	state.mu.Unlock()
+
+	review := request(t, s, http.MethodPost, "/api/v0/receipt/review", map[string]any{
+		"receipt_id": legacy["receipt_id"],
+		"outcome": "overridden",
+		"reviewer_name": "Demo reviewer",
+		"reviewer_role": "Reviewer",
+	})
+	if review.Code != http.StatusConflict {
+		t.Fatalf("legacy receipt without sealed purchase style must fail closed, got %d %s", review.Code, review.Body.String())
+	}
+}
+
+func TestHistoricalOrderRechecksTransactionAuthority(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+
+	hold := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+		"identifier": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+		"actor_ref": "consumer_v1",
+		"quantity": 1,
+		"context": "purchase",
+	}))
+	receipt := obj(hold["receipt"])
+	order := obj(receipt["order"])
+	line := map[string]any{
+		"subject_ref": receipt["subject_ref"],
+		"product_name": valueOr(receipt, "product_name", ""),
+		"quantity": order["quantity"],
+		"line_total_cents": order["line_total_cents"],
+		"receipt_ref": receipt["receipt_id"],
+		"receipt_hash": receipt["payload_hash"],
+		"actor_ref": receipt["actor_ref"],
+		"objective_posture": receipt["objective_posture"],
+		"actor_decision": receipt["actor_decision"],
+		"human_authorised": false,
+		"supersedes_receipt": valueOr(receipt, "supersedes_receipt", nil),
+	}
+	forged := s.seal(map[string]any{"record_type": "order_record", "lines": []any{line}})
+	report := s.verifyReceipt(forged)
+	if boolv(report["integrity_verified"]) || boolv(report["lines_intact"]) {
+		t.Fatalf("order linked to non-authorising held receipt must fail: %#v", report)
+	}
+	found := false
+	for _, raw := range arr(report["checks"]) {
+		check := obj(raw)
+		if str(check["name"]) == "lines_intact" && strings.Contains(str(check["detail"]), "did not permit this transaction") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("transaction-authority failure detail missing: %#v", report)
+	}
+}
