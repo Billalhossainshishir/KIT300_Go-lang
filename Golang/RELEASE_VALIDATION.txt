@@ -1,64 +1,94 @@
-RAMIFY OS v11.0.7-go-final — FINAL RELEASE VALIDATION
-====================================================
-Validation date: 25 September 2026
+RAMIFY OS v11.0.7-go-final — 29 SEPTEMBER 2026 PARITY VALIDATION
+=================================================================
 
-SOURCE MERGE
-------------
-PASS  Golden Go folder/module architecture retained.
-PASS  Latest supplied FastAPI frontend used as the source of truth for current UX.
-PASS  All 25 recent frontend files are present; only Go-specific factual wording was adapted.
-PASS  41/41 current FastAPI API routes (excluding the page catch-all) are present in Go.
-
-STATIC / SOURCE CHECKS
-----------------------
-PASS  GitHub Actions workflow is active at repository root (.github/workflows/go-test.yml).
-PASS  GitHub Actions run #7 succeeded on source head 8cbb23e37c5d377eec2eb33915bfe3c4d65a0b85.
-PASS  go test -count=1 ./... (GitHub Actions run #7)
-PASS  go vet ./... (GitHub Actions run #7)
-PASS  every frontend/scripts/*.js passes node --check (GitHub Actions run #7)
-PASS  frontend serving/UX regression guards cover all current pages, page scripts, and key Aymen-feedback fixes
-PASS  no Python runtime files (.py / requirements.txt / pyproject.toml) remain in the final Go project
-
-FUNCTIONAL REGRESSION
+SOURCE / PARITY BASIS
 ---------------------
-PASS  17/17 named synthetic scenarios match expected objective posture and actor decision.
-PASS  scenario decision receipts verify.
-PASS  current pages, JS, CSS and product images serve from Go.
-PASS  Basket regression: lines/orders/requisitions are arrays, never null.
-PASS  Assess -> Add -> Place order -> reload returns lines=[] and signed order verification succeeds.
-PASS  Human review successor + human-authorised purchase flow.
-PASS  Procurement requisition remains separate and verifies.
-PASS  Action ledger hash chain + receipt links verify.
-PASS  Runtime receipt/action/cart/custom-agent state persists across restart tests.
-PASS  Agent preview/create/update/reset + derived policy tests.
-PASS  Real evidence-byte tamper demo: verified -> hash_mismatch -> block; shared artefact unchanged.
-PASS  Optional native Go -> Ollama adapter tested with a local fake model endpoint; LLM remains presentation-only.
+PASS  Golden Go modular architecture retained.
+PASS  FastAPI behaviour/security hardening supplied through 28 September 2026 used as the parity reference.
+PASS  Go remains independently implemented; Python/FastAPI is not required by the Go runtime.
+PASS  Current browser-facing application flow remains served by Go.
+PASS  Historical 25 September release evidence remains preserved separately.
+
+HTTP / LOCAL-AI BOUNDARY
+------------------------
+PASS  Foreign Host values are rejected.
+PASS  Foreign/null Origin values are rejected for state-changing requests.
+PASS  JSON requests reject trailing/unknown typed fields where strict schemas apply.
+PASS  Assessment quantity accepts only integer values 1–1000.
+PASS  Ollama endpoints are restricted to local loopback HTTP.
+PASS  Model explanations cannot contradict or weaken a sealed decision.
+PASS  Deterministic parity mode refuses normal HTTP serving.
+
+RECEIPT / TRANSACTION AUTHORITY
+-------------------------------
+PASS  Assessment-time actor purchase style is sealed into decision receipts.
+PASS  Human-review successor receipts use the sealed transaction path, not a later profile edit.
+PASS  Legacy receipts without a sealed transaction path fail closed for human authorisation.
+PASS  Reviewer identity is explicitly recorded as not authenticated.
+PASS  Historical order/requisition verification re-checks that linked receipts permitted the transaction.
+PASS  Duplicate/superseded one-time authority controls remain enforced.
+
+SIGNED TRUST DATA
+-----------------
+PASS  Evidence artefact bytes, hashes, issuer signatures and claim bindings verify.
+PASS  Recall/status records carry signed trust metadata and tamper fail closed.
+PASS  Seller-authority records carry signed trust metadata and tamper fail closed.
+PASS  Dataset digest covers demo seed, evidence signatures and record signatures.
+PASS  Structurally broken trust manifests fail closed without crashing.
+PASS  Claim evidence/binding failure reaches the aggregate decision.
+PASS  Required RATIFY check-set structure is validated before a clean decision is accepted.
+PASS  Comparable EPA/DHA claims are normalised to compatible serving basis before conflict evaluation.
+
+SIGNER LIFECYCLE
+----------------
+PASS  Receipt private signer is generated/stored in machine-local runtime state.
+PASS  No private receipt-signing seed is distributed in the Go repository.
+PASS  Existing signed history + missing/corrupt signer refuses silent identity rotation.
+PASS  Explicit signer rotation retains previous public keys for historical verification.
+PASS  Receipt verification reports the signer fingerprint that verified the record.
+PASS  /healthz, receipt verification and Proof Pack expose consistent current signer fingerprint.
 
 PROOF PACKS
 -----------
-PASS  Quick Proof Pack contains 5 receipts, manifest, public keys, policy, evidence signatures/artefacts and verify_receipts.go.
-PASS  Quick portable verifier: 5/5 receipts PASS.
-PASS  Extended Proof Pack contains 6 receipts plus verification/release evidence.
-PASS  Extended portable verifier: 6/6 receipts PASS.
+PASS  Quick Proof Pack declares exactly five expected receipts.
+PASS  Extended Proof Pack declares exactly six expected receipts.
+PASS  Manifest is signed by the runtime receipt signer.
+PASS  Editing the expected-receipt list invalidates the manifest signature.
+PASS  Missing or unexpected receipt files fail package completeness verification.
+PASS  Each declared receipt file is checked against its raw SHA-256 digest.
+PASS  Receipt canonical hash + Ed25519 signature are verified.
+PASS  record_signatures.json is included with evidence trust material.
+PASS  README states that a Proof Pack cannot vouch for its own included signer key.
+PASS  Signer fingerprint can be compared with the issuing instance /healthz endpoint.
 
-BUILDS
-------
-PASS  Windows amd64: RAMIFY.exe + RAMIFY-Verify.exe
-PASS  Linux amd64: launcher + verifier
-PASS  macOS amd64: launcher + verifier
-PASS  macOS arm64: launcher + verifier
+AGENT / POLICY PARITY
+---------------------
+PASS  Custom agents cannot borrow a built-in agent display name.
+PASS  Case/whitespace variants of built-in names are rejected on custom-agent update.
+PASS  A built-in profile may retain its own shipped name.
+PASS  EPA/DHA serving-normalised comparison follows the policy tolerance.
+PASS  Incompatible/missing serving bases are not silently treated as equivalent.
 
-BROWSER RUNNER NOTE
--------------------
-NOT COUNTED AS PASS: the final visual browser walkthrough remains a manual acceptance step.
-Earlier headless Chromium navigation to the local server was attempted,
-but this execution environment blocks 127.0.0.1 browser navigation with
-ERR_BLOCKED_BY_ADMINISTRATOR. The product flow itself passed via HTTP regression,
-Go tests and current frontend JavaScript contract checks. Perform the final visual
-browser walkthrough on the Windows presentation machine before assessed handover.
+AUTOMATED VALIDATION
+--------------------
+The repository Project validation workflow runs on every push and validates:
+- go test -count=1 ./...
+- go vet ./...
+- Go frontend JavaScript syntax
+- FastAPI pytest suite
+- FastAPI frontend JavaScript syntax
+
+The workflow paths match the current repository layout:
+- Go:      Golang/
+- FastAPI: Fastapi/
+
+BROWSER ACCEPTANCE
+------------------
+MANUAL STEP  Final visual browser walkthrough should still be performed on the presentation Windows machine.
+This is a presentation/visual acceptance step, not an unported trust-path feature.
 
 SCOPE
 -----
-Synthetic local demonstration only. Optional Ollama interprets/explains; deterministic
-RAMIFY remains the sole decision authority. This is not a production product
-certification system, blockchain, or production-grade key custody implementation.
+Synthetic local demonstration only. Optional Ollama interprets/explains; deterministic RAMIFY remains
+the sole trust-decision authority. This is not a production purchasing, medical, safety, legal,
+compliance, product-certification, blockchain or production-grade key-custody system.
