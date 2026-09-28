@@ -5857,3 +5857,146 @@ nav .count { flex:none; margin-left:0 !important; }
   .guided-field-grid { grid-template-columns:1fr !important; }
   .guided-context-row span { font-size:11px !important; }
 }
+
+/* ── Team frontend sync · 27–28 Sep 2026 ───────────────────────────── */
+/* Keep button labels readable during mouse and keyboard interaction. */
+.btn:not(.btn-ghost):not(.btn-quiet):not(.btn-story) {
+  color:#fff;
+}
+.btn.btn-story:hover,
+.btn.btn-story:focus-visible {
+  background:#e0eee8 !important;
+  color:#173f35 !important;
+  border-color:#9bbfb0 !important;
+}
+.btn:focus-visible,
+html.ui-keyboard .btn:focus-visible {
+  outline:3px solid #185fa5 !important;
+  outline-offset:3px !important;
+}
+
+/* Stack basket details on small screens to prevent overlap. */
+@media (max-width:680px) {
+  .cart-line { grid-template-columns:minmax(0,1fr); }
+  .cart-line .cright {
+    width:100%;
+    align-items:flex-start;
+    text-align:left;
+  }
+}
+
+/* Keep the Shop hero on the first stage and simplify later stage headers. */
+.shop-head[hidden] { display:none !important; }
+body:not([data-journey-step="0"]) .shop-head { display:none !important; }
+#journey-stage-1 .journey-stage-head,
+#journey-stage-2 .journey-stage-head,
+#journey-stage-3 .journey-stage-head,
+#journey-stage-4 .journey-stage-head,
+#journey-stage-5 .journey-stage-head {
+  position:absolute;
+  width:1px;
+  height:1px;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  border:0;
+}
+#journey-stage-1,
+#journey-stage-2,
+#journey-stage-3,
+#journey-stage-4,
+#journey-stage-5 {
+  padding-top:24px !important;
+  scroll-margin-top:110px;
+}
+
+/* Keep navbar groups and selected items consistently rounded. */
+.topbar nav,
+.topbar nav a,
+.topbar nav a[aria-current="page"] {
+  border-radius:9999px !important;
+}
+.topbar nav a {
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:6px !important;
+}
+.topbar nav a .nav-icon {
+  flex:0 0 16px;
+  margin:0 !important;
+}
+
+/* Keep one clear journey tracker instead of repeating the same stages. */
+.trust-timeline-shell,
+#trust-timeline {
+  display:none !important;
+}
+
+/* Keep product cards stable when the mouse moves over them. */
+#catalogue .card:hover {
+  transform:none !important;
+  border-color:rgba(28,75,59,.18) !important;
+  box-shadow:0 10px 30px rgba(18,50,40,.055) !important;
+}
+
+/* Reduce unnecessary borders and give Shop sections more breathing room. */
+body[data-journey-step="0"] .disclaimer {
+  border:0 !important;
+  padding:12px 16px !important;
+  margin:18px 0 !important;
+}
+body[data-journey-step="0"] .journey-promise {
+  gap:16px !important;
+  margin:22px 0 !important;
+}
+body[data-journey-step="0"] .journey-promise > span {
+  border:0 !important;
+  box-shadow:none !important;
+  padding:18px 20px !important;
+}
+body[data-journey-step="0"] .shop-controls {
+  border:0 !important;
+  padding:18px !important;
+  margin-bottom:20px !important;
+}
+
+/* Keep story panels and their Close button above the navigation bar. */
+.drawer-scrim { z-index:1000 !important; }
+.drawer { z-index:1001 !important; }
+#open-cases:hover,
+#open-cases:focus-visible,
+#open-cases:hover span,
+#open-cases:focus-visible span {
+  color:#fff !important;
+}
+.story-card-context span {
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  overflow-wrap:anywhere;
+}
+.story-card:hover,
+.story-card:focus-visible {
+  transform:none !important;
+  border-color:#8bd5ca !important;
+  box-shadow:0 8px 20px rgba(21,61,48,.08) !important;
+}
+
+/* RAMIFY proof cards remain usable without horizontal scrolling. */
+@media (max-width:1050px) {
+  .primitive-proof-track {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    overflow:visible;
+  }
+  .primitive-proof-track > u { display:none; }
+  .primitive-proof-card { min-width:0; }
+}
+
+/* Remove the distracting agent-response accent line. */
+.split-half.split-agent.persona-tone {
+  box-shadow:none !important;
+}
+

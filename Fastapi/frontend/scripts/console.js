@@ -215,6 +215,9 @@ function handleRequestEdit() {
 function selectProduct(subjectRef) {
   const product = shopCatalogue?.products.find((p) => p.subject_ref === subjectRef);
   if (!product) return;
+  if (selectedProductRef && selectedProductRef !== subjectRef) {
+    clearPreparedProduct({ keepQuery: false, preserveActor: true });
+  }
   if (current && current.subject_ref !== subjectRef) {
     clearDecisionOutput();
     journeyStep = 0;
@@ -238,6 +241,7 @@ function selectProduct(subjectRef) {
 
 function goJourney(step) {
   journeyStep = Math.max(0, Math.min(5, Number(step) || 0));
+  document.body.dataset.journeyStep = String(journeyStep);
   if (journeyStep > journeyMax) journeyMax = journeyStep;
 
   const shopHeader = document.querySelector(".shop-head");
@@ -267,7 +271,7 @@ function goJourney(step) {
   if (!nav.hidden) {
     const stepNames = ["Product", "Request", "RAMIFY", "Agent", "Receipt", "Checkout"];
     const nextNames = ["", "RAMIFY", "Agent", "Receipt", "Checkout", ""];
-    $("journey-position").textContent = `${stepNames[journeyStep]} · ${journeyStep + 1}/6`;
+    $("journey-position").textContent = `Current stage: ${stepNames[journeyStep]}`;
     $("journey-next-label").textContent = nextNames[journeyStep] ? `Next: ${nextNames[journeyStep]}` : "Final step";
     $("journey-back").disabled = journeyStep <= 1;
     $("journey-next").hidden = journeyStep >= 5;
@@ -322,11 +326,11 @@ const LIGHT_OF_POSTURE = {
 
 function scenarioStoryMeta(scenario) {
   const featured = {
-    "APPROVED-001": ["Everything checks out", "A clean path from product evidence to a permitted action.", "Clean path"],
-    "EXPIRED-001": ["Evidence needs attention", "The product is known, but one evidence record is no longer current.", "Evidence"],
-    "SELLER-RISK-001": ["The seller changes the answer", "The product can be known while the seller still needs scrutiny.", "Seller"],
-    "RECALL-001": ["A recall stops the journey", "A hard product-trust stop that no agent persona can make more permissive.", "Recall"],
-    "SUBSTITUTION-001": ["The product has changed", "RAMIFY keeps the original decision separate and points to a replacement for reassessment.", "Replacement"],
+    "APPROVED-001": ["Product passes all checks", "The product passes the checks and can continue.", "Clear path"],
+    "EXPIRED-001": ["One record is out of date", "The product is known, but one evidence record has expired and needs review.", "Evidence"],
+    "SELLER-RISK-001": ["Seller needs review", "The product is known, but the seller needs more checking.", "Seller"],
+    "RECALL-001": ["The product is recalled", "A recalled product is blocked and cannot continue.", "Recall"],
+    "SUBSTITUTION-001": ["Replacement needs a new check", "The original result stays unchanged. The replacement must be checked separately.", "Replacement"],
   };
   const fallbackTitle = SCENARIO_TITLE[scenario.id] || scenario.id;
   const [title, description, category] = featured[scenario.id] || [fallbackTitle, scenario.note, scenarioCategory(scenario)];

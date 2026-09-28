@@ -292,9 +292,9 @@ async function checkAll() {
   terminal.textContent = [
     `Checked ${feed.length} record${feed.length === 1 ? "" : "s"}.`,
     "",
-    `  unchanged since issued   ${intact + expired}`,
-    `  past their one-hour window ${expired}   (still unchanged — only the purchase-authority validity window lapsed)`,
-    `  altered                  ${broken.length}`,
+    `  authentic and unchanged    ${intact} (a valid receipt may still record a blocked decision)`,
+    `  authentic but expired      ${expired} (the receipt still verifies; only its evidence or authority time window has passed)`,
+    `  verification failed        ${broken.length} (the record was altered or did not pass verification)`,
     "",
     ...broken.flatMap((b) => [
       `  ${b.id}`,
