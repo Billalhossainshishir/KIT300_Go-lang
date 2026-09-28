@@ -34,7 +34,7 @@ func New(root string) (*Server, error) {
 	}
 
 	s := &Server{root: root, runtimeDir: runtimeDirectory(root), version: version, build: frontendBuildID(root), seed: seed, mux: http.NewServeMux()}
-	if err := loadPortableSigner(root); err != nil {
+	if err := loadRuntimeSigner(s.runtimeDir); err != nil {
 		return nil, err
 	}
 	if err := s.loadRuntimeState(); err != nil {
@@ -64,6 +64,7 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status": "ok", "data_snapshot": s.seed.SnapshotID(), "version": s.version, "build": s.build,
+		"signer_key_fingerprint": currentSignerFingerprint(),
 		"runtime": "go", "configured_endpoint": "127.0.0.1:8000", "core_external_network_calls": false,
 		"migration_status": "complete", "default_launcher_loopback_only": true, "documented_launch_loopback_only": true,
 		"bound_to": "not introspected by the application", "binds_loopback_only": nil,
