@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -42,7 +44,7 @@ func New(root string) (*Server, error) {
 	return s, nil
 }
 
-func (s *Server) Handler() http.Handler { return noStore(s.mux) }
+func (s *Server) Handler() http.Handler { return noStore(localBoundary(s.mux)) }
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /healthz", s.healthz)
@@ -56,6 +58,10 @@ func (s *Server) routes() {
 }
 
 func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("RAMIFY_DEMO_DETERMINISTIC") == "1" {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"detail": "HTTP serving is disabled in deterministic parity mode."})
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status": "ok", "data_snapshot": s.seed.SnapshotID(), "version": s.version, "build": s.build,
 		"runtime": "go", "configured_endpoint": "127.0.0.1:8000", "core_external_network_calls": false,
@@ -76,7 +82,7 @@ type subjectRequest struct {
 
 func (s *Server) identify(w http.ResponseWriter, r *http.Request) {
 	var req identifyRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeJSON(w, 422, map[string]any{"detail": "invalid JSON"})
 		return
 	}
@@ -134,7 +140,7 @@ func (s *Server) identify(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) resolve(w http.ResponseWriter, r *http.Request) {
 	var req subjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeJSON(w, 422, map[string]any{"detail": "invalid JSON"})
 		return
 	}
@@ -165,7 +171,7 @@ func (s *Server) resolve(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	var req subjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeBody(r, &req); err != nil {
 		writeJSON(w, 422, map[string]any{"detail": "invalid JSON"})
 		return
 	}
@@ -196,6 +202,52 @@ func noStore(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+func loopbackHost(hostport string) bool {
+	hostport = strings.TrimSpace(hostport)
+	if hostport == "" {
+		return false
+	}
+	host := hostport
+	if h, _, err := net.SplitHostPort(hostport); err == nil {
+		host = h
+	} else {
+		host = strings.Trim(host, "[]")
+	}
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func localOrigin(raw string) bool {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Scheme != "http" || u.Host == "" || u.User != nil {
+		return false
+	}
+	return loopbackHost(u.Host)
+}
+
+func localBoundary(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !loopbackHost(r.Host) {
+			writeJSON(w, http.StatusForbidden, map[string]any{"detail": "RAMIFY accepts local loopback requests only."})
+			return
+		}
+		switch r.Method {
+		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+			if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" {
+				if strings.EqualFold(origin, "null") || !localOrigin(origin) {
+					writeJSON(w, http.StatusForbidden, map[string]any{"detail": "Cross-origin write request rejected."})
+					return
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 
 func (s *Server) fullRoutes() {
 	m := s.mux
@@ -241,7 +293,18 @@ func (s *Server) fullRoutes() {
 func decodeBody(r *http.Request, dst any) error {
 	dec := json.NewDecoder(io.LimitReader(r.Body, 2<<20))
 	dec.UseNumber()
-	return dec.Decode(dst)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		return err
+	}
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
+		if err == nil {
+			return fmt.Errorf("request body must contain exactly one JSON value")
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *Server) verifyPrimitive(w http.ResponseWriter, r *http.Request) {
@@ -265,9 +328,14 @@ func (s *Server) assessHTTP(w http.ResponseWriter, r *http.Request) {
 	if actor == "" {
 		actor = "consumer_v1"
 	}
-	qty := intv(q["quantity"])
-	if qty == 0 {
-		qty = 1
+	qty := 1
+	if raw, ok := q["quantity"]; ok {
+		parsed, err := strictJSONInt(raw, 1, 1000)
+		if err != nil {
+			writeJSON(w, 422, map[string]any{"detail": "quantity " + err.Error()})
+			return
+		}
+		qty = parsed
 	}
 	ctx := str(q["context"])
 	if ctx == "" {
