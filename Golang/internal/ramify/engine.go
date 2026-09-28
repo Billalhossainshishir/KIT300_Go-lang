@@ -167,6 +167,13 @@ func (s *Server) assessOne(identifier, actorRef, policyRef string, quantity int,
 	if unit > 0 {
 		receipt["order"] = map[string]any{"quantity": quantity, "unit_price_cents": unit, "line_total_cents": unit * quantity, "currency": "AUD"}
 	}
+	if profile := obj(actor["profile"]); profile != nil {
+		if style := str(profile["purchase_style"]); style == "cart" || style == "requisition" {
+			// Seal the transaction path used at assessment time so a later
+			// profile edit cannot change what human review may authorise.
+			receipt["actor_purchase_style"] = style
+		}
+	}
 	if sub := a["substitution"]; sub != nil {
 		receipt["substitution"] = sub
 	}
