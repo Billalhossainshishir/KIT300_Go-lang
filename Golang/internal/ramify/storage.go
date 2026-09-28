@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -409,7 +410,89 @@ func (s *Server) ledgerVerifyHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-const ramifySignerRef = "ramify:demo:signer:receipt"
+const (
+	ramifySignerRef = "ramify:demo:signer:receipt"
+	legacyReceiptSignerPublicHex = "a77cc79c7e6e3cdf17a317f11d5ce757cf8bd7c910579f076715b30c62caaabc"
+)
+
+func verifiesWithPublicKey(record map[string]any, pub ed25519.PublicKey) bool {
+	if len(pub) != ed25519.PublicKeySize {
+		return false
+	}
+	body := canonical(record)
+	digest := sha256.Sum256(body)
+	if str(record["payload_hash"]) != "sha256:"+hex.EncodeToString(digest[:]) {
+		return false
+	}
+	sig, err := base64.StdEncoding.DecodeString(str(record["signature"]))
+	return err == nil && ed25519.Verify(pub, digest[:], sig)
+}
+
+func knownLegacySignedRecords(dir string) ([]map[string]any, error) {
+	records := []map[string]any{}
+	receipts, err := readJSONL(filepath.Join(dir, "receipts.jsonl"))
+	if err != nil {
+		return nil, err
+	}
+	records = append(records, receipts...)
+
+	var cart map[string]any
+	if err := readJSONFile(filepath.Join(dir, "cart.json"), &cart); err != nil {
+		return nil, err
+	}
+	for _, key := range []string{"orders", "requisitions"} {
+		for _, raw := range arr(cart[key]) {
+			if record := obj(raw); record != nil {
+				records = append(records, record)
+			}
+		}
+	}
+	return records, nil
+}
+
+func migrateKnownLegacyRuntimeSigner(dir string) (bool, error) {
+	pub, err := decodePublicHex(legacyReceiptSignerPublicHex)
+	if err != nil {
+		return false, err
+	}
+	records, err := knownLegacySignedRecords(dir)
+	if err != nil {
+		return false, err
+	}
+	if len(records) == 0 {
+		return false, nil
+	}
+	for _, record := range records {
+		if !verifiesWithPublicKey(record, pub) {
+			return false, nil
+		}
+	}
+	history, err := loadSignerHistory(dir)
+	if err != nil {
+		return false, err
+	}
+	already := false
+	for _, existing := range history {
+		if bytes.Equal(existing, pub) {
+			already = true
+			break
+		}
+	}
+	if !already {
+		history = append(history, pub)
+		if err := persistSignerHistory(dir, history); err != nil {
+			return false, err
+		}
+	}
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return false, err
+	}
+	if err := installRuntimeSigner(dir, priv, false); err != nil {
+		return false, err
+	}
+	return true, nil
+}
 
 func signerFingerprint(pub ed25519.PublicKey) string {
 	h := sha256.Sum256(pub)
@@ -541,6 +624,13 @@ func loadRuntimeSigner(dir string) error {
 	raw, err := os.ReadFile(keyPath)
 	if os.IsNotExist(err) {
 		if runtimeSigningHistoryExists(dir) {
+			migrated, migrationErr := migrateKnownLegacyRuntimeSigner(dir)
+			if migrationErr != nil {
+				return fmt.Errorf("legacy RAMIFY signer migration failed: %w", migrationErr)
+			}
+			if migrated {
+				return nil
+			}
 			return fmt.Errorf("RAMIFY signing material is missing while receipt/transaction history exists; refusing silent signer rotation")
 		}
 		_, priv, genErr := ed25519.GenerateKey(rand.Reader)
