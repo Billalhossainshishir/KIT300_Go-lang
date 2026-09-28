@@ -39,6 +39,7 @@ func request(t *testing.T, s *Server, method, path string, body any) *httptest.R
 		r = httptest.NewRequest(method, path, bytes.NewReader(b))
 		r.Header.Set("Content-Type", "application/json")
 	}
+	r.Host = "127.0.0.1:8000"
 	w := httptest.NewRecorder()
 	s.Handler().ServeHTTP(w, r)
 	return w
@@ -470,5 +471,146 @@ func TestAgentEditorCRUDAndDerivedPolicy(t *testing.T) {
 	reset := request(t, s, http.MethodDelete, "/api/v0/agents/"+ref, nil)
 	if reset.Code != http.StatusOK || !boolv(decodeResponse(t, reset)["deleted"]) {
 		t.Fatalf("custom profile delete/reset failed: %d %s", reset.Code, reset.Body.String())
+	}
+}
+
+
+func TestLocalHTTPBoundaryRejectsForeignHostAndOrigin(t *testing.T) {
+	s := newTestServer(t)
+
+	foreignHost := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	foreignHost.Host = "evil.example"
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, foreignHost)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("foreign host should be rejected, got %d %s", w.Code, w.Body.String())
+	}
+
+	for _, origin := range []string{"https://evil.example", "null"} {
+		r := httptest.NewRequest(http.MethodPost, "/api/v0/identify", strings.NewReader(`{"identifier":"ramify:demo:supp:apex-mg-glyc-120"}`))
+		r.Host = "127.0.0.1:8000"
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Origin", origin)
+		w := httptest.NewRecorder()
+		s.Handler().ServeHTTP(w, r)
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("origin %q should be rejected, got %d %s", origin, w.Code, w.Body.String())
+		}
+	}
+
+	local := httptest.NewRequest(http.MethodPost, "/api/v0/identify", strings.NewReader(`{"identifier":"ramify:demo:supp:apex-mg-glyc-120"}`))
+	local.Host = "localhost:8000"
+	local.Header.Set("Content-Type", "application/json")
+	local.Header.Set("Origin", "http://127.0.0.1:8000")
+	w = httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, local)
+	if w.Code != http.StatusOK {
+		t.Fatalf("loopback request should be accepted, got %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAssessQuantityRequiresStrictIntegerRange(t *testing.T) {
+	s := newTestServer(t)
+	invalid := []any{0, -1, 1001, "2", 1.5, true}
+	for _, quantity := range invalid {
+		w := request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+			"identifier": "ramify:demo:supp:apex-mg-glyc-120",
+			"actor_ref": "consumer_v1",
+			"quantity": quantity,
+			"context": "decision",
+		})
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("quantity %#v should be rejected, got %d %s", quantity, w.Code, w.Body.String())
+		}
+	}
+
+	w := request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+		"identifier": "ramify:demo:supp:apex-mg-glyc-120",
+		"actor_ref": "consumer_v1",
+		"quantity": 2,
+		"context": "decision",
+	})
+	if w.Code != http.StatusOK {
+		t.Fatalf("integer quantity should be accepted, got %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestRequestJSONRejectsTrailingAndUnknownTypedFields(t *testing.T) {
+	s := newTestServer(t)
+
+	trailing := httptest.NewRequest(http.MethodPost, "/api/v0/identify", strings.NewReader(`{"identifier":"ramify:demo:supp:apex-mg-glyc-120"} {}`))
+	trailing.Host = "127.0.0.1:8000"
+	trailing.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, trailing)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("trailing JSON should be rejected, got %d %s", w.Code, w.Body.String())
+	}
+
+	unknown := httptest.NewRequest(http.MethodPost, "/api/v0/identify", strings.NewReader(`{"identifier":"ramify:demo:supp:apex-mg-glyc-120","unexpected":true}`))
+	unknown.Host = "127.0.0.1:8000"
+	unknown.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, unknown)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("unknown typed field should be rejected, got %d %s", w.Code, w.Body.String())
+	}
+}
+
+func TestExternalOllamaEndpointIsRejected(t *testing.T) {
+	t.Setenv("RAMIFY_OLLAMA_BASE_URL", "https://example.com:11434")
+	t.Setenv("RAMIFY_DISABLE_AGENT", "")
+	s := newTestServer(t)
+	status := decodeResponse(t, request(t, s, http.MethodGet, "/api/v0/agent/status", nil))
+	if boolv(status["local_model_available"]) {
+		t.Fatalf("external Ollama endpoint must not be available: %#v", status)
+	}
+	if str(status["error_type"]) != "non_local_ollama_endpoint" {
+		t.Fatalf("expected non-local endpoint rejection, got %#v", status)
+	}
+	if str(status["base_url"]) != "" {
+		t.Fatalf("external endpoint must not be exposed as active base URL: %#v", status)
+	}
+}
+
+func TestContradictoryModelExplanationFallsBackToDeterministic(t *testing.T) {
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/tags":
+			writeJSON(w, 200, map[string]any{"models": []any{map[string]any{"name": "llama3.1:latest"}}})
+		case "/api/generate":
+			writeJSON(w, 200, map[string]any{"response": `{"explanation":"This product is safe to buy and you may proceed."}`})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer fake.Close()
+
+	t.Setenv("RAMIFY_OLLAMA_BASE_URL", fake.URL)
+	t.Setenv("RAMIFY_LOCAL_MODEL", "llama3.1")
+	t.Setenv("RAMIFY_DISABLE_AGENT", "")
+	s := newTestServer(t)
+
+	assessment := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+		"identifier": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+		"actor_ref": "consumer_v1",
+		"quantity": 1,
+		"context": "decision",
+	}))
+	if str(assessment["actor_decision"]) != "block" {
+		t.Fatalf("test requires a blocked receipt, got %#v", assessment)
+	}
+	explained := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/explain", map[string]any{"receipt": assessment["receipt"]}))
+	if boolv(explained["model_text_accepted"]) || str(explained["source"]) != "deterministic_summary" {
+		t.Fatalf("contradictory model text must be discarded: %#v", explained)
+	}
+}
+
+func TestDeterministicParityModeRefusesHTTPHealth(t *testing.T) {
+	t.Setenv("RAMIFY_DEMO_DETERMINISTIC", "1")
+	s := newTestServer(t)
+	w := request(t, s, http.MethodGet, "/healthz", nil)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("deterministic parity mode health should be 503, got %d %s", w.Code, w.Body.String())
 	}
 }
