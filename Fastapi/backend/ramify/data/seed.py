@@ -42,19 +42,33 @@ def policy_pack() -> dict:
     return json.loads(POLICY_PACK_PATH.read_text(encoding="utf-8"))
 
 
+def _load_generated_mapping(path: Path, default: dict) -> dict:
+    """Load generated trust metadata without letting one damaged byte crash the demo.
+
+    Invalid UTF-8 inside a string is replaced so downstream cryptographic
+    verification can reject the affected signature. Structurally invalid JSON
+    returns the supplied empty/default mapping, which also fails closed because
+    no unverified signature is treated as trusted.
+    """
+    if not path.exists():
+        return default
+    text = path.read_bytes().decode("utf-8", errors="replace")
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return default
+    return payload if isinstance(payload, dict) else default
+
+
 @lru_cache(maxsize=1)
 def evidence_signatures() -> dict[str, dict[str, str]]:
-    if not EVIDENCE_SIGNATURES_PATH.exists():
-        return {}
-    return json.loads(EVIDENCE_SIGNATURES_PATH.read_text(encoding="utf-8"))
+    return _load_generated_mapping(EVIDENCE_SIGNATURES_PATH, {})
 
 
 @lru_cache(maxsize=1)
 def record_signatures() -> dict[str, dict[str, dict[str, str]]]:
     """Issuer signatures over recall-status and seller-authority records."""
-    if not RECORD_SIGNATURES_PATH.exists():
-        return {"statuses": {}, "sellers": {}}
-    return json.loads(RECORD_SIGNATURES_PATH.read_text(encoding="utf-8"))
+    return _load_generated_mapping(RECORD_SIGNATURES_PATH, {"statuses": {}, "sellers": {}})
 
 
 def parse_timestamp(value: str) -> datetime:

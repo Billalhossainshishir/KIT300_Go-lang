@@ -57,3 +57,29 @@ def test_dataset_digest_includes_record_signature_manifest():
 def test_existing_clean_and_recalled_scenarios_keep_expected_posture():
     assert engine.assess(CLEAN, persist_receipt=False)["objective_posture"] == "allow"
     assert engine.assess(RECALLED, persist_receipt=False)["objective_posture"] == "block"
+
+
+
+def test_corrupt_utf8_signature_manifest_does_not_crash_loader(tmp_path):
+    manifest = tmp_path / "evidence_signatures.json"
+    manifest.write_bytes(
+        b'{"ev:test":{"content_hash":"sha256:00","signature":"abc\xf9xyz","storage_path":"x"}}'
+    )
+    try:
+        with patch.object(seed, "EVIDENCE_SIGNATURES_PATH", manifest):
+            seed.evidence_signatures.cache_clear()
+            loaded = seed.evidence_signatures()
+            assert loaded["ev:test"]["signature"] == "abc\ufffdxyz"
+    finally:
+        seed.evidence_signatures.cache_clear()
+
+
+def test_structurally_broken_signature_manifest_fails_closed(tmp_path):
+    manifest = tmp_path / "evidence_signatures.json"
+    manifest.write_bytes(b'{"ev:test":')
+    try:
+        with patch.object(seed, "EVIDENCE_SIGNATURES_PATH", manifest):
+            seed.evidence_signatures.cache_clear()
+            assert seed.evidence_signatures() == {}
+    finally:
+        seed.evidence_signatures.cache_clear()
