@@ -278,10 +278,17 @@ func (s *Server) receiptReviewHTTP(w http.ResponseWriter, r *http.Request) {
 		next["human_authorised_actions"] = []string{}
 		consequence = "No basket line or requisition is created, and nothing proceeds."
 	} else {
-		action := "add_to_mock_cart"
-		if p := s.profiles()[str(orig["actor_ref"])]; p != nil && str(p["purchase_style"]) == "requisition" {
+		style := str(orig["actor_purchase_style"])
+		action := ""
+		switch style {
+		case "cart":
+			action = "add_to_mock_cart"
+		case "requisition":
 			action = "create_mock_requisition"
 			consequence = "This successor receipt may create one simulated purchase requisition. The objective posture and original agent decision remain unchanged."
+		default:
+			writeJSON(w, 409, map[string]any{"detail": "This receipt does not record which transaction path its agent uses, so it cannot be authorised. Run the product check again."})
+			return
 		}
 		next["human_authorised_actions"] = []string{action}
 		if action == "create_mock_requisition" {
@@ -293,7 +300,8 @@ func (s *Server) receiptReviewHTTP(w http.ResponseWriter, r *http.Request) {
 	next["human_review"] = map[string]any{
 		"outcome": outcome, "outcome_label": label, "reviewer_name": q["reviewer_name"], "reviewer_role": q["reviewer_role"], "note": q["reviewer_note"],
 		"reviewed_at": reviewedAt, "reviewed_decision": orig["actor_decision"], "decision_scope": "this simulated transaction only",
-		"reviewer_attestation": "The named reviewer made this simulated decision. This field is a recorded acknowledgement, not a personal cryptographic signature.",
+		"identity_verified": false,
+		"reviewer_attestation": "Reviewer name and role are recorded as supplied with the request. The reviewer's identity was not authenticated, and this is not a personal cryptographic signature.",
 	}
 	meaning := str(orig["objective_posture"])
 	if row := standingDisplay(str(obj(orig["status_result"])["standing"])); row != nil {
@@ -311,7 +319,7 @@ func (s *Server) receiptReviewHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	next["human_receipt"] = map[string]any{
 		"receipt_type": "human_decision_summary", "headline": label,
-		"reviewer":                map[string]any{"name": q["reviewer_name"], "role": q["reviewer_role"]},
+		"reviewer":                map[string]any{"name": q["reviewer_name"], "role": q["reviewer_role"], "identity_verified": false},
 		"what_ramify_found":       "Objective posture " + str(orig["objective_posture"]) + " — " + meaning,
 		"what_the_agent_did":      str(orig["actor_label"]) + " returned " + str(orig["actor_decision"]) + " and handed the decision to a person.",
 		"what_the_person_decided": label, "why_it_stopped": valueOr(orig, "primary_reason", "No primary reason recorded."),
