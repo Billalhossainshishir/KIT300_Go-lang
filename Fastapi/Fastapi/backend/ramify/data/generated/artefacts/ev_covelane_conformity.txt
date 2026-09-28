@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Conformity certificate. Filtering facepiece respirator. Filtration efficiency 95.4 per cent at the specified particle size.","authority_level":"certification_body","certificate_number":"GMP-2026-00019","claim_ref":"clm:covelane:certification","document_type":"conformity_certificate","expires_at":"2027-04-14T00:00:00.000000000Z","issued_at":"2026-04-14T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:GMP_AU_demo","record_status":"active","ref":"ev:covelane:conformity","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":"2026-01-B","product_ref":"ramify:demo:ppe:covelane-n95-resp-b2026-01-B","tests":["conformity_assessment"]},"source_uri":"synthetic://gmp/certificates/GMP-2026-00019","subject_ref":"ramify:demo:ppe:covelane-n95-resp-b2026-01-B","type":"conformity_cert","valid_from":"2026-04-14T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:covelane:certification":{"issuer_ref":"ramify:demo:issuer:GMP_AU_demo","ref":"clm:covelane:certification","state":"accepted","type":"certification_claim","value":"Conforms to the P2/N95 filtration standard"}}}
+
+Conformity certificate. Filtering facepiece respirator. Filtration efficiency 95.4 per cent at the specified particle size.
+
+Synthetic demonstration artefact. Certifies nothing.

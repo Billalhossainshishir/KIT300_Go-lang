@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Certificate of analysis. Sample TDP-2605-088. EPA 181mg and DHA 119mg per softgel.","authority_level":"accredited_laboratory","certificate_number":"CONC-2026-00011","claim_ref":"clm:tidalpoint:ingredient","document_type":"third_party_lab_certificate","expires_at":"2027-05-11T00:00:00.000000000Z","issued_at":"2026-05-11T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","record_status":"active","ref":"ev:tidalpoint:coa","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":"2025-12-D","product_ref":"ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D","tests":["identity","purity","heavy_metals"]},"source_uri":"synthetic://conc/certificates/CONC-2026-00011","subject_ref":"ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D","type":"coa_pdf","valid_from":"2026-05-11T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:tidalpoint:ingredient":{"issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","ref":"clm:tidalpoint:ingredient","state":"accepted","type":"ingredient_claim","value":"EPA 180mg / DHA 120mg per softgel"}}}
+
+Certificate of analysis. Sample TDP-2605-088. EPA 181mg and DHA 119mg per softgel.
+
+Synthetic demonstration artefact. Certifies nothing.

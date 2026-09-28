@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Certificate of analysis. Sample STF-2502-064. Zinc gluconate 49.6mg per capsule against a 50mg specification.","authority_level":"accredited_laboratory","certificate_number":"CONC-2025-00014","claim_ref":"clm:stonefield-gluc:ingredient","document_type":"third_party_lab_certificate","expires_at":"2026-02-10T00:00:00.000000000Z","issued_at":"2025-02-10T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","record_status":"active","ref":"ev:stonefield-gluc:coa","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":null,"product_ref":"ramify:demo:supp:stonefield-zinc-gluc-50-90","tests":["identity","purity","heavy_metals"]},"source_uri":"synthetic://conc/certificates/CONC-2025-00014","subject_ref":"ramify:demo:supp:stonefield-zinc-gluc-50-90","type":"coa_pdf","valid_from":"2025-02-10T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:stonefield-gluc:ingredient":{"issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","ref":"clm:stonefield-gluc:ingredient","state":"accepted","type":"ingredient_claim","value":"Zinc gluconate 50mg per capsule"}}}
+
+Certificate of analysis. Sample STF-2502-064. Zinc gluconate 49.6mg per capsule against a 50mg specification.
+
+Synthetic demonstration artefact. Certifies nothing.

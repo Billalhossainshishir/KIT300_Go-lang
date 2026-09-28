@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Certificate of analysis. Sample NBM-2604-019. Ascorbic acid 1004mg per tablet against a 1000mg specification.","authority_level":"accredited_laboratory","certificate_number":"CONC-2026-00009","claim_ref":"clm:northbeam:ingredient","document_type":"third_party_lab_certificate","expires_at":"2027-04-02T00:00:00.000000000Z","issued_at":"2026-04-02T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","record_status":"active","ref":"ev:northbeam:coa","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":"2025-03-A","product_ref":"ramify:demo:supp:northbeam-vitc-1000-b2025-03-A","tests":["identity","purity","heavy_metals"]},"source_uri":"synthetic://conc/certificates/CONC-2026-00009","subject_ref":"ramify:demo:supp:northbeam-vitc-1000-b2025-03-A","type":"coa_pdf","valid_from":"2026-04-02T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:northbeam:ingredient":{"issuer_ref":"ramify:demo:issuer:Concordia_Labs_AU","ref":"clm:northbeam:ingredient","state":"accepted","type":"ingredient_claim","value":"Ascorbic acid 1000mg per tablet"}}}
+
+Certificate of analysis. Sample NBM-2604-019. Ascorbic acid 1004mg per tablet against a 1000mg specification.
+
+Synthetic demonstration artefact. Certifies nothing.

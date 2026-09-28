@@ -1,0 +1,6 @@
+RAMIFY synthetic evidence v2
+binding-json: {"record":{"artefact":"Packaging artwork capture. Front panel declares EPA 300mg and DHA 200mg per softgel.","authority_level":"certification_body","certificate_number":"GMP-2026-00012","claim_ref":"clm:tidalpoint:ingredient_restated","document_type":"packaging_artwork_capture","expires_at":"2027-05-20T00:00:00.000000000Z","issued_at":"2026-05-20T00:00:00.000000000Z","issuer_ref":"ramify:demo:issuer:GMP_AU_demo","record_status":"active","ref":"ev:tidalpoint:label","retrieved_at":"2026-07-23T10:15:00.000000000Z","scope":{"batch_ref":"2025-12-D","product_ref":"ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D","tests":["label_transcription"]},"source_uri":"synthetic://gmp/certificates/GMP-2026-00012","subject_ref":"ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D","type":"label_image","valid_from":"2026-05-20T00:00:00.000000000Z"},"schema":"ramify-evidence-binding-v2","supported_claims":{"clm:tidalpoint:ingredient_restated":{"issuer_ref":"ramify:demo:issuer:GMP_AU_demo","ref":"clm:tidalpoint:ingredient_restated","state":"accepted","type":"ingredient_claim","value":"EPA 300mg / DHA 200mg per softgel"}}}
+
+Packaging artwork capture. Front panel declares EPA 300mg and DHA 200mg per softgel.
+
+Synthetic demonstration artefact. Certifies nothing.
