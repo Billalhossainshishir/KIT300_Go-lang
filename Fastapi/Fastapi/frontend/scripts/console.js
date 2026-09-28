@@ -233,7 +233,6 @@ function selectProduct(subjectRef) {
   $("selection-panel").hidden = false;
   $("selection-panel").classList.remove("selection-pop");
   requestAnimationFrame(() => $("selection-panel").classList.add("selection-pop"));
-  $("selection-panel").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function goJourney(step) {
@@ -280,13 +279,6 @@ function goJourney(step) {
   // reading Request or RAMIFY. Surface it once the journey reaches Agent.
   if (journeyStep >= 3) void refreshBadges();
 
-  const stage = $(`journey-stage-${journeyStep}`);
-  if (stage && journeyStep > 0) {
-    stage.classList.remove("journey-stage-focus");
-    requestAnimationFrame(() => stage.classList.add("journey-stage-focus"));
-    stage.addEventListener("animationend", () => stage.classList.remove("journey-stage-focus"), { once: true });
-    stage.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 }
 
 // The cases are an operator's tool, not shop furniture, so they live in a
