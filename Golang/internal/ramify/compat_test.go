@@ -1284,3 +1284,77 @@ func TestNeedsMeScriptRecoversFromLegacyReviewErrors(t *testing.T) {
 		}
 	}
 }
+
+
+func TestExpiredIntactReceiptCanBeDeclinedButNotAuthorised(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+
+	makeExpired := func(suffix string) map[string]any {
+		hold := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+			"identifier": "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z",
+			"actor_ref": "consumer_v1",
+			"quantity": 1,
+			"context": "purchase",
+		}))
+		receipt := copyMap(obj(hold["receipt"]))
+		delete(receipt, "payload_hash")
+		delete(receipt, "signature")
+		receipt["receipt_id"] = str(receipt["receipt_id"]) + suffix
+		receipt["timestamp"] = "2026-09-20T00:00:00Z"
+		receipt["expires_at"] = "2026-09-20T01:00:00Z"
+		return s.seal(receipt)
+	}
+
+	expiredDecline := makeExpired("-expired-decline")
+	expiredOverride := makeExpired("-expired-override")
+	state.mu.Lock()
+	state.receipts = append(state.receipts, expiredDecline, expiredOverride)
+	state.mu.Unlock()
+
+	report := s.verifyReceipt(expiredDecline)
+	if !boolv(report["integrity_verified"]) || boolv(report["purchase_authority_valid"]) {
+		t.Fatalf("test receipt should be intact but expired: %#v", report)
+	}
+
+	decline := request(t, s, http.MethodPost, "/api/v0/receipt/review", map[string]any{
+		"receipt_id": expiredDecline["receipt_id"],
+		"outcome": "confirmed",
+		"reviewer_note": "Declined after the old review request expired.",
+	})
+	if decline.Code != http.StatusOK {
+		t.Fatalf("expired intact receipt should be declinable, got %d %s", decline.Code, decline.Body.String())
+	}
+	successor := obj(decodeResponse(t, decline)["receipt"])
+	if str(successor["supersedes_receipt"]) != str(expiredDecline["receipt_id"]) ||
+		str(obj(successor["human_review"])["outcome"]) != "confirmed" {
+		t.Fatalf("decline successor was not recorded correctly: %#v", successor)
+	}
+
+	queue := decodeResponse(t, request(t, s, http.MethodGet, "/api/v0/review/queue", nil))
+	for _, raw := range arr(queue["open"]) {
+		if str(obj(raw)["receipt_id"]) == str(expiredDecline["receipt_id"]) {
+			t.Fatalf("declined receipt remained in Needs Me queue: %#v", queue)
+		}
+	}
+	resolved := false
+	for _, raw := range arr(queue["resolved"]) {
+		row := obj(raw)
+		if str(row["supersedes_receipt"]) == str(expiredDecline["receipt_id"]) {
+			resolved = true
+			break
+		}
+	}
+	if !resolved {
+		t.Fatalf("declined receipt was not moved to completed reviews: %#v", queue)
+	}
+
+	override := request(t, s, http.MethodPost, "/api/v0/receipt/review", map[string]any{
+		"receipt_id": expiredOverride["receipt_id"],
+		"outcome": "overridden",
+		"reviewer_note": "Attempted expired override.",
+	})
+	if override.Code != http.StatusConflict {
+		t.Fatalf("expired receipt must not authorise a transaction, got %d %s", override.Code, override.Body.String())
+	}
+}
