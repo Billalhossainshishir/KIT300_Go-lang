@@ -703,9 +703,6 @@ function installFinalPolish() {
   if (document.documentElement.dataset.finalPolish === "1") return;
   document.documentElement.dataset.finalPolish = "1";
 
-  // Mark the shared shell as ready without observing or mutating every section.
-  requestAnimationFrame(() => document.documentElement.classList.add("ui-ready"));
-
   // Keep a clear keyboard focus mode for live demos and accessibility.
   let keyboardMode = false;
   document.addEventListener("keydown", (event) => {
