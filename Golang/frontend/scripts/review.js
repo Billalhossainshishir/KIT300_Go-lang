@@ -235,8 +235,26 @@ function stopKind(r) {
   return "finding";
 }
 
+function needsFreshAssessment(r) {
+  return !["cart", "requisition"].includes(r.actor_purchase_style);
+}
+
+function freshAssessmentHref(r) {
+  const params = new URLSearchParams({
+    subject: r.subject_ref || "",
+    actor: r.actor_ref || "",
+  });
+  return `/shop?${params.toString()}`;
+}
+
 function openItem(r) {
   const commercial = stopKind(r) === "commercial";
+  const legacy = needsFreshAssessment(r);
+  const authoriseControl = legacy
+    ? `<a class="btn btn-sm btn-go" href="${esc(freshAssessmentHref(r))}">
+         Run product check again</a>`
+    : `<button class="btn btn-sm btn-go" data-decide="overridden" data-receipt="${esc(r.receipt_id)}">
+         Authorise once</button>`;
   return `
     <div class="queue-item ${esc(toneOf(r))} ${personaClass(r.actor_ref)}" id="item-${esc(r.receipt_id)}">
       <div class="queue-head">
@@ -249,8 +267,7 @@ function openItem(r) {
       <div class="queue-actions">
         <button class="btn btn-sm btn-stop" data-decide="confirmed" data-receipt="${esc(r.receipt_id)}">
           Decline — leave item</button>
-        <button class="btn btn-sm btn-go" data-decide="overridden" data-receipt="${esc(r.receipt_id)}">
-          Authorise once</button>
+        ${authoriseControl}
         <button class="btn btn-sm btn-ghost" data-detail="${esc(r.receipt_id)}"
                 aria-expanded="false">Why it needs you</button>
         ${
@@ -294,6 +311,16 @@ const OVERRIDE_ADVICE = {
   finding: "Read the findings below first; this one is a finding about the product.",
 };
 
+function authoriseAdvice(r, kind) {
+  if (needsFreshAssessment(r)) {
+    return `<li><strong>Run product check again.</strong> This receipt was created before RAMIFY
+      sealed the agent's transaction path into the receipt. For safety, it cannot mint new purchase
+      authority. Re-run the same product with the same agent, then decide from the fresh receipt.</li>`;
+  }
+  return `<li><strong>Authorise once.</strong> A linked human receipt records that a person accepted
+    responsibility for this simulated transaction only. ${esc(OVERRIDE_ADVICE[kind])}</li>`;
+}
+
 function detailPanel(r) {
   const kind = stopKind(r);
   const checks = r.check_results
@@ -317,8 +344,7 @@ function detailPanel(r) {
       <ul>
         <li><strong>Decline — leave item.</strong> No basket line or requisition is created. A linked human
           receipt records that a person reviewed the stop and chose not to proceed.</li>
-        <li><strong>Authorise once.</strong> A linked human receipt records that a person accepted
-          responsibility for this simulated transaction only. ${esc(OVERRIDE_ADVICE[kind])}</li>
+        ${authoriseAdvice(r, kind)}
       </ul>
       <p class="detail-note">Either way the receipt below is left exactly as it is. Your decision
         is written next to it as its own linked record, never over it.</p>
@@ -378,39 +404,47 @@ async function decide(receiptId, outcome, button) {
   // not exposed as another form step in the client demo; the API's synthetic
   // defaults are written into the linked Human Receipt.
   const card = $(`item-${receiptId}`);
-  if (card) $$("button", card).forEach((b) => (b.disabled = true));
+  const cardButtons = card ? $$("button", card) : [];
+  cardButtons.forEach((b) => (b.disabled = true));
+
   const typedNote = $(`note-${receiptId}`)?.value.trim();
   const note = typedNote ||
     (outcome === "confirmed"
       ? "Reviewed and declined for this simulated transaction."
       : "Reviewed and authorised once for this simulated transaction.");
 
-  const result = await api("/api/v0/receipt/review", {
-    receipt_id: receiptId,
-    outcome,
-    reviewer_note: note,
-  });
+  try {
+    const result = await api("/api/v0/receipt/review", {
+      receipt_id: receiptId,
+      outcome,
+      reviewer_note: note,
+    });
 
-  if (card) card.classList.add("resolving");
-  if (outcome === "overridden") {
-    const actions = result.receipt?.human_authorised_actions || [];
-    const requisition = actions.includes("create_mock_requisition");
-    const endpoint = requisition ? "/api/v0/requisition/create" : "/api/v0/cart/add";
-    try {
-      await api(endpoint, { receipt_ref: result.receipt_ref });
-      toast(
-        requisition
-          ? "Human receipt created. A simulated requisition was recorded; the original machine receipt was not altered."
-          : "Human receipt created. The simulated item was added to the basket; the original machine receipt was not altered.",
-        "good"
-      );
-    } catch (error) {
-      toast(`Human decision recorded, but the transaction step was refused: ${error.message}`, "bad");
+    if (card) card.classList.add("resolving");
+    if (outcome === "overridden") {
+      const actions = result.receipt?.human_authorised_actions || [];
+      const requisition = actions.includes("create_mock_requisition");
+      const endpoint = requisition ? "/api/v0/requisition/create" : "/api/v0/cart/add";
+      try {
+        await api(endpoint, { receipt_ref: result.receipt_ref });
+        toast(
+          requisition
+            ? "Human receipt created. A simulated requisition was recorded; the original machine receipt was not altered."
+            : "Human receipt created. The simulated item was added to the basket; the original machine receipt was not altered.",
+          "good"
+        );
+      } catch (error) {
+        toast(`Human decision recorded, but the transaction step was refused: ${error.message}`, "bad");
+      }
+    } else {
+      toast(`Human receipt ${result.receipt_ref.slice(-8)} recorded. The original machine receipt was not altered.`);
     }
-  } else {
-    toast(`Human receipt ${result.receipt_ref.slice(-8)} recorded. The original machine receipt was not altered.`);
+    setTimeout(load, 540);
+  } catch (error) {
+    cardButtons.forEach((b) => (b.disabled = false));
+    button?.focus();
+    toast(error?.message || "That review could not be recorded. Please try again.", "bad");
   }
-  setTimeout(load, 540);
 }
 
 startPage(boot);
