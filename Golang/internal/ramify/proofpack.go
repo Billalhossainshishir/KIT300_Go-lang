@@ -201,7 +201,7 @@ func (s *Server) buildProofPack(examples []proofExample, packType string, includ
 		return nil, err
 	}
 	if includeReleaseEvidence {
-		for _, rel := range []string{"ASSESSMENT_EVIDENCE.json", "MEETING_RELEASE_EVIDENCE.txt", "DAVID_FEEDBACK_COVERAGE_MATRIX.md", "DAVID_LIVE_DEMO_GUIDE.md", "GO_FASTAPI_PARITY_MERGE_25_SEP_2026.md", "RELEASE_VALIDATION.txt", "FINAL_RELEASE_SUMMARY_25_SEP_2026.md", filepath.Join("docs", "07_21Sep_Final_Hardening_Addendum.md")} {
+		for _, rel := range []string{"ASSESSMENT_EVIDENCE.json", "MEETING_RELEASE_EVIDENCE.txt", "DAVID_FEEDBACK_COVERAGE_MATRIX.md", "DAVID_LIVE_DEMO_GUIDE.md", "GO_FASTAPI_PARITY_MERGE_25_SEP_2026.md", "RELEASE_VALIDATION.txt", "FINAL_RELEASE_SUMMARY_25_SEP_2026.md", "FINAL_RELEASE_SUMMARY_29_SEP_2026.md", filepath.Join("docs", "07_21Sep_Final_Hardening_Addendum.md")} {
 			path := filepath.Join(s.root, rel)
 			raw, err := os.ReadFile(path)
 			if err != nil {
