@@ -21,6 +21,15 @@ var issuerPublicKeysHex = map[string]string{
 	"ramify:demo:issuer:Regulator_AU_demo": "3b633daf869fd8fcbcced3f707a69c201c4e3d01410c07fb9473a9100f8a75e2",
 }
 
+const sellerAuthorityIssuer = "ramify:demo:issuer:Regulator_AU_demo"
+
+var recordTamperStates = map[string]bool{
+	"hash_mismatch": true,
+	"signature_invalid": true,
+	"issuer_mismatch": true,
+	"unknown_issuer_key": true,
+}
+
 var integrityReason = map[string]string{
 	"missing_metadata":          "evidence_integrity_metadata_missing",
 	"artefact_missing":          "evidence_artefact_missing",
@@ -30,6 +39,39 @@ var integrityReason = map[string]string{
 	"signature_invalid":         "evidence_signature_invalid",
 	"subject_scope_mismatch":    "evidence_subject_scope_mismatch",
 	"artefact_binding_mismatch": "evidence_artefact_binding_mismatch",
+}
+
+func (s *Server) evaluateRecordIntegrity(kind, ref string, record map[string]any) map[string]any {
+	meta := obj(obj(s.recordSignatures()[kind])[ref])
+	if meta == nil {
+		return map[string]any{"state": "missing_signature", "detail": fmt.Sprintf("no issuer signature is held for this %s record", strings.TrimSuffix(kind, "s"))}
+	}
+	canonical := canonicalJSONValue(record)
+	digest := sha256.Sum256(canonical)
+	computed := "sha256:" + hex.EncodeToString(digest[:])
+	if computed != str(meta["content_hash"]) {
+		return map[string]any{"state": "hash_mismatch", "detail": fmt.Sprintf("the %s record differs from what the issuer signed", strings.TrimSuffix(kind, "s"))}
+	}
+	expectedIssuer := str(record["issuer_ref"])
+	if kind == "sellers" {
+		expectedIssuer = sellerAuthorityIssuer
+	}
+	if str(meta["issuer_ref"]) != expectedIssuer {
+		return map[string]any{"state": "issuer_mismatch", "detail": "the record was signed by a different issuer"}
+	}
+	hexKey, ok := issuerPublicKeysHex[str(meta["issuer_ref"])]
+	if !ok {
+		return map[string]any{"state": "unknown_issuer_key", "detail": "issuer public key is not in the embedded trust material"}
+	}
+	keyBytes, err := hex.DecodeString(hexKey)
+	if err != nil || len(keyBytes) != ed25519.PublicKeySize {
+		return map[string]any{"state": "unknown_issuer_key", "detail": "issuer public key is not in the embedded trust material"}
+	}
+	sig, err := base64.StdEncoding.DecodeString(str(meta["signature"]))
+	if err != nil || !ed25519.Verify(ed25519.PublicKey(keyBytes), digest[:], sig) {
+		return map[string]any{"state": "signature_invalid", "detail": "issuer Ed25519 signature does not verify"}
+	}
+	return map[string]any{"state": "verified", "detail": "record hash and issuer Ed25519 signature verify"}
 }
 
 func evidenceBindingPayload(record map[string]any, subjectClaims []any) map[string]any {
