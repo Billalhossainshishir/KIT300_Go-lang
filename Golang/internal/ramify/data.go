@@ -147,6 +147,18 @@ func intv(v any) int {
 	return 0
 }
 
+func strictJSONInt(v any, min, max int) (int, error) {
+	n, ok := v.(json.Number)
+	if !ok {
+		return 0, fmt.Errorf("must be an integer between %d and %d", min, max)
+	}
+	i, err := n.Int64()
+	if err != nil || i < int64(min) || i > int64(max) {
+		return 0, fmt.Errorf("must be an integer between %d and %d", min, max)
+	}
+	return int(i), nil
+}
+
 func boolv(v any) bool { b, _ := v.(bool); return b }
 
 func copyMap(in map[string]any) map[string]any {
