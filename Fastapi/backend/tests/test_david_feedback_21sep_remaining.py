@@ -333,7 +333,12 @@ def test_r2_quick_proof_pack_manifest_detects_missing_expected_file_and_malforme
         target = root / row["filename"]
         target.write_text("[]\n", encoding="utf-8")
         import hashlib
+        from ramify.receipt.proof_pack import sign_manifest
         row["sha256"] = "sha256:" + hashlib.sha256(target.read_bytes()).hexdigest()
+        # The proof-pack manifest is signed. Re-sign this deliberately edited
+        # manifest so the test reaches receipt-shape validation rather than
+        # correctly stopping at the package-signature boundary.
+        manifest = sign_manifest(manifest)
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         malformed = subprocess.run([sys.executable, str(verifier)], cwd=root, text=True, capture_output=True)
         assert malformed.returncode != 0
