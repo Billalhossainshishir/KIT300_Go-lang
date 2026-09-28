@@ -738,3 +738,133 @@ func TestHistoricalOrderRechecksTransactionAuthority(t *testing.T) {
 		t.Fatalf("transaction-authority failure detail missing: %#v", report)
 	}
 }
+
+
+func TestSignedStatusAndSellerRecordsVerify(t *testing.T) {
+	s := newTestServer(t)
+	for ref, raw := range section(s.seedMap(), "statuses") {
+		report := s.evaluateRecordIntegrity("statuses", ref, obj(raw))
+		if str(report["state"]) != "verified" {
+			t.Fatalf("status %s integrity=%#v", ref, report)
+		}
+	}
+	for ref, raw := range section(s.seedMap(), "sellers") {
+		report := s.evaluateRecordIntegrity("sellers", ref, obj(raw))
+		if str(report["state"]) != "verified" {
+			t.Fatalf("seller %s integrity=%#v", ref, report)
+		}
+	}
+}
+
+func TestTamperedStatusAndSellerRecordsFailClosed(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+
+	recalled := "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K"
+	statuses := section(s.seedMap(), "statuses")
+	originalStatus := obj(statuses[recalled])
+	tamperedStatus := copyMap(originalStatus)
+	tamperedStatus["standing"] = "no_active_recall"
+	statuses[recalled] = tamperedStatus
+	out, err := s.assessOne(recalled, "consumer_v1", "", 1, "decision", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if str(out["objective_posture"]) != "block" || !contains(stringSlice(out["reason_codes"]), "status_record_integrity_failed") {
+		t.Fatalf("tampered status did not fail closed: %#v", out)
+	}
+	statuses[recalled] = originalStatus
+
+	clean := "ramify:demo:supp:apex-mg-glyc-120"
+	subject := s.seed.Subject(clean)
+	sellers := section(s.seedMap(), "sellers")
+	sellerRef := str(subject["seller_ref"])
+	originalSeller := obj(sellers[sellerRef])
+	tamperedSeller := copyMap(originalSeller)
+	tamperedSeller["name"] = str(originalSeller["name"]) + " tampered"
+	sellers[sellerRef] = tamperedSeller
+	out, err = s.assessOne(clean, "consumer_v1", "", 1, "decision", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if str(out["objective_posture"]) != "block" || !contains(stringSlice(out["reason_codes"]), "seller_record_integrity_failed") {
+		t.Fatalf("tampered seller did not fail closed: %#v", out)
+	}
+	sellers[sellerRef] = originalSeller
+}
+
+func TestDatasetDigestIncludesTrustManifests(t *testing.T) {
+	root := t.TempDir()
+	dataDir := filepath.Join(root, "data")
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"demo_seed.json", "evidence_signatures.json", "record_signatures.json"} {
+		if err := os.WriteFile(filepath.Join(dataDir, name), []byte(name+"-v1"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := &Server{root: root}
+	before := s.datasetDigest()
+	if err := os.WriteFile(filepath.Join(dataDir, "record_signatures.json"), []byte("record_signatures.json-v2"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	after := s.datasetDigest()
+	if before == after {
+		t.Fatal("dataset digest did not change when record signature manifest changed")
+	}
+}
+
+func TestGeneratedTrustManifestLoaderFailsClosed(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "record_signatures.json")
+	if err := os.WriteFile(path, []byte("{\"statuses\":"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fallback := map[string]any{"statuses": map[string]any{}, "sellers": map[string]any{}}
+	loaded := loadGeneratedMapping(path, fallback)
+	if len(obj(loaded["statuses"])) != 0 || len(obj(loaded["sellers"])) != 0 {
+		t.Fatalf("broken manifest should load empty trust sets: %#v", loaded)
+	}
+
+	if err := os.WriteFile(path, []byte{'{', '"', 'x', '"', ':', '"', 'a', 'b', 'c', 0xff, 'x', 'y', 'z', '"', '}'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loaded = loadGeneratedMapping(path, map[string]any{})
+	if str(loaded["x"]) == "" {
+		t.Fatalf("invalid UTF-8 string should be safely decoded for later rejection: %#v", loaded)
+	}
+}
+
+func TestClaimEvidenceFailureCannotLeaveAggregateCheckPassing(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+	ref := "ramify:demo:supp:apex-mg-glyc-120"
+	subject := s.seed.Subject(ref)
+	originalClaims := arr(subject["claims"])
+	mutated := make([]any, len(originalClaims))
+	for i, raw := range originalClaims {
+		mutated[i] = copyMap(obj(raw))
+	}
+	if len(mutated) == 0 {
+		t.Fatal("test subject has no claims")
+	}
+	obj(mutated[0])["evidence_refs"] = []string{}
+	subject["claims"] = mutated
+	defer func() { subject["claims"] = originalClaims }()
+
+	out, err := s.assessOne(ref, "consumer_v1", "", 1, "decision", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if str(out["objective_posture"]) != "block" || !contains(stringSlice(out["reason_codes"]), "claim_evidence_validation_failed") {
+		t.Fatalf("claim evidence failure did not reach aggregate decision: %#v", out)
+	}
+}
+
+func TestMalformedRatifyCheckSetEscalates(t *testing.T) {
+	s := newTestServer(t)
+	posture, _, _, _, _, reasons := s.objective([]map[string]any{}, "no_active_recall")
+	if posture != "escalate" || !contains(reasons, "ratify_check_set_invalid") {
+		t.Fatalf("malformed RATIFY set should escalate: posture=%s reasons=%#v", posture, reasons)
+	}
+}
