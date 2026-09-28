@@ -1060,3 +1060,90 @@ func TestProofManifestDetectsEditAndDeclaresExactReceipts(t *testing.T) {
 		t.Fatal("portable verifier no longer enforces declared receipt completeness")
 	}
 }
+
+
+func TestCustomAgentCannotBorrowBuiltInName(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+
+	blocked := request(t, s, http.MethodPost, "/api/v0/agents", map[string]any{
+		"label": "Consumer shopping agent",
+		"autonomy_level": "none",
+		"purchase_style": "cart",
+	})
+	if blocked.Code != http.StatusBadRequest {
+		t.Fatalf("custom agent borrowed built-in name: %d %s", blocked.Code, blocked.Body.String())
+	}
+
+	created := request(t, s, http.MethodPost, "/api/v0/agents", map[string]any{
+		"label": "My helper",
+		"autonomy_level": "none",
+		"purchase_style": "cart",
+	})
+	if created.Code != http.StatusOK {
+		t.Fatalf("create helper: %d %s", created.Code, created.Body.String())
+	}
+	ref := str(decodeResponse(t, created)["ref"])
+	update := request(t, s, http.MethodPut, "/api/v0/agents/"+ref, map[string]any{
+		"label": "  consumer SHOPPING agent ",
+		"autonomy_level": "none",
+		"purchase_style": "cart",
+	})
+	if update.Code != http.StatusBadRequest {
+		t.Fatalf("renamed custom agent borrowed built-in name: %d %s", update.Code, update.Body.String())
+	}
+
+	// A built-in profile may keep its own shipped name while being edited.
+	builtIn := s.profiles()["consumer_v1"]
+	own := request(t, s, http.MethodPut, "/api/v0/agents/consumer_v1", map[string]any{
+		"label": builtIn["label"],
+		"summary": builtIn["summary"],
+		"description": builtIn["description"],
+		"autonomy_level": builtIn["autonomy_level"],
+		"purchase_style": builtIn["purchase_style"],
+		"budget_limit_cents": builtIn["budget_limit_cents"],
+		"brand_allowlist": builtIn["brand_allowlist"],
+		"approved_vendors": builtIn["approved_vendors"],
+		"warned_outcome_requires_review": builtIn["warned_outcome_requires_review"],
+	})
+	if own.Code != http.StatusOK {
+		t.Fatalf("built-in could not retain its own name: %d %s", own.Code, own.Body.String())
+	}
+}
+
+func TestOmega3ClaimComparisonNormalizesServingBasis(t *testing.T) {
+	s := newTestServer(t)
+	policy := s.policyPack()
+
+	equivalent := []map[string]any{
+		{"value": "EPA 300mg DHA 200mg per 2 capsules"},
+		{"value": "EPA 150mg DHA 100mg per 1 capsule"},
+	}
+	if conflict, detail := claimValuesConflict(policy, "ingredient_claim", equivalent); conflict {
+		t.Fatalf("equivalent serving-normalized claims conflicted: %s", detail)
+	}
+
+	withinTolerance := []map[string]any{
+		{"value": "EPA 300mg DHA 200mg per 2 capsules"},
+		{"value": "EPA 304mg DHA 196mg per 2 capsules"},
+	}
+	if conflict, detail := claimValuesConflict(policy, "ingredient_claim", withinTolerance); conflict {
+		t.Fatalf("claims within policy tolerance conflicted: %s", detail)
+	}
+
+	materialDifference := []map[string]any{
+		{"value": "EPA 300mg DHA 200mg per 2 capsules"},
+		{"value": "EPA 330mg DHA 200mg per 2 capsules"},
+	}
+	if conflict, _ := claimValuesConflict(policy, "ingredient_claim", materialDifference); !conflict {
+		t.Fatal("material EPA difference was not detected")
+	}
+
+	incompatibleBasis := []map[string]any{
+		{"value": "EPA 300mg DHA 200mg per 2 capsules"},
+		{"value": "EPA 150mg DHA 100mg per 1 softgel"},
+	}
+	if conflict, _ := claimValuesConflict(policy, "ingredient_claim", incompatibleBasis); !conflict {
+		t.Fatal("incompatible serving bases were silently treated as comparable")
+	}
+}
