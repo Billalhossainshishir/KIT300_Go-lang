@@ -96,7 +96,7 @@
   },
   "ev:tidalpoint:label": {
     "content_hash": "sha256:3a1b64d6d4c786f1c758cea02e51326fad3a9b40ae73474e79d7a0c2fa7d7060",
-    "signature": "PYRYCJoq7RutzF6Sm7ghUVuHOZrVwuDSe+zsgkw9EXsNUy716dIP5kjU7/rtG92twpfùhcJ+6s7SDs9k57vlAA==",
+    "signature": "PYRYCJoq7RutzF6Sm7ghUVuHOZrVwuDSe+zsgkw9EXsNUy716dIP5kjU7/rtG92twpfYhcJ+6s7SDs9k57vlAA==",
     "storage_path": "generated/artefacts/ev_tidalpoint_label.txt"
   }
 }
