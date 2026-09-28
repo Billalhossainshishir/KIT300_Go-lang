@@ -868,3 +868,195 @@ func TestMalformedRatifyCheckSetEscalates(t *testing.T) {
 		t.Fatalf("malformed RATIFY set should escalate: posture=%s reasons=%#v", posture, reasons)
 	}
 }
+
+
+func TestRuntimeSignerIsMachineLocalAndDoesNotRotateOverHistory(t *testing.T) {
+	resetTestState()
+	dir := t.TempDir()
+	t.Setenv("RAMIFY_DATA_DIR", dir)
+	s, err := New(repoRoot(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyPath := filepath.Join(dir, "signer_key.json")
+	if _, err := os.Stat(keyPath); err != nil {
+		t.Fatalf("runtime signer was not created locally: %v", err)
+	}
+
+	if _, err := s.assessOne("ramify:demo:supp:apex-mg-glyc-120", "consumer_v1", "", 1, "decision", true); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(keyPath); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(repoRoot(t)); err == nil || !strings.Contains(err.Error(), "refusing silent signer rotation") {
+		t.Fatalf("missing signer over existing history must fail closed, got %v", err)
+	}
+}
+
+func TestExplicitSignerRotationRetainsOldReceiptVerification(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+	old := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+		"identifier": "ramify:demo:supp:apex-mg-glyc-120",
+		"actor_ref": "consumer_v1",
+		"quantity": 1,
+		"context": "decision",
+	}))
+	oldReceipt := obj(old["receipt"])
+	oldFP := currentSignerFingerprint()
+	if oldFP == "" {
+		t.Fatal("current signer fingerprint is empty")
+	}
+
+	if err := rotateRuntimeSigner(s.runtimeDir); err != nil {
+		t.Fatal(err)
+	}
+	newFP := currentSignerFingerprint()
+	if newFP == oldFP {
+		t.Fatal("explicit signer rotation did not change the signer")
+	}
+
+	report := s.verifyReceipt(oldReceipt)
+	if !boolv(report["integrity_verified"]) || str(report["signer_key_fingerprint"]) != oldFP {
+		t.Fatalf("old receipt did not verify with retained signer: %#v", report)
+	}
+	foundRetained := false
+	for _, raw := range arr(report["checks"]) {
+		check := obj(raw)
+		if str(check["name"]) == "signature_valid" && strings.Contains(str(check["detail"]), "retained") {
+			foundRetained = true
+		}
+	}
+	if !foundRetained {
+		t.Fatalf("verification did not disclose retained signer use: %#v", report)
+	}
+
+	var history []string
+	if err := readJSONFile(filepath.Join(s.runtimeDir, "signer_history.json"), &history); err != nil {
+		t.Fatal(err)
+	}
+	if len(history) == 0 {
+		t.Fatal("retired signer public key was not persisted")
+	}
+}
+
+func TestHealthVerifyAndProofPackShareSignerFingerprint(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+	assessment := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/assess", map[string]any{
+		"identifier": "ramify:demo:supp:apex-mg-glyc-120",
+		"actor_ref": "consumer_v1",
+		"quantity": 1,
+		"context": "decision",
+	}))
+	expected := currentSignerFingerprint()
+
+	health := decodeResponse(t, request(t, s, http.MethodGet, "/healthz", nil))
+	if str(health["signer_key_fingerprint"]) != expected {
+		t.Fatalf("health fingerprint mismatch: %#v", health)
+	}
+	verified := decodeResponse(t, request(t, s, http.MethodPost, "/api/v0/receipt/verify", assessment["receipt"]))
+	if str(verified["signer_key_fingerprint"]) != expected {
+		t.Fatalf("verification fingerprint mismatch: %#v", verified)
+	}
+
+	w := request(t, s, http.MethodGet, "/api/v0/proof-pack", nil)
+	zr, err := zip.NewReader(bytes.NewReader(w.Body.Bytes()), int64(w.Body.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string][]byte{}
+	for _, zf := range zr.File {
+		r, err := zf.Open()
+		if err != nil { t.Fatal(err) }
+		raw, err := io.ReadAll(r)
+		_ = r.Close()
+		if err != nil { t.Fatal(err) }
+		files[zf.Name] = raw
+	}
+	var manifest map[string]any
+	dec := json.NewDecoder(bytes.NewReader(files["manifest.json"]))
+	dec.UseNumber()
+	if err := dec.Decode(&manifest); err != nil {
+		t.Fatal(err)
+	}
+	if str(manifest["signer_key_fingerprint"]) != expected {
+		t.Fatalf("proof manifest fingerprint mismatch: %#v", manifest)
+	}
+	if str(manifest["manifest_signature"]) == "" {
+		t.Fatal("proof manifest is not signed")
+	}
+	var keys map[string]string
+	if err := json.Unmarshal(files["trust/public_keys.json"], &keys); err != nil {
+		t.Fatal(err)
+	}
+	pub, err := decodePublicHex(keys[ramifySignerRef])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verifyProofManifest(manifest, pub) {
+		t.Fatal("signed proof manifest did not verify")
+	}
+	if !strings.Contains(string(files["README.txt"]), expected) || !strings.Contains(string(files["README.txt"]), "cannot vouch for its own included signer key") {
+		t.Fatal("proof-pack README does not expose fingerprint/trust-anchor limitation")
+	}
+}
+
+func TestProofManifestDetectsEditAndDeclaresExactReceipts(t *testing.T) {
+	resetTestState()
+	s := newTestServer(t)
+	raw, err := s.buildProofPack(quickProofExamples, "quick", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zr, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual := map[string]bool{}
+	var manifest map[string]any
+	var signerHex string
+	for _, zf := range zr.File {
+		actual[zf.Name] = true
+		if zf.Name != "manifest.json" && zf.Name != "trust/public_keys.json" {
+			continue
+		}
+		r, err := zf.Open()
+		if err != nil { t.Fatal(err) }
+		content, err := io.ReadAll(r)
+		_ = r.Close()
+		if err != nil { t.Fatal(err) }
+		if zf.Name == "manifest.json" {
+			dec := json.NewDecoder(bytes.NewReader(content)); dec.UseNumber()
+			if err := dec.Decode(&manifest); err != nil { t.Fatal(err) }
+		} else {
+			var keys map[string]string
+			if err := json.Unmarshal(content, &keys); err != nil { t.Fatal(err) }
+			signerHex = keys[ramifySignerRef]
+		}
+	}
+	pub, err := decodePublicHex(signerHex)
+	if err != nil { t.Fatal(err) }
+	if !verifyProofManifest(manifest, pub) {
+		t.Fatal("original proof manifest did not verify")
+	}
+	for _, row := range arr(manifest["expected_receipts"]) {
+		name := str(obj(row)["filename"])
+		if !actual[name] {
+			t.Fatalf("manifest declares missing receipt %s", name)
+		}
+	}
+	if len(arr(manifest["expected_receipts"])) != 5 {
+		t.Fatalf("quick pack declared %d receipts, want 5", len(arr(manifest["expected_receipts"])))
+	}
+	tampered := copyMap(manifest)
+	rows := arr(tampered["expected_receipts"])
+	tampered["expected_receipts"] = rows[:len(rows)-1]
+	if verifyProofManifest(tampered, pub) {
+		t.Fatal("edited manifest still verified")
+	}
+	if !strings.Contains(portableProofVerifier, "missing expected receipt(s)") {
+		t.Fatal("portable verifier no longer enforces declared receipt completeness")
+	}
+}
