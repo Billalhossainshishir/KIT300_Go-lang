@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"sort"
@@ -21,9 +23,34 @@ func localModelName() string {
 	return "llama3.1"
 }
 
+func localOllamaURL(raw string) (string, bool) {
+	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
+	if raw == "" {
+		return "", false
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "http" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return "", false
+	}
+	if u.Path != "" && u.Path != "/" {
+		return "", false
+	}
+	host := strings.TrimSpace(u.Hostname())
+	if !strings.EqualFold(host, "localhost") {
+		ip := net.ParseIP(host)
+		if ip == nil || !ip.IsLoopback() {
+			return "", false
+		}
+	}
+	return raw, true
+}
+
 func ollamaBaseURL() string {
-	if v := strings.TrimRight(strings.TrimSpace(os.Getenv("RAMIFY_OLLAMA_BASE_URL")), "/"); v != "" {
-		return v
+	if v := strings.TrimSpace(os.Getenv("RAMIFY_OLLAMA_BASE_URL")); v != "" {
+		if local, ok := localOllamaURL(v); ok {
+			return local
+		}
+		return ""
 	}
 	return defaultOllamaBaseURL
 }
@@ -55,8 +82,12 @@ func probeOllama() ollamaRuntime {
 	if os.Getenv("RAMIFY_DISABLE_AGENT") == "1" {
 		return ollamaRuntime{Detail: "Local AI was intentionally disabled; safe deterministic mode is active.", ElapsedMS: float64(time.Since(started).Microseconds()) / 1000}
 	}
+	base := ollamaBaseURL()
+	if base == "" {
+		return ollamaRuntime{Detail: "Configured Ollama endpoint is not local loopback; deterministic mode is active.", ErrorType: "non_local_ollama_endpoint", ElapsedMS: float64(time.Since(started).Microseconds()) / 1000}
+	}
 	client := &http.Client{Timeout: 700 * time.Millisecond}
-	resp, err := client.Get(ollamaBaseURL() + "/api/tags")
+	resp, err := client.Get(base + "/api/tags")
 	if err != nil {
 		return ollamaRuntime{Detail: "Ollama is offline; deterministic mode is active.", ErrorType: fmt.Sprintf("%T", err), ElapsedMS: float64(time.Since(started).Microseconds()) / 1000}
 	}
@@ -202,13 +233,17 @@ func callOllama(prompt string) (string, error) {
 	if os.Getenv("RAMIFY_DISABLE_AGENT") == "1" {
 		return "", fmt.Errorf("local AI disabled")
 	}
+	base := ollamaBaseURL()
+	if base == "" {
+		return "", fmt.Errorf("configured Ollama endpoint must use local loopback HTTP")
+	}
 	payload := map[string]any{
 		"model": localModelName(), "prompt": prompt, "stream": false, "format": "json",
 		"options": map[string]any{"temperature": 0},
 	}
 	body, _ := json.Marshal(payload)
 	client := &http.Client{Timeout: localModelTimeout()}
-	resp, err := client.Post(ollamaBaseURL()+"/api/generate", "application/json", bytes.NewReader(body))
+	resp, err := client.Post(base+"/api/generate", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
