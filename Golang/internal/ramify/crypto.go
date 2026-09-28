@@ -65,6 +65,27 @@ func (s *Server) verifyTransactionLines(record map[string]any) (bool, string) {
 			problems = append(problems, fmt.Sprintf("line %d names a receipt not in the ledger", i+1))
 			continue
 		}
+
+		permitted := map[string]bool{}
+		switch str(record["record_type"]) {
+		case "order_record":
+			permitted["add_to_mock_cart"] = true
+			permitted["purchase_autonomously"] = true
+		case "requisition_record":
+			permitted["create_mock_requisition"] = true
+		}
+		transactionAllowed := false
+		for _, action := range append(stringSlice(receipt["permitted_actions"]), stringSlice(receipt["human_authorised_actions"])...) {
+			if permitted[action] {
+				transactionAllowed = true
+				break
+			}
+		}
+		if !transactionAllowed {
+			problems = append(problems, fmt.Sprintf("line %d links to a receipt whose decision did not permit this transaction", i+1))
+			continue
+		}
+
 		report := s.verifyReceipt(receipt)
 		if !boolv(report["integrity_verified"]) {
 			problems = append(problems, fmt.Sprintf("line %d links to a receipt whose integrity does not verify", i+1))
