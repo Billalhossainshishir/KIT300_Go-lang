@@ -400,7 +400,11 @@ function go(step, options = {}) {
       [{ opacity: 1, transform: "translateX(0) scale(1)" }, { opacity: 0, transform: `translateX(${direction * 18}px) scale(.992)` }],
       { duration: 150, easing: "ease", fill: "forwards" }
     );
-    exit.addEventListener("finish", renderNext, { once: true });
+    exit.addEventListener("finish", () => {
+      // Release fill:forwards before rendering the next visible stage.
+      exit.cancel();
+      renderNext();
+    }, { once: true });
   } else renderNext();
 }
 

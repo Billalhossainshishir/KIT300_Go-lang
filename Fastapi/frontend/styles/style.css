@@ -6212,3 +6212,217 @@ a.btn, .btn, a.btn:hover, a.btn:focus-visible { text-decoration: none !important
   --t-hero: radial-gradient(120% 140% at 100% 0%, rgba(31,107,85,.10), transparent 55%), #ffffff;
   --t-note-bg: #fbf7ee; --t-note-line: #eadfc6;
 }
+
+/* Large displays: use the viewport without changing laptop/mobile density.
+   Keep this layer after the theme and legacy !important declarations. */
+/* Author display:grid otherwise overrides the browser's hidden attribute. */
+.guided-shell[hidden], .guided-empty[hidden], .guided-actions .btn[hidden] { display: none !important; }
+
+@media screen and (min-width: 1600px) {
+  :root {
+    --wide-content: min(calc(100% - clamp(64px, 6vw, 240px)), 3200px);
+    --wide-copy: clamp(16px, .75vw, 24px);
+    --wide-label: clamp(12px, .6vw, 20px);
+    --wide-control: clamp(14px, .7vw, 22px);
+    --wide-gap: clamp(18px, 1vw, 32px);
+    --wide-inset: clamp(32px, 1.8vw, 64px);
+    --wide-header-offset: 132px;
+  }
+
+  body { font-size: var(--wide-copy); }
+  html { scroll-padding-top: 240px; }
+  main, .journey-main, .human-page, .tour-main, .guided-main {
+    width: var(--wide-content) !important;
+    max-width: 3200px !important;
+    font-size: var(--wide-copy);
+  }
+  .topbar, body > footer {
+    width: var(--wide-content) !important;
+    max-width: 3200px !important;
+  }
+  .topbar-inner { width: 100%; max-width: none; min-height: 76px !important; }
+  .topbar nav a { font-size: var(--wide-control) !important; min-height: 46px !important; }
+  .brand-copy .wordmark { font-size: var(--wide-copy) !important; }
+  .brand-copy .tagline { font-size: var(--wide-label) !important; }
+  .brand-mark { width: 48px !important; height: 48px !important; }
+  .offline, body > footer { font-size: var(--wide-label); }
+  .nav-icon { width: 22px !important; height: 22px !important; flex-basis: 22px !important; }
+  .nav-icon svg { width: 21px !important; height: 21px !important; }
+
+  .page-head, .shop-head { padding: var(--wide-inset) !important; }
+  .shop-head > div:first-child, .guided-intro > div { max-width: 1100px !important; }
+  .page-head h1, .shop-head h1, .guided-intro h1, .walkthrough-hero h1, .info-hero h1 {
+    font-size: clamp(56px, 3vw, 88px) !important;
+  }
+  .page-head .lede, .page-head:not(.shop-head) .lede, .shop-head .lede,
+  .guided-intro p, .walkthrough-hero p, .info-lede {
+    font-size: var(--wide-copy) !important;
+    max-width: 70ch !important;
+  }
+  .journey-stage { padding: var(--wide-inset) !important; }
+  .journey-stage-head h2, .guided-stage-card h2, .walkthrough-stage-head h2 {
+    font-size: clamp(34px, 1.8vw, 54px) !important;
+  }
+  h2.section, .info-section h2 { font-size: clamp(26px, 1.4vw, 42px); }
+  .journey-stage-head p, .section-hint, .story-helper, .action-note,
+  .guided-stage-lede, .walkthrough-stage-head p { font-size: var(--wide-copy) !important; }
+  .journey-main .field-label, .journey-main .eyebrow, .field-label, .eyebrow,
+  .info-main .eyebrow, .disclaimer { font-size: var(--wide-label) !important; }
+  .shop-intro-details > summary { font-size: var(--wide-control); }
+  .shop-intro-details > summary span { font-size: var(--wide-label); }
+  .btn, .btn-sm, .btn-lg, .btn-quiet, .btn-story,
+  input, select, textarea { font-size: var(--wide-control) !important; }
+  .btn { min-height: 46px; padding: 12px 18px !important; }
+  input:not([type=checkbox]):not([type=radio]), select, textarea { padding: 12px 14px !important; }
+  .shop-controls { grid-template-columns: minmax(260px, 1fr) minmax(320px, 2fr) 110px auto !important; gap: var(--wide-gap) !important; }
+
+  .journey-progress { top: var(--wide-header-offset) !important; }
+  .journey-progress button { padding: 16px !important; }
+  .journey-progress button strong { font-size: var(--wide-control) !important; }
+  .journey-progress button small { font-size: var(--wide-label) !important; }
+  .journey-nav { max-width: 1040px !important; gap: var(--wide-gap); }
+  .journey-nav-copy strong { font-size: var(--wide-control) !important; }
+  .journey-nav-copy small { font-size: var(--wide-label) !important; }
+
+  .grid { gap: var(--wide-gap) !important; }
+  .product-card-image { height: clamp(240px, 12vw, 360px) !important; padding: 24px !important; }
+  .card .name { font-size: clamp(17px, .85vw, 26px) !important; }
+  .card .meta, .card .inspect { font-size: var(--wide-label) !important; }
+  .card .price { font-size: clamp(22px, 1.1vw, 34px) !important; }
+  .card .card-action { font-size: var(--wide-control) !important; padding: 12px 14px; }
+  .selection-copy h3 { font-size: clamp(23px, 1.1vw, 34px); }
+  .selection-copy p { font-size: var(--wide-copy); }
+
+  .guided-shell, .guided-shell-v2, .walkthrough-shell {
+    grid-template-columns: clamp(280px, 18vw, 440px) minmax(0, 1fr);
+    gap: var(--wide-gap) !important;
+  }
+  .guided-rail, .guided-rail-v2, .walkthrough-rail { top: var(--wide-header-offset); }
+  .guided-stage-card, .walkthrough-stage { padding: var(--wide-inset); }
+  .guided-step, .walkthrough-step { min-height: 64px; padding: 12px; }
+  .guided-intro, .walkthrough-hero { padding: var(--wide-inset); }
+  .guided-empty-copy { max-width: 1000px; }
+  .guided-empty-copy > strong { font-size: clamp(30px, 1.5vw, 46px); }
+  .guided-empty-copy p { font-size: var(--wide-copy); }
+
+  /* Dialogs remain bounded and scroll on short wide windows. */
+  .welcome-choice {
+    width: min(80vw, 1600px) !important;
+    max-width: 1600px;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+  }
+  .welcome-story, .welcome-actions-panel { padding: var(--wide-inset); }
+  .welcome-choice h2 { font-size: clamp(40px, 2.5vw, 72px); }
+  .welcome-story > p { font-size: var(--wide-copy); }
+  .welcome-option strong { font-size: clamp(22px, 1.1vw, 32px); }
+  .welcome-option small, .welcome-journey b, .welcome-journey small,
+  .welcome-foot, .welcome-actions-head span, .welcome-actions-head small,
+  .welcome-option-action, .welcome-option-top em, .welcome-trust-note { font-size: var(--wide-label); }
+  .story-library { width: min(88vw, 2000px) !important; }
+}
+
+@media screen and (min-width: 2400px) {
+  .grid { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+}
+@media screen and (min-width: 3200px) {
+  .grid { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+}
+
+@media screen and (min-width: 1600px) {
+  /* Existing components use pixel sizes; scale their reading text explicitly. */
+  .guided-stage-lede, .guided-action-card p, .guided-receipt-summary p,
+  .guided-rail-note p, .walkthrough-hero p, .walkthrough-stage-head p,
+  .walkthrough-product-details > p, .walkthrough-explain-card p,
+  .walkthrough-engine-ready p, .walkthrough-objective-card p,
+  .walkthrough-lock-banner p, .walkthrough-human-receipt p,
+  .walkthrough-finish-hero p, .walkthrough-checkout-boundary p,
+  .persona .summary, .persona .desc, .queue-why, .detail-plain p,
+  .detail-plain ul, .light-text .meaning, .esc-head p, .action-note,
+  .receipt-doc, .receipt-notice, .trust-passport-head p, .trust-passport-proof p,
+  .gate-decision-card p, .transaction-audit-copy p, .evidence-trail-head p,
+  .info-lede, .info-section p, .info-checks li, .info-cards p, .info-duo p,
+  .info-outcomes article p, .info-steps p, .info-main .faq details p,
+  .info-wayfind span, .info-note {
+    font-size: var(--wide-copy) !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Values and interactive text retain a stronger tier than metadata. */
+  .guided-step strong, .guided-rail-head strong, .guided-field-grid b,
+  .guided-boundary strong, .guided-locked-line strong,
+  .guided-policy-grid strong, .guided-selected-policy b,
+  .guided-receipt-card summary, .guided-position strong,
+  .walkthrough-step strong, .walkthrough-rail-note strong,
+  .walkthrough-product-strip-copy strong, .walkthrough-facts dd,
+  .walkthrough-boundary strong, .walkthrough-request-product strong,
+  .walkthrough-success-summary strong, .walkthrough-check-row strong,
+  .walkthrough-persona h3, .walkthrough-persona-decision,
+  .walkthrough-receipt-summary strong, .walkthrough-verify-banner strong,
+  .walkthrough-json summary, .walkthrough-finish-grid strong,
+  .walkthrough-back, .walkthrough-primary, .walkthrough-error strong,
+  .persona .rules, .action, .check, .cart-line .cmeta, .cart-total .sub,
+  .receipt-status-grid b, dl.receipt-fields, dl.receipt-fields.compact,
+  .trust-passport-grid b, .trust-passport-proof strong,
+  .performance-proof b, .evidence-trail-grid article > strong,
+  .risk-path > span b, .session-summary-grid b, .audit-story-row b,
+  .audit-story-key b, .human-review-story strong, .agent-principle-card strong,
+  .system-node strong, .system-map-output b, .receipt-story-tabs button,
+  .transaction-audit-copy > strong, .gate-substitution span,
+  .info-wayfind b, .info-pipeline span, .info-main .faq summary, main table {
+    font-size: var(--wide-control) !important;
+    line-height: 1.45 !important;
+  }
+
+  /* Labels, evidence identifiers and technical details stay subordinate. */
+  .guided-step small, .guided-rail-kicker, .guided-rail-note span,
+  .guided-receipt-ref span, .guided-request-copy > span,
+  .guided-product-line span, .guided-structured-head span, .guided-match,
+  .guided-context-row span, .guided-field-grid small, .guided-boundary span,
+  .guided-proof-banner span, .guided-proof-banner small, .guided-trace code,
+  .guided-trace span, .guided-trace b, .guided-measure-note,
+  .guided-locked-line span, .guided-policy-grid small, .policy-outcome,
+  .guided-selected-policy span, .guided-action-card span,
+  .guided-action-chips span, .guided-receipt-head span,
+  .guided-receipt-head > b, .guided-receipt-stats span, .guided-receipt-card pre,
+  .guided-position span, .guided-preview-label, .guided-scenario-preview small,
+  .guided-empty-flow span, .guided-progress-copy span, .guided-progress-copy small,
+  .guided-stage-kicker, .walkthrough-step small, .walkthrough-rail-head,
+  .walkthrough-rail-note span, .walkthrough-stage-kicker, .walkthrough-action-copy,
+  .walkthrough-product-strip-copy > span, .walkthrough-product-strip-copy small,
+  .walkthrough-product-price span, .walkthrough-product-ref span,
+  .walkthrough-product-ref code, .walkthrough-pill, .walkthrough-facts dt,
+  .walkthrough-boundary span, .walkthrough-card-label,
+  .walkthrough-request-product small, .walkthrough-flow-mini span,
+  .walkthrough-success-summary small, .walkthrough-check-preview span,
+  .walkthrough-objective-card > span, .walkthrough-objective-card > small,
+  .walkthrough-timing-total, .walkthrough-timing-grid span,
+  .walkthrough-timing-grid strong, .walkthrough-timing-panel > small,
+  .walkthrough-check-row small, .walkthrough-check-outcome,
+  .walkthrough-lock-banner span, .walkthrough-persona-top,
+  .walkthrough-persona > small, .walkthrough-decision-split span,
+  .walkthrough-decision-split small, .walkthrough-human-receipt header span,
+  .walkthrough-receipt-summary span, .walkthrough-human-receipt code,
+  .walkthrough-verify-banner small, .walkthrough-json pre,
+  .walkthrough-checkout-boundary span, .walkthrough-checkout-boundary code,
+  .walkthrough-finish-grid span, .walkthrough-error span, .walkthrough-error small,
+  .queue-head .qactor, .queue-meta, .queue-detail h4, .detail-note,
+  .detail-technical > summary, .light-aside, .light-aside .posture,
+  .esc-who .who-label, .esc-who .who-value, .agent-paused, .warn-chip,
+  .autonomy-badge, .edited-badge, .persona-fingerprint small, .persona-fingerprint b,
+  .receipt-block-title, .receipt-sub, .receipt-status-grid small, .written-by,
+  dl.receipt-fields dd.mono, .receipt-doc .mono, .event-hash,
+  .cart-line .creceipt, .trust-passport-grid small, .trust-passport-sources,
+  .trust-passport-sources pre, .trust-timeline-node small,
+  .performance-proof small, .performance-proof p, .trace-row,
+  .trace-evidence-cue, .evidence-trail-grid article > span,
+  .evidence-trail-grid article > small, .evidence-trail-grid details,
+  .evidence-trail-grid pre, .risk-path > span small,
+  .session-summary-grid small, .audit-story-row small, .audit-story-key small,
+  .human-review-story small, .agent-principle-flow, .system-node > span,
+  .system-node small, .system-map-output small, main th, main td.mono,
+  .info-stats span, .info-checks b, .info-pipeline span small {
+    font-size: var(--wide-label) !important;
+    line-height: 1.45 !important;
+  }
+}
