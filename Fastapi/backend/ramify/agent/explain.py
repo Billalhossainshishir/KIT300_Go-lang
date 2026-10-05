@@ -7,6 +7,7 @@ a slow or absent model off the critical path of a demonstration.
 """
 
 import copy
+import re
 
 POSTURE_SENTENCE = {
     "allow": "Every check passed and there is no recall or advisory on record, so the agent may proceed.",
@@ -42,6 +43,20 @@ REASON_SENTENCE = {
     "seller_record_unsigned": "the seller's authority record carries no issuer signature",
 }
 
+# Why an agent's own policy tightened the outcome. Kept apart from the product
+# findings above: a missing price or a spend ceiling says nothing about the
+# product, and a missing price is not the same thing as being over budget.
+AGENT_REASON_SENTENCE = {
+    "line_total_unavailable_for_agent_budget": (
+        "the listing carries no price, so the agent's spend ceiling could not be checked"
+    ),
+    "line_total_exceeds_agent_budget": "the line total is over the agent's spend ceiling",
+    "brand_outside_agent_arrangement": "the brand is outside the agent's arrangement",
+    "seller_not_on_approved_vendor_list": "the seller is not on the agent's approved supplier list",
+    "autonomy_withheld_on_warned_outcome": "the agent does not buy unattended when a warning is attached",
+    "warned_outcome_requires_a_person": "the agent sends warned outcomes to a person",
+}
+
 
 def deterministic_summary(receipt: dict) -> str:
     """Derived from the receipt alone. No model involved."""
@@ -51,10 +66,15 @@ def deterministic_summary(receipt: dict) -> str:
 
     parts = [f"{name}. {POSTURE_SENTENCE.get(objective, '')}".strip()]
 
+    agent_codes = [
+        rule.get("reason_code")
+        for rule in receipt.get("actor_applied_rules", [])
+        if rule.get("reason_code")
+    ]
     reasons = [
         REASON_SENTENCE[code]
         for code in receipt.get("reason_codes", [])
-        if code in REASON_SENTENCE
+        if code in REASON_SENTENCE and code not in agent_codes
     ]
     if reasons:
         if len(reasons) == 1:
@@ -64,11 +84,17 @@ def deterministic_summary(receipt: dict) -> str:
             parts.append(f"The findings were that {listed}; and {reasons[-1]}.")
 
     if receipt.get("actor_narrowed"):
+        why = [
+            AGENT_REASON_SENTENCE.get(code) or REASON_SENTENCE.get(code)
+            for code in agent_codes
+        ]
+        why = [sentence for sentence in why if sentence]
+        because = f" because {'; and '.join(why)}" if why else ""
         parts.append(
             f"Assessed for {receipt.get('actor_label', 'this actor')}, the outcome "
             f"tightens from {objective.replace('_', ' ')} to "
-            f"{decision.replace('_', ' ')}. The facts about the product did not "
-            "change; the policy applied to them did."
+            f"{decision.replace('_', ' ')}{because}. The facts about the product did "
+            "not change; the policy applied to them did."
         )
 
     substitution = receipt.get("substitution")
@@ -80,19 +106,6 @@ def deterministic_summary(receipt: dict) -> str:
         f"The agent is permitted to {action.replace('_', ' ')}, and nothing beyond that."
     )
     return " ".join(part for part in parts if part)
-
-
-def _contradicts_receipt(text: str, receipt: dict) -> bool:
-    """Conservative guard against prose that reverses the sealed decision."""
-    lowered = " ".join(text.casefold().split())
-    decision = receipt.get("actor_decision") or receipt.get("objective_posture")
-    approval_terms = ("safe to buy", "safe to purchase", "approved to buy", "approved to purchase", "may proceed", "can proceed", "purchase is allowed", "buy this")
-    stop_terms = ("must not proceed", "do not purchase", "cannot purchase", "blocked", "must stop")
-    if decision in {"block", "hold", "escalate"} and any(term in lowered for term in approval_terms):
-        return True
-    if decision in {"allow", "allow_with_warning"} and any(term in lowered for term in stop_terms):
-        return True
-    return False
 
 
 def _configured_adapter():
@@ -107,36 +120,53 @@ def _configured_adapter():
     return adapter if adapter.available() else None
 
 
+_APPROVING = re.compile(
+    r"\b(safe to (buy|purchase|use)|go ahead|(you|agent) (can|may) (buy|purchase|proceed)|"
+    r"proceed with (the |this )?purchase|approved (for|to) (buy|purchase)|ok(ay)? to (buy|purchase)|"
+    r"fine to (buy|purchase)|recommend(ed)? (buying|purchasing))\b",
+    re.IGNORECASE,
+)
+_STOPPING = re.compile(
+    r"\b(recalled|under (an active )?recall|do not (buy|purchase)|must not (buy|purchase|proceed)|"
+    r"unsafe|blocked|rejected)\b",
+    re.IGNORECASE,
+)
+
+
+def contradicts_decision(text: str, receipt: dict) -> bool:
+    """Whether generated prose says the opposite of the signed decision.
+
+    The receipt could not be changed by the model, but its prose was shown
+    whatever it said, so text approving a recalled product was accepted as the
+    explanation of a blocked receipt (David's L2). Deliberately blunt: a false
+    alarm only swaps in the deterministic summary, which is always correct.
+    """
+    decision = receipt.get("actor_decision", receipt.get("objective_posture", "escalate"))
+    if decision in ("block", "hold", "escalate"):
+        return bool(_APPROVING.search(text))
+    if decision in ("allow", "allow_with_warning"):
+        return bool(_STOPPING.search(text))
+    return True
+
+
 def explain_receipt(receipt: dict) -> dict:
     """Explain a receipt without being able to change it."""
     read_only = copy.deepcopy(receipt)
 
-    authoritative = deterministic_summary(read_only)
     adapter = _configured_adapter()
     if adapter is not None:
         try:
             text = adapter.explain(read_only)
             if isinstance(text, str) and text.strip():
-                candidate = text.strip()
-                if not _contradicts_receipt(candidate, read_only):
+                if contradicts_decision(text, read_only):
                     return {
-                        "text": candidate,
-                        "authoritative_summary": authoritative,
-                        "source": adapter.name,
-                        "model_text_accepted": True,
+                        "text": deterministic_summary(read_only),
+                        "source": "deterministic_summary (model text rejected: it contradicted the signed decision)",
                     }
-                return {
-                    "text": authoritative,
-                    "authoritative_summary": authoritative,
-                    "source": "deterministic_summary:contradictory_model_rejected",
-                    "model_text_accepted": False,
-                }
+                return {"text": text.strip(), "source": adapter.name}
         except Exception:
+            # A model that errors, times out or returns nonsense must not take
+            # the demonstration with it.
             pass
 
-    return {
-        "text": authoritative,
-        "authoritative_summary": authoritative,
-        "source": "deterministic_summary",
-        "model_text_accepted": False,
-    }
+    return {"text": deterministic_summary(read_only), "source": "deterministic_summary"}

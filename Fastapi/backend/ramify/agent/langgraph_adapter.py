@@ -30,7 +30,7 @@ import urllib.request
 from typing import Any
 
 from ramify.agent import tools
-from ramify.agent.protocol import Interpretation
+from ramify.agent.protocol import Interpretation, bounded_confidence
 
 # llama3.1 is the model named in the client setup path. It is configurable so a
 # lighter local model can be used on a presentation laptop without touching code.
@@ -297,11 +297,7 @@ class LangGraphAdapter:
                 "Local model suggested an identifier outside the supplied catalogue, so RAMIFY discarded it.",
             )
 
-        try:
-            confidence = float(parsed.get("confidence", 0.0))
-        except (TypeError, ValueError):
-            confidence = 0.0
-        confidence = max(0.0, min(1.0, confidence))
+        confidence = bounded_confidence(parsed.get("confidence", 0.0))
         note = str(parsed.get("note") or "Local model matched a known catalogue item.")[:240]
         return Interpretation(identifier, "consumer_v1", confidence, note)
 

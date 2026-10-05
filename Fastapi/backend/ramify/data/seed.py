@@ -20,6 +20,7 @@ SEED_PATH = DATA_DIR / "demo_seed.json"
 POLICY_PACK_PATH = DATA_DIR / "policy_pack_demo_v1.json"
 GENERATED_DIR = DATA_DIR / "generated"
 EVIDENCE_SIGNATURES_PATH = GENERATED_DIR / "evidence_signatures.json"
+# Issuer signatures over recall-status and seller-authority records.
 RECORD_SIGNATURES_PATH = GENERATED_DIR / "record_signatures.json"
 
 
@@ -42,33 +43,19 @@ def policy_pack() -> dict:
     return json.loads(POLICY_PACK_PATH.read_text(encoding="utf-8"))
 
 
-def _load_generated_mapping(path: Path, default: dict) -> dict:
-    """Load generated trust metadata without letting one damaged byte crash the demo.
-
-    Invalid UTF-8 inside a string is replaced so downstream cryptographic
-    verification can reject the affected signature. Structurally invalid JSON
-    returns the supplied empty/default mapping, which also fails closed because
-    no unverified signature is treated as trusted.
-    """
-    if not path.exists():
-        return default
-    text = path.read_bytes().decode("utf-8", errors="replace")
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
-        return default
-    return payload if isinstance(payload, dict) else default
-
-
 @lru_cache(maxsize=1)
 def evidence_signatures() -> dict[str, dict[str, str]]:
-    return _load_generated_mapping(EVIDENCE_SIGNATURES_PATH, {})
+    if not EVIDENCE_SIGNATURES_PATH.exists():
+        return {}
+    return json.loads(EVIDENCE_SIGNATURES_PATH.read_text(encoding="utf-8"))
 
 
 @lru_cache(maxsize=1)
 def record_signatures() -> dict[str, dict[str, dict[str, str]]]:
-    """Issuer signatures over recall-status and seller-authority records."""
-    return _load_generated_mapping(RECORD_SIGNATURES_PATH, {"statuses": {}, "sellers": {}})
+    """{"statuses": {subject_ref: meta}, "sellers": {seller_ref: meta}}."""
+    if not RECORD_SIGNATURES_PATH.exists():
+        return {"statuses": {}, "sellers": {}}
+    return json.loads(RECORD_SIGNATURES_PATH.read_text(encoding="utf-8"))
 
 
 def parse_timestamp(value: str) -> datetime:
@@ -92,23 +79,31 @@ def snapshot_id() -> str:
     return seed()["meta"]["snapshot_id"]
 
 
-def _sha256_file(path: Path) -> str:
-    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+def _content_digest(value) -> str:
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def policy_digest() -> str:
-    """Digest of the exact policy pack bytes evaluated by this build."""
-    return _sha256_file(POLICY_PACK_PATH)
+    """Identity of the policy pack by content, not by its version label.
+
+    The label can stay the same while the rules change. A receipt recording
+    this digest can be matched to the exact pack that was evaluated.
+    """
+    return _content_digest(policy_pack())
 
 
 def dataset_digest() -> str:
-    """Digest the seed plus the manifests that authenticate decision inputs."""
-    digest = hashlib.sha256()
-    for path in (SEED_PATH, EVIDENCE_SIGNATURES_PATH, RECORD_SIGNATURES_PATH):
-        digest.update(path.name.encode("utf-8") + b"\0")
-        digest.update(path.read_bytes() if path.exists() else b"")
-        digest.update(b"\0")
-    return "sha256:" + digest.hexdigest()
+    """Identity of the dataset by content, not by its snapshot label.
+
+    Covers the seed records and both signature manifests, which hold every
+    artefact's and signed record's content hash, so changing one changes it too.
+    """
+    return _content_digest({
+        "seed": seed(),
+        "evidence_signatures": evidence_signatures(),
+        "record_signatures": record_signatures(),
+    })
 
 
 def subjects() -> dict:

@@ -1,4 +1,4 @@
-# RAMIFY OS v11.0.7 — David Meeting Mode v4.2
+# RAMIFY OS v11.0.6 — David Meeting Mode v4.2
 
 This build turns the 15-point client demonstration plan into a dedicated browser route: `/david-demo`.
 
@@ -6,7 +6,7 @@ This build turns the 15-point client demonstration plan into a dedicated browser
 1. Authoritative architecture: User request → Identify → Resolve → Status → Verify → Assess → Actor Policy → Action Gate → Signed Receipt → Action/Review.
 2. Apex clean assessment with the five primitive call trace.
 3. Evidence integrity shown separately from evidence validity.
-4. Isolated evidence tamper proof: a modified in-memory copy of artefact bytes is assessed, RATIFY rejects it, and the shared evidence file is never changed.
+4. Reversible evidence tamper proof: actual artefact bytes are changed for one assessment, RATIFY rejects them, then the source is restored byte-for-byte.
 5. Northbeam Consumer vs Procurement: one objective truth, different actor authority.
 6. Action Gate + basket + checkout re-verification.
 7. Receipt tamper proof.
@@ -17,6 +17,6 @@ This build turns the 15-point client demonstration plan into a dedicated browser
 12. Final end-to-end trust-chain summary.
 
 ## Important scope
-The evidence tamper button is a local synthetic demonstration. It operates on an in-memory byte copy and never edits the shared evidence artefact or persists the tampered assessment receipt.
+The evidence tamper button is a local synthetic demonstration. It restores the original evidence artefact in a `finally` block and does not persist the tampered assessment receipt.
 
-The testing panel reports the current v11.0.7 regression result (422 passed, 7 explicit environment-dependent skips, 1,316 subtests, 0 failures). Repository commit SHA and clean/dirty state are deliberately not invented in this exported archive; capture those from the team's actual repository before assessed handover.
+The testing panel retains the v4 release result (379 passed, 4 optional skipped, 1,312 subtests, 0 failures). Repository commit SHA and clean/dirty state are deliberately not invented in this exported archive; capture those from the team's actual repository before assessed handover.

@@ -69,28 +69,29 @@ class SuccessorExists(RuntimeError):
     """Raised when two requests try to answer the same review."""
 
 
-class InvalidSuccessorTarget(RuntimeError):
-    """Raised when human review targets a successor instead of a machine root."""
-
-
 def has_successor(receipt_id: str) -> bool:
     return any(r.get("supersedes_receipt") == receipt_id for r in all_receipts())
 
 
-def append_successor(original_id: str, receipt: dict) -> dict:
-    """Append one human successor only to the original machine review root.
+def is_review_answered(receipt: dict) -> bool:
+    """True when this receipt is already part of a settled review chain.
 
-    A human successor is terminal review state: it may be consumed by the
-    authorised transaction path, but it can never itself become a fresh review
-    target that mints more authority.
+    A successor keeps the original's ``actor_decision`` on purpose, so that the
+    machine verdict is never rewritten by a person. That also leaves it looking
+    reviewable: same held decision, no successor of its own, a fresh validity
+    window. Reviewing it again would mint a second authority from one person's
+    single decision, and the chain could be extended without limit.
+
+    A chain is therefore terminal at both ends. A receipt carrying a human
+    answer is one, and so is any receipt that supersedes another.
     """
+    return bool(receipt.get("human_review")) or bool(receipt.get("supersedes_receipt"))
+
+
+def append_successor(original_id: str, receipt: dict) -> dict:
+    """Append exactly one direct successor for a receipt, atomically in-process."""
     with _LOCK:
         rows = read_jsonl(ledger_path())
-        original = next((row for row in rows if row.get("receipt_id") == original_id), None)
-        if original is None:
-            raise InvalidSuccessorTarget(original_id)
-        if original.get("supersedes_receipt") or original.get("human_review"):
-            raise InvalidSuccessorTarget(original_id)
         if any(row.get("supersedes_receipt") == original_id for row in rows):
             raise SuccessorExists(original_id)
         append_jsonl(ledger_path(), receipt)
@@ -176,22 +177,25 @@ def actions(limit: int = 50) -> list[dict]:
 
 
 def actions_for(receipt_id: str) -> list[dict]:
-    """Return complete action history for a receipt; do not truncate audit history."""
+    """Every action recorded against a receipt, newest first, however old.
+
+    This used to look only at the latest 1,000 events, so a receipt's older
+    actions silently dropped out of its history (David's M1).
+    """
     with _LOCK:
         rows = _all_actions_chronological()
-    return [e for e in rows if e.get("receipt_ref") == receipt_id][::-1]
+    return [e for e in reversed(rows) if e.get("receipt_ref") == receipt_id]
 
 
 def verify_action_ledger() -> dict:
-    """Recompute the action chain using one receipt-history read per run."""
+    """Recompute the append-only action chain without trusting stored hashes."""
     with _LOCK:
         rows = _all_actions_chronological()
-        receipt_rows = read_jsonl(ledger_path())
-    receipt_map = {row.get("receipt_id"): row for row in receipt_rows if row.get("receipt_id")}
+        # One read of the receipt ledger for the whole run. Looking each linked
+        # receipt up separately re-read the entire file once per action (M1).
+        receipts_by_id = {r.get("receipt_id"): r for r in all_receipts()}
     expected_previous = "GENESIS"
     problems: list[dict] = []
-    from ramify.crypto.sign import verify_receipt
-
     for index, row in enumerate(rows, start=1):
         if row.get("event_sequence") != index:
             problems.append({"sequence": index, "problem": "event_sequence mismatch"})
@@ -204,12 +208,13 @@ def verify_action_ledger() -> dict:
         receipt_ref = row.get("receipt_ref")
         receipt_hash = row.get("receipt_hash")
         if receipt_ref:
-            receipt = receipt_map.get(receipt_ref)
+            receipt = receipts_by_id.get(receipt_ref)
             if receipt is None:
                 problems.append({"sequence": index, "problem": "receipt_ref missing from receipt ledger"})
             else:
                 if receipt.get("payload_hash") != receipt_hash:
                     problems.append({"sequence": index, "problem": "receipt_hash does not match linked receipt"})
+                from ramify.crypto.sign import verify_receipt
                 report = verify_receipt(receipt)
                 if not report.get("integrity_verified"):
                     problems.append({"sequence": index, "problem": "linked receipt integrity does not verify"})
@@ -224,4 +229,3 @@ def verify_action_ledger() -> dict:
         "head_hash": expected_previous if rows else "GENESIS",
         "note": "SHA-256 hash-linked local demonstration ledger with receipt-link verification; not a distributed immutable log.",
     }
-

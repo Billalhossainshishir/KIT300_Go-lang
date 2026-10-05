@@ -10,8 +10,27 @@ produce a posture, verdict, reason code or action — the engine does that, and
 the receipt is sealed before an adapter ever sees it.
 """
 
+import math
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
+
+
+def bounded_confidence(value) -> float:
+    """A model's confidence as a finite number in 0..1, or 0.0.
+
+    float("NaN") parses, and min(1.0, nan) returns 1.0, so a model answering
+    "NaN" used to be read as fully confident (David, 1 Oct, item 6). Booleans,
+    infinities and anything unparseable are treated as no confidence at all.
+    """
+    if isinstance(value, bool):
+        return 0.0
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return 0.0
+    if not math.isfinite(number):
+        return 0.0
+    return max(0.0, min(1.0, number))
 
 
 @dataclass

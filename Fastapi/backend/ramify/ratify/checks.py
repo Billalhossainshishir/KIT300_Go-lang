@@ -15,12 +15,14 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass, field
+from contextlib import contextmanager
+from contextvars import ContextVar
+from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
 
 from ramify.crypto import keys
 from ramify.data import seed
-from ramify.ratify.evidence_binding import binding_payload
 
 PASS = "pass"
 REVIEW = "review"
@@ -103,16 +105,24 @@ def check_standing(status_result: dict) -> CheckResult:
     standing = status_result.get("standing")
     detail = status_result.get("detail") or ""
 
+    # A status record that does not match what its issuer signed cannot be
+    # read as clean, whatever its standing field now says.
     integrity = status_result.get("integrity")
     if integrity in RECORD_TAMPER_STATES:
         return CheckResult(
-            "standing", "Recall and advisory standing", FAIL, HARD_STOP,
+            "standing",
+            "Recall and advisory standing",
+            FAIL,
+            HARD_STOP,
             "The recall status record does not match what the issuer signed, so its standing cannot be relied on.",
             reason_codes=["status_record_integrity_failed"],
         )
     if integrity == "missing_signature":
         return CheckResult(
-            "standing", "Recall and advisory standing", INCOMPLETE, INCOMPLETE_SEVERITY,
+            "standing",
+            "Recall and advisory standing",
+            INCOMPLETE,
+            INCOMPLETE_SEVERITY,
             "The recall status record carries no issuer signature, so its standing is unconfirmed.",
             reason_codes=["status_record_unsigned"],
         )
@@ -168,13 +178,19 @@ def check_seller_authority(subject: dict) -> CheckResult:
     integrity = evaluate_record_integrity("sellers", subject.get("seller_ref", ""), seller)["state"]
     if integrity in RECORD_TAMPER_STATES:
         return CheckResult(
-            "seller_authority", "Seller authority", FAIL, HARD_STOP,
+            "seller_authority",
+            "Seller authority",
+            FAIL,
+            HARD_STOP,
             f"The seller record for {seller.get('name', 'this seller')} does not match what the issuer signed.",
             reason_codes=["seller_record_integrity_failed"],
         )
     if integrity == "missing_signature":
         return CheckResult(
-            "seller_authority", "Seller authority", INCOMPLETE, INCOMPLETE_SEVERITY,
+            "seller_authority",
+            "Seller authority",
+            INCOMPLETE,
+            INCOMPLETE_SEVERITY,
             f"The seller record for {seller.get('name', 'this seller')} carries no issuer signature.",
             reason_codes=["seller_record_unsigned"],
         )
@@ -261,18 +277,145 @@ INTEGRITY_REASON = {
 }
 
 
-def evaluate_evidence_integrity_bytes(
-    record: dict,
-    artefact_bytes: bytes,
-    expected_subject_ref: str | None = None,
-    subject_claims: list[dict] | None = None,
-) -> dict:
-    """Verify supplied artefact bytes and bind the structured decision metadata."""
-    required = ("content_hash", "signature", "issuer_ref", "subject_ref")
+# Where evidence artefacts are read from. The tamper demonstration points its
+# own assessment at a temporary copy and every other request keeps reading the
+# shipped files. A context variable belongs to one request, so nothing is
+# shared and no shipped artefact is ever written (David's U2). This replaces a
+# lock that only serialised the demonstration's edits to the shipped file,
+# which a process killed mid-demonstration could still leave modified.
+_ARTEFACT_ROOT: ContextVar[Path | None] = ContextVar("ramify_artefact_root", default=None)
+
+
+def artefact_root() -> Path:
+    return _ARTEFACT_ROOT.get() or seed.DATA_DIR
+
+
+@contextmanager
+def artefacts_from(root: Path):
+    """Read evidence artefacts from ``root`` for the current request only."""
+    token = _ARTEFACT_ROOT.set(root)
+    try:
+        yield
+    finally:
+        _ARTEFACT_ROOT.reset(token)
+
+# Ordered by the posture each outcome leads to, not by how alarming the word
+# sounds: review gives allow_with_warning, incomplete gives escalate. Ranking
+# review above incomplete let expired evidence with missing integrity metadata
+# combine to allow_with_warning, so an ordinary warning erased the integrity
+# stop (David, 1 Oct, item 2).
+_OUTCOME_STRICTNESS = {PASS: 0, REVIEW: 1, INCOMPLETE: 2, FAIL: 3}
+_SEVERITY_STRICTNESS = {
+    INFORMATIONAL: 0,
+    INCOMPLETE_SEVERITY: 1,
+    POLICY_DEPENDENT: 2,
+    HARD_STOP: 3,
+}
+
+
+def _strictness(graded: tuple[str, str]) -> tuple[int, int]:
+    """Order an (outcome, severity) pair so the strictest one can be taken."""
+    outcome, severity = graded
+    return _OUTCOME_STRICTNESS[outcome], _SEVERITY_STRICTNESS[severity]
+
+
+def parse_signed_header(text: str) -> dict[str, str]:
+    """The ``key: value`` lines of a signed artefact, up to the first blank line."""
+    headers: dict[str, str] = {}
+    for line in text.splitlines()[1:]:
+        if not line.strip():
+            break
+        if ": " in line:
+            key, value = line.split(": ", 1)
+            headers[key.strip().lower()] = value.strip()
+    return headers
+
+
+def supported_claim_refs(record: dict) -> list[str]:
+    """The claims an evidence record says it supports, in signed-header order."""
+    refs = {record.get("claim_ref"), *(record.get("supports_claim_refs") or [])}
+    refs.discard(None)
+    return sorted(refs)
+
+
+def signed_claim_assertions(record: dict, expected_subject_ref: str | None = None) -> dict | None:
+    """What the issuer signed about each supported claim, or None if unverified.
+
+    Returns ``{claim_ref: {"state": ..., "value": ...}}`` read from the signed
+    artefact header, only once that artefact's integrity has verified.
+    """
+    if evaluate_evidence_integrity(record, expected_subject_ref)["state"] != "verified":
+        return None
+    text = (artefact_root() / record["storage_path"]).resolve().read_text(encoding="utf-8")
+    headers = parse_signed_header(text)
+    assertions: dict[str, dict] = {}
+    for ref in supported_claim_refs(record):
+        key = ref.lower()
+        if f"claim-state {key}" in headers or f"claim-value {key}" in headers:
+            assertions[ref] = {
+                "state": headers.get(f"claim-state {key}"),
+                "value": headers.get(f"claim-value {key}"),
+            }
+    return assertions
+
+
+# Issuer that attests seller-authority records, which do not name one
+# themselves. Recall-status records are signed by the issuer they name.
+SELLER_AUTHORITY_ISSUER = "ramify:demo:issuer:Regulator_AU_demo"
+RECORD_TAMPER_STATES = frozenset({"hash_mismatch", "signature_invalid", "issuer_mismatch", "unknown_issuer_key"})
+
+
+def evaluate_record_integrity(kind: str, ref: str, record: dict) -> dict:
+    """Verify a recall-status or seller-authority record against its issuer signature.
+
+    These records decide a verdict as directly as evidence does: a recall is
+    the headline hard stop and seller authority can block a sale. They used to
+    be trusted as plain JSON, so editing one record turned a recalled product
+    into an allowed one (26 September audit, N4). ``kind`` is ``statuses`` or
+    ``sellers``.
+    """
+    meta = (seed.record_signatures().get(kind) or {}).get(ref)
+    if not meta:
+        return {"state": "missing_signature", "detail": f"no issuer signature is held for this {kind[:-1]} record"}
+    canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    digest = hashlib.sha256(canonical).digest()
+    if "sha256:" + digest.hex() != meta.get("content_hash"):
+        return {"state": "hash_mismatch", "detail": f"the {kind[:-1]} record differs from what the issuer signed"}
+    expected_issuer = record.get("issuer_ref") if kind == "statuses" else SELLER_AUTHORITY_ISSUER
+    if meta.get("issuer_ref") != expected_issuer:
+        return {"state": "issuer_mismatch", "detail": "the record was signed by a different issuer"}
+    public_key = keys.load_public_key(meta["issuer_ref"])
+    if public_key is None:
+        return {"state": "unknown_issuer_key", "detail": "issuer public key is not in the embedded trust material"}
+    try:
+        public_key.verify(base64.b64decode(meta.get("signature", ""), validate=True), digest)
+    except (InvalidSignature, ValueError, TypeError):
+        return {"state": "signature_invalid", "detail": "issuer Ed25519 signature does not verify"}
+    return {"state": "verified", "detail": "record hash and issuer Ed25519 signature verify"}
+
+
+def evaluate_evidence_integrity(record: dict, expected_subject_ref: str | None = None) -> dict:
+    """Cryptographically verify the synthetic evidence artefact and its binding.
+
+    The evidence manifest is not treated as proof by itself: RAMIFY opens the
+    artefact bytes, recomputes SHA-256, verifies the issuer Ed25519 signature
+    over that digest, then checks that the record/scope still point at the
+    subject being assessed.
+    """
+    required = ("content_hash", "signature", "storage_path", "issuer_ref", "subject_ref")
     missing = [field for field in required if not record.get(field)]
     if missing:
         return {"state": "missing_metadata", "detail": f"integrity metadata missing: {', '.join(missing)}"}
 
+    data_root = artefact_root().resolve()
+    artefact_path = (data_root / record["storage_path"]).resolve()
+    try:
+        artefact_path.relative_to(data_root)
+    except ValueError:
+        return {"state": "unsafe_path", "detail": "artefact storage path escapes the demo data directory"}
+    if not artefact_path.is_file():
+        return {"state": "artefact_missing", "detail": f"artefact is missing: {record['storage_path']}"}
+    artefact_bytes = artefact_path.read_bytes()
     digest = hashlib.sha256(artefact_bytes).digest()
     computed_hash = "sha256:" + digest.hex()
     if computed_hash != record["content_hash"]:
@@ -291,32 +434,36 @@ def evaluate_evidence_integrity_bytes(
     except (InvalidSignature, ValueError, TypeError):
         return {"state": "signature_invalid", "detail": "issuer Ed25519 signature does not verify"}
 
+    # The signed artefact itself carries issuer/subject/date headers. Compare
+    # those signed bytes with the structured metadata so changing both
+    # ``subject_ref`` and ``scope.product_ref`` cannot make an unrelated signed
+    # artefact appear bound to the product being assessed.
     try:
-        text = artefact_bytes.decode("utf-8")
-        binding_line = next(
-            (line for line in text.splitlines()[:6] if line.startswith("binding-json: ")),
-            None,
-        )
-        if binding_line is None:
-            return {
-                "state": "artefact_binding_mismatch",
-                "detail": "signed artefact does not contain the required v2 metadata binding",
-            }
-        signed_binding = json.loads(binding_line.split(": ", 1)[1])
-    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
-        return {
-            "state": "artefact_binding_mismatch",
-            "detail": "signed artefact metadata binding is malformed",
-        }
+        headers = parse_signed_header(artefact_bytes.decode("utf-8"))
+    except UnicodeDecodeError:
+        return {"state": "artefact_binding_mismatch", "detail": "signed artefact header is not valid UTF-8"}
 
-    if subject_claims is None:
-        subject = seed.subject(record.get("subject_ref", "")) or {}
-        subject_claims = list(subject.get("claims", []))
-    expected_binding = binding_payload(record, subject_claims)
-    if signed_binding != expected_binding:
+    # Every field that decides a verdict is compared with what the issuer
+    # signed. Validity start, record status and the supported claims used to
+    # sit outside the signature, so a one-word manifest edit could clear a
+    # revoked certificate while integrity still reported verified (David's E1).
+    expected_headers = {
+        "issuer": str(record.get("issuer_ref", "")),
+        "subject": str(record.get("subject_ref", "")),
+        "issued": str(record.get("issued_at", "")),
+        "expires": str(record.get("expires_at", "")),
+        "valid_from": str(record.get("valid_from", "")),
+        "status": str(record.get("record_status", "")),
+        "supports": ", ".join(supported_claim_refs(record)),
+    }
+    mismatched = [
+        key for key, value in expected_headers.items()
+        if headers.get(key) != value
+    ]
+    if mismatched:
         return {
             "state": "artefact_binding_mismatch",
-            "detail": "signed evidence binding disagrees with structured metadata or supported claim values",
+            "detail": "signed artefact header disagrees with structured metadata: " + ", ".join(mismatched),
         }
 
     expected = expected_subject_ref or record.get("subject_ref")
@@ -327,56 +474,9 @@ def evaluate_evidence_integrity_bytes(
 
     return {
         "state": "verified",
-        "detail": "artefact hash and issuer Ed25519 signature verify; signed metadata/claim binding is consistent",
+        "detail": "artefact hash and issuer Ed25519 signature verify; subject/scope binding is consistent",
         "content_hash": computed_hash,
     }
-
-
-SELLER_AUTHORITY_ISSUER = "ramify:demo:issuer:Regulator_AU_demo"
-RECORD_TAMPER_STATES = frozenset({"hash_mismatch", "signature_invalid", "issuer_mismatch", "unknown_issuer_key"})
-
-
-def evaluate_record_integrity(kind: str, ref: str, record: dict) -> dict:
-    """Verify recall-status or seller-authority data against its issuer signature."""
-    meta = (seed.record_signatures().get(kind) or {}).get(ref)
-    if not meta:
-        return {"state": "missing_signature", "detail": f"no issuer signature is held for this {kind[:-1]} record"}
-    canonical = json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    digest = hashlib.sha256(canonical).digest()
-    if "sha256:" + digest.hex() != meta.get("content_hash"):
-        return {"state": "hash_mismatch", "detail": f"the {kind[:-1]} record differs from what the issuer signed"}
-    expected_issuer = record.get("issuer_ref") if kind == "statuses" else SELLER_AUTHORITY_ISSUER
-    if meta.get("issuer_ref") != expected_issuer:
-        return {"state": "issuer_mismatch", "detail": "the record was signed by a different issuer"}
-    public_key = keys.load_public_key(meta.get("issuer_ref", ""))
-    if public_key is None:
-        return {"state": "unknown_issuer_key", "detail": "issuer public key is not in the embedded trust material"}
-    try:
-        public_key.verify(base64.b64decode(meta.get("signature", ""), validate=True), digest)
-    except (InvalidSignature, ValueError, TypeError):
-        return {"state": "signature_invalid", "detail": "issuer Ed25519 signature does not verify"}
-    return {"state": "verified", "detail": "record hash and issuer Ed25519 signature verify"}
-
-
-def evaluate_evidence_integrity(
-    record: dict,
-    expected_subject_ref: str | None = None,
-    subject_claims: list[dict] | None = None,
-) -> dict:
-    """Read the configured artefact safely, then verify its bytes."""
-    if not record.get("storage_path"):
-        return {"state": "missing_metadata", "detail": "integrity metadata missing: storage_path"}
-    data_root = seed.DATA_DIR.resolve()
-    artefact_path = (seed.DATA_DIR / record["storage_path"]).resolve()
-    try:
-        artefact_path.relative_to(data_root)
-    except ValueError:
-        return {"state": "unsafe_path", "detail": "artefact storage path escapes the demo data directory"}
-    if not artefact_path.is_file():
-        return {"state": "artefact_missing", "detail": f"artefact is missing: {record['storage_path']}"}
-    return evaluate_evidence_integrity_bytes(
-        record, artefact_path.read_bytes(), expected_subject_ref, subject_claims
-    )
 
 
 REQUIRED_EVIDENCE_FIELDS = (
@@ -445,6 +545,11 @@ def evaluate_evidence_freshness(record: dict, as_at) -> dict:
             "state": "malformed_record",
             "detail": "retrieval timestamp precedes the evidence issue timestamp",
         }
+    if valid_from < issued_at:
+        return {
+            "state": "malformed_record",
+            "detail": "validity commencement precedes the evidence issue timestamp",
+        }
     # Validate internal chronology before asking whether the record is current at
     # a particular assessment snapshot. Otherwise an impossible record whose
     # validity begins in the future could be misreported as merely not-yet-valid.
@@ -455,8 +560,8 @@ def evaluate_evidence_freshness(record: dict, as_at) -> dict:
         expires_at = seed.parse_timestamp(record["expires_at"])
     except (TypeError, ValueError):
         return {"state": "malformed_record", "detail": "expiry timestamp is malformed"}
-    if expires_at < valid_from:
-        return {"state": "malformed_record", "detail": "expiry timestamp precedes validity commencement"}
+    if expires_at <= valid_from:
+        return {"state": "malformed_record", "detail": "expiry timestamp does not follow validity commencement"}
     if expires_at < issued_at:
         return {"state": "malformed_record", "detail": "expiry timestamp precedes the evidence issue timestamp"}
 
@@ -480,7 +585,7 @@ def evaluate_evidence_freshness(record: dict, as_at) -> dict:
     }
 
 
-def check_evidence_freshness(subject: dict, artefact_overrides: dict[str, bytes] | None = None) -> CheckResult:
+def check_evidence_freshness(subject: dict) -> CheckResult:
     as_at = seed.snapshot_date()
     records = _evidence_for(subject)
 
@@ -490,76 +595,97 @@ def check_evidence_freshness(subject: dict, artefact_overrides: dict[str, bytes]
             "Evidence validity and integrity",
             INCOMPLETE,
             INCOMPLETE_SEVERITY,
-            "There is no evidence whose validity could be checked.",
+            "There is no evidence whose freshness could be checked.",
             reason_codes=["no_evidence_to_assess"],
         )
 
-    claims = list(subject.get("claims", []))
-    findings = []
-    reason_codes: set[str] = set()
-    consulted: list[str] = []
-    outcome_rank = 0
-    # Restrictiveness: pass < review < incomplete < fail.  Incomplete evidence
-    # escalates rather than being softened by a merely reviewable validity issue,
-    # while any established hard stop still dominates everything else.
-    rank_to_result = {
-        0: (PASS, INFORMATIONAL),
-        1: (REVIEW, POLICY_DEPENDENT),
-        2: (INCOMPLETE, INCOMPLETE_SEVERITY),
-        3: (FAIL, HARD_STOP),
-    }
-    descriptions: list[str] = []
+    integrity_states = [
+        (record, evaluate_evidence_integrity(record, subject.get("ref"))) for record in records
+    ]
+    integrity_problems = [(r, finding) for r, finding in integrity_states if finding["state"] != "verified"]
+    if integrity_problems:
+        # Integrity and freshness are separate axes and one record can fail on
+        # both. Deciding on integrity alone let a weaker defect hide a stronger
+        # one: a revoked certificate is a hard stop, missing integrity metadata
+        # is merely incomplete, and a record with both came out incomplete. That
+        # made the result weaker for having one more thing wrong with it, and it
+        # dropped the revocation reason from the output entirely.
+        #
+        # So both axes are evaluated and the strictest safely established
+        # outcome wins, carrying every reason that was found.
+        freshness_states = [(r, evaluate_evidence_freshness(r, as_at)) for r in records]
+        freshness_problems = [(r, f) for r, f in freshness_states if f["state"] != "current"]
 
-    for record in records:
-        if artefact_overrides and record.get("ref") in artefact_overrides:
-            integrity = evaluate_evidence_integrity_bytes(
-                record, artefact_overrides[record["ref"]], subject.get("ref"), claims
-            )
-        else:
-            integrity = evaluate_evidence_integrity(record, subject.get("ref"), claims)
-        validity = evaluate_evidence_freshness(record, as_at)
-        findings.append({
-            "evidence_ref": record["ref"],
-            "integrity": integrity,
-            "freshness": validity,
-        })
-        consulted.append(record["ref"])
+        graded = [INTEGRITY_OUTCOME[f["state"]] for _, f in integrity_problems]
+        graded += [FRESHNESS_OUTCOME[f["state"]] for _, f in freshness_problems]
+        outcome, severity = max(graded, key=_strictness)
 
-        i_outcome, _ = INTEGRITY_OUTCOME[integrity["state"]]
-        v_outcome, _ = FRESHNESS_OUTCOME[validity["state"]]
-        local_rank = max(
-            {PASS: 0, REVIEW: 1, INCOMPLETE: 2, FAIL: 3}[i_outcome],
-            {PASS: 0, REVIEW: 1, INCOMPLETE: 2, FAIL: 3}[v_outcome],
+        reason_codes = {INTEGRITY_REASON[f["state"]] for _, f in integrity_problems}
+        reason_codes |= {FRESHNESS_REASON[f["state"]] for _, f in freshness_problems}
+
+        described = "; ".join(f"{r['ref']} {finding['detail']}" for r, finding in integrity_problems)
+        also = "; ".join(f"{r['ref']} {f['detail']}" for r, f in freshness_problems)
+        summary = f"Evidence integrity could not be established: {described}."
+        if also:
+            summary += f" Validity also failed: {also}."
+        return CheckResult(
+            "evidence_freshness",
+            "Evidence validity and integrity",
+            outcome,
+            severity,
+            summary,
+            reason_codes=sorted(reason_codes),
+            evidence_consulted=sorted(
+                {r["ref"] for r, _ in integrity_problems} | {r["ref"] for r, _ in freshness_problems}
+            ),
+            findings=[
+                {
+                    "evidence_ref": r["ref"],
+                    "integrity": finding,
+                    "freshness": evaluate_evidence_freshness(r, as_at),
+                }
+                for r, finding in integrity_states
+            ],
         )
-        outcome_rank = max(outcome_rank, local_rank)
 
-        if integrity["state"] != "verified":
-            reason_codes.add(INTEGRITY_REASON[integrity["state"]])
-            descriptions.append(f"{record['ref']} integrity: {integrity['detail']}")
-        if validity["state"] != "current":
-            code = FRESHNESS_REASON.get(validity["state"])
-            if code:
-                reason_codes.add(code)
-            descriptions.append(f"{record['ref']} validity: {validity['detail']}")
+    states = [(record, evaluate_evidence_freshness(record, as_at)) for record in records]
+    problems = [(r, f) for r, f in states if f["state"] != "current"]
 
-    outcome, severity = rank_to_result[outcome_rank]
-    if outcome_rank == 0:
-        detail = (
-            f"All {len(records)} evidence record(s) have verified signed bindings and are current at "
-            f"{as_at.date().isoformat()}."
+    if not problems:
+        return CheckResult(
+            "evidence_freshness",
+            "Evidence validity and integrity",
+            PASS,
+            INFORMATIONAL,
+            f"All {len(records)} evidence record(s) are current at "
+            f"{as_at.date().isoformat()}.",
+            evidence_consulted=[r["ref"] for r in records],
+            findings=[
+                {"evidence_ref": r["ref"], **f, "integrity": evaluate_evidence_integrity(r, subject.get("ref"))}
+                for r, f in states
+            ],
         )
-    else:
-        detail = "; ".join(descriptions) + "."
+
+    # Several records can be unusable for different reasons at once. The check
+    # takes the worst outcome and reports every reason, rather than stopping at
+    # the first problem it finds.
+    worst = max(problems, key=lambda pair: _FRESHNESS_RANK[pair[1]["state"]])
+    outcome, severity = FRESHNESS_OUTCOME[worst[1]["state"]]
+    described = "; ".join(f"{r['document_type'].replace('_', ' ')} {f['detail']}" for r, f in problems)
 
     return CheckResult(
         "evidence_freshness",
         "Evidence validity and integrity",
         outcome,
         severity,
-        detail,
-        reason_codes=sorted(reason_codes),
-        evidence_consulted=consulted,
-        findings=findings,
+        f"{described}. Derived from the record's own dates against the "
+        f"{as_at.date().isoformat()} snapshot.",
+        reason_codes=sorted({FRESHNESS_REASON[f["state"]] for _, f in problems}),
+        evidence_consulted=[r["ref"] for r, _ in problems],
+        findings=[
+            {"evidence_ref": r["ref"], **f, "integrity": evaluate_evidence_integrity(r, subject.get("ref"))}
+            for r, f in states
+        ],
     )
 
 
@@ -580,31 +706,27 @@ def check_claims_and_category(subject: dict) -> CheckResult:
     claims = subject.get("claims", [])
     consulted = [ref for claim in claims for ref in claim.get("evidence_refs", [])]
 
+    # Every rule is evaluated and the strictest outcome is reported with all
+    # of its reasons. Returning at the first finding let a missing required
+    # claim (incomplete) hide another claim's broken evidence binding (a hard
+    # stop), so the weaker result won for having more wrong (David, 1 Oct).
+    findings: list[tuple[str, str, str, str]] = []
+
     rejected = [c for c in claims if c["state"] in ("rejected", "revoked")]
     if rejected:
         reasons = ", ".join(c.get("reason", c["state"]) for c in rejected)
-        return CheckResult(
-            "claims_and_category",
-            "Claims and category requirements",
-            FAIL,
-            HARD_STOP,
+        findings.append((
+            FAIL, HARD_STOP, "claim_rejected_or_revoked",
             f"{len(rejected)} claim(s) rejected or revoked by the issuer: {reasons}.",
-            reason_codes=["claim_rejected_or_revoked"],
-            evidence_consulted=consulted,
-        )
+        ))
 
     present_types = {c["type"] for c in claims}
     missing = [kind for kind in required if kind not in present_types]
     if missing:
-        return CheckResult(
-            "claims_and_category",
-            "Claims and category requirements",
-            INCOMPLETE,
-            INCOMPLETE_SEVERITY,
+        findings.append((
+            INCOMPLETE, INCOMPLETE_SEVERITY, "required_claim_missing",
             f"No issuer has asserted the required claim(s): {', '.join(missing)}.",
-            reason_codes=["required_claim_missing"],
-            evidence_consulted=consulted,
-        )
+        ))
 
     binding_problems: list[str] = []
     for claim in claims:
@@ -621,20 +743,26 @@ def check_claims_and_category(subject: dict) -> CheckResult:
                 binding_problems.append(f"{claim['ref']} evidence {evidence_ref} belongs to another subject")
             if record.get("issuer_ref") != claim.get("issuer_ref"):
                 binding_problems.append(f"{claim['ref']} evidence {evidence_ref} is signed by a different issuer")
-            supported = {record.get("claim_ref"), *(record.get("supports_claim_refs") or [])}
-            supported.discard(None)
-            if claim.get("ref") not in supported:
+            if claim.get("ref") not in supported_claim_refs(record):
                 binding_problems.append(f"{claim['ref']} is not named by evidence {evidence_ref}")
+                continue
+            # The claim's own state and value must be what the issuer signed.
+            # When the artefact does not verify, evidence_freshness already
+            # reports that, so nothing is added here.
+            signed = signed_claim_assertions(record, subject.get("ref"))
+            if signed is not None:
+                assertion = signed.get(claim["ref"])
+                if assertion is None:
+                    binding_problems.append(
+                        f"{claim['ref']} is not asserted in signed evidence {evidence_ref}")
+                elif assertion["state"] != claim.get("state") or assertion["value"] != claim.get("value"):
+                    binding_problems.append(
+                        f"{claim['ref']} differs from what signed evidence {evidence_ref} asserts")
     if binding_problems:
-        return CheckResult(
-            "claims_and_category",
-            "Claims and category requirements",
-            FAIL,
-            HARD_STOP,
+        findings.append((
+            FAIL, HARD_STOP, "claim_evidence_binding_invalid",
             "Claim-to-evidence binding is inconsistent: " + "; ".join(binding_problems) + ".",
-            reason_codes=["claim_evidence_binding_invalid"],
-            evidence_consulted=consulted,
-        )
+        ))
 
     out_of_scope = []
     for claim in claims:
@@ -645,13 +773,20 @@ def check_claims_and_category(subject: dict) -> CheckResult:
         described = ", ".join(
             f"{issuer['name']} asserting {claim['type']}" for claim, issuer in out_of_scope
         )
+        findings.append((
+            REVIEW, POLICY_DEPENDENT, "claim_asserted_outside_issuer_authority",
+            f"Claim asserted outside the issuer's registered authority: {described}.",
+        ))
+
+    if findings:
+        outcome, severity = max(((f[0], f[1]) for f in findings), key=_strictness)
         return CheckResult(
             "claims_and_category",
             "Claims and category requirements",
-            REVIEW,
-            POLICY_DEPENDENT,
-            f"Claim asserted outside the issuer's registered authority: {described}.",
-            reason_codes=["claim_asserted_outside_issuer_authority"],
+            outcome,
+            severity,
+            " ".join(f[3] for f in findings),
+            reason_codes=[f[2] for f in findings],
             evidence_consulted=consulted,
         )
 
@@ -666,64 +801,57 @@ def check_claims_and_category(subject: dict) -> CheckResult:
     )
 
 
-def _parse_omega3_components(value: object) -> dict[str, object] | None:
-    """Parse EPA/DHA and, when present, the serving denominator/basis."""
+def _parse_omega3_components(value: object) -> dict[str, float] | None:
     text = str(value or "")
-    found: dict[str, object] = {}
+    found = {}
     for component in ("EPA", "DHA"):
         match = re.search(rf"\b{component}\s*([0-9]+(?:\.[0-9]+)?)\s*mg\b", text, re.IGNORECASE)
         if not match:
             return None
         found[component] = float(match.group(1))
-    serving = re.search(
-        r"(?:per|/)\s*([0-9]+(?:\.[0-9]+)?)?\s*(capsule|capsules|softgel|softgels|tablet|tablets|serving|servings)\b",
-        text, re.IGNORECASE,
-    )
-    if serving:
-        found["denominator_count"] = float(serving.group(1) or 1.0)
-        basis = serving.group(2).casefold()
-        if basis.endswith("s"):
-            basis = basis[:-1]
-        found["denominator_basis"] = basis
-    else:
-        found["denominator_count"] = None
-        found["denominator_basis"] = None
     return found
 
 
-def _claim_values_conflict(claim_type: str, group: list[dict]) -> tuple[bool, str]:
+def _serving_basis(value: object) -> tuple[float, str] | None:
+    """``per 2 softgels`` -> (2.0, "softgel"); None when no basis is stated."""
+    match = re.search(r"\bper\s+(?:([0-9]+(?:\.[0-9]+)?)\s*)?([a-z]+)", str(value or ""), re.IGNORECASE)
+    if not match:
+        return None
+    count = float(match.group(1)) if match.group(1) else 1.0
+    unit = match.group(2).lower()
+    return count, unit[:-1] if unit.endswith("s") else unit
+
+
+def _claim_values_conflict(claim_type: str, group: list[dict]) -> tuple[str, str]:
+    """Compare claim values: ``conflict``, ``consistent`` or ``incomparable``."""
     rule = (seed.policy_pack().get("claim_comparison") or {}).get(claim_type, {"mode": "exact"})
     mode = rule.get("mode", "exact")
     values = [claim.get("value") for claim in group]
     if mode == "omega3_mg_components":
         parsed = [_parse_omega3_components(value) for value in values]
         if all(item is not None for item in parsed):
-            bases = {item["denominator_basis"] for item in parsed}
-            counts = [item["denominator_count"] for item in parsed]
-            # If both omit a denominator, preserve the existing demo semantics:
-            # compare the stated EPA/DHA values on the same unstated basis.
-            if bases == {None}:
-                normalized = parsed
-            # Mixed explicit/missing bases are not silently comparable.
-            elif None in bases or len(bases) != 1 or any(c in (None, 0) for c in counts):
-                return True, "policy comparison incomplete: incompatible or missing serving denominator"
-            else:
-                normalized = [
-                    {
-                        "EPA": float(item["EPA"]) / float(item["denominator_count"]),
-                        "DHA": float(item["DHA"]) / float(item["denominator_count"]),
-                    }
-                    for item in parsed
-                ]
+            # Milligrams mean nothing without the serving they are per. Values
+            # were compared as bare numbers, so 360 mg per two softgels read as
+            # a conflict with 180 mg per softgel (David's E4). Normalise to one
+            # unit of a shared basis, or say the values cannot be compared.
+            bases = [_serving_basis(value) for value in values]
+            comparison = "policy comparison: EPA/DHA per serving unit"
+            if any(basis is None for basis in bases) or len({unit for _, unit in bases}) > 1:
+                return "incomparable", comparison + "; serving bases absent or incompatible"
+            per_unit = [
+                {c: item[c] / count for c in ("EPA", "DHA")}
+                for item, (count, _) in zip(parsed, bases)
+            ]
             tolerance = float(rule.get("absolute_tolerance_mg", 0))
-            components = ("EPA", "DHA")
             conflict = any(
-                max(float(item[c]) for item in normalized) - min(float(item[c]) for item in normalized) > tolerance
-                for c in components
+                max(item[c] for item in per_unit) - min(item[c] for item in per_unit) > tolerance
+                for c in ("EPA", "DHA")
             )
-            return conflict, f"policy comparison: EPA/DHA absolute tolerance {tolerance:g} mg on a compatible serving basis"
+            return ("conflict" if conflict else "consistent"), (
+                f"{comparison}, absolute tolerance {tolerance:g} mg"
+            )
     normalised = {str(value).strip().casefold() for value in values}
-    return len(normalised) > 1, "policy comparison: exact normalised value"
+    return ("conflict" if len(normalised) > 1 else "consistent"), "policy comparison: exact normalised value"
 
 
 def check_conflicting_information(subject: dict) -> CheckResult:
@@ -733,12 +861,29 @@ def check_conflicting_information(subject: dict) -> CheckResult:
         by_type.setdefault(claim["type"], []).append(claim)
 
     conflicts = []
+    incomparable = []
     for claim_type, group in by_type.items():
         if len(group) < 2:
             continue
-        conflict, comparison = _claim_values_conflict(claim_type, group)
-        if conflict:
+        status, comparison = _claim_values_conflict(claim_type, group)
+        if status == "conflict":
             conflicts.append((claim_type, group, comparison))
+        elif status == "incomparable":
+            incomparable.append((claim_type, group, comparison))
+
+    if incomparable and not conflicts:
+        described = "; ".join(f"{claim_type} ({comparison})" for claim_type, _, comparison in incomparable)
+        return CheckResult(
+            "conflicting_information",
+            "Conflicting information",
+            INCOMPLETE,
+            INCOMPLETE_SEVERITY,
+            f"Issuers' values could not be compared on a common basis: {described}.",
+            reason_codes=["claim_values_not_comparable"],
+            evidence_consulted=[
+                ref for _, group, _ in incomparable for c in group for ref in c.get("evidence_refs", [])
+            ],
+        )
 
     if conflicts:
         described = "; ".join(
@@ -780,7 +925,21 @@ def check_conflicting_information(subject: dict) -> CheckResult:
     )
 
 
-def run_all(subject: dict | None, identify_result: dict, status_result: dict, *, artefact_overrides: dict[str, bytes] | None = None) -> list[CheckResult]:
+# The checks run_all produces, in order, and the outcomes a check may report.
+# Precedence validates against both before it will derive a posture (David's E4).
+CHECK_IDS = (
+    "identity",
+    "standing",
+    "seller_authority",
+    "mandatory_evidence",
+    "evidence_freshness",
+    "claims_and_category",
+    "conflicting_information",
+)
+KNOWN_OUTCOMES = frozenset({PASS, REVIEW, FAIL, INCOMPLETE})
+
+
+def run_all(subject: dict | None, identify_result: dict, status_result: dict) -> list[CheckResult]:
     """The seven checks, fixed order.
 
     With no resolved subject the remaining six report `incomplete` rather than
@@ -813,7 +972,7 @@ def run_all(subject: dict | None, identify_result: dict, status_result: dict, *,
         check_standing(status_result),
         check_seller_authority(subject),
         check_mandatory_evidence(subject),
-        check_evidence_freshness(subject, artefact_overrides=artefact_overrides),
+        check_evidence_freshness(subject),
         check_claims_and_category(subject),
         check_conflicting_information(subject),
     ]

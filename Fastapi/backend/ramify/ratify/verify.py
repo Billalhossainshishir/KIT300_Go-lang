@@ -15,20 +15,19 @@ from ramify.data import seed
 from ramify.ratify import checks as ratify_checks
 
 
-def _claim_verdict(
-    claim: dict, as_at, subject_ref: str, subject_claims: list[dict],
-    artefact_overrides: dict[str, bytes] | None = None,
-) -> tuple[str, list[str]]:
+def _claim_verdict(claim: dict, as_at, subject_ref: str) -> tuple[str, list[str]]:
     if claim["state"] in ("rejected", "revoked"):
         reason = claim.get("reason")
         return claim["state"], [reason] if reason else []
 
-    if not claim.get("evidence_refs"):
-        return "rejected", ["claim_evidence_missing"]
-
     reason_codes: list[str] = []
     severe = False
     revoked = False
+    # A claim naming no evidence used to fall straight through the loop below
+    # and come out "accepted" while the aggregate check failed it (David's E3).
+    if not claim.get("evidence_refs"):
+        reason_codes.append("claim_has_no_evidence")
+        severe = True
     for ref in claim.get("evidence_refs", []):
         record = seed.evidence(ref)
         if record is None:
@@ -39,21 +38,14 @@ def _claim_verdict(
         binding_ok = True
         if record.get("subject_ref") != subject_ref or record.get("issuer_ref") != claim.get("issuer_ref"):
             binding_ok = False
-        supported = {record.get("claim_ref"), *(record.get("supports_claim_refs") or [])}
-        supported.discard(None)
-        if claim.get("ref") not in supported:
+        if claim.get("ref") not in ratify_checks.supported_claim_refs(record):
             binding_ok = False
         if not binding_ok:
             if "claim_evidence_binding_invalid" not in reason_codes:
                 reason_codes.append("claim_evidence_binding_invalid")
             severe = True
 
-        if artefact_overrides and ref in artefact_overrides:
-            integrity = ratify_checks.evaluate_evidence_integrity_bytes(
-                record, artefact_overrides[ref], subject_ref, subject_claims
-            )
-        else:
-            integrity = ratify_checks.evaluate_evidence_integrity(record, subject_ref, subject_claims)
+        integrity = ratify_checks.evaluate_evidence_integrity(record, subject_ref)
         if integrity["state"] != "verified":
             code = ratify_checks.INTEGRITY_REASON.get(integrity["state"], "evidence_integrity_unverified")
             if code not in reason_codes:
@@ -62,6 +54,18 @@ def _claim_verdict(
                 "unsafe_path", "hash_mismatch", "signature_invalid", "subject_scope_mismatch",
                 "artefact_binding_mismatch"
             }
+        elif binding_ok:
+            # Integrity verified, so the header can be trusted: the claim's own
+            # state and value must be what the issuer signed (David's E1).
+            assertion = (ratify_checks.signed_claim_assertions(record, subject_ref) or {}).get(claim["ref"])
+            if (
+                assertion is None
+                or assertion["state"] != claim.get("state")
+                or assertion["value"] != claim.get("value")
+            ):
+                if "claim_evidence_binding_invalid" not in reason_codes:
+                    reason_codes.append("claim_evidence_binding_invalid")
+                severe = True
 
         freshness = ratify_checks.evaluate_evidence_freshness(record, as_at)
         state = freshness["state"]
@@ -90,12 +94,11 @@ def _claim_verdict(
     return "accepted", []
 
 
-def claim_results(subject: dict, artefact_overrides: dict[str, bytes] | None = None) -> list[dict]:
+def claim_results(subject: dict) -> list[dict]:
     as_at = seed.snapshot_date()
     results = []
-    claims = list(subject.get("claims", []))
-    for claim in claims:
-        verdict, reason_codes = _claim_verdict(claim, as_at, subject["ref"], claims, artefact_overrides)
+    for claim in subject.get("claims", []):
+        verdict, reason_codes = _claim_verdict(claim, as_at, subject["ref"])
         issuer = seed.issuer(claim["issuer_ref"])
         results.append(
             {
@@ -112,29 +115,34 @@ def claim_results(subject: dict, artefact_overrides: dict[str, bytes] | None = N
     return results
 
 
-def verify(
-    subject_ref: str, policy_ref: str | None, identify_result: dict, status_result: dict,
-    *, artefact_overrides: dict[str, bytes] | None = None,
-) -> dict:
-    """Run RATIFY over a subject and identify the exact decision inputs."""
+def verify(subject_ref: str, policy_ref: str, identify_result: dict, status_result: dict) -> dict:
+    """Run RATIFY over a subject and return both views.
+
+    A caller may name the policy it expects, but only to be checked against the
+    pack that is actually evaluated. Echoing an unchecked caller-supplied value
+    into the receipt let a sealed, cryptographically valid receipt attest to a
+    policy that had never been applied, which is the one thing the receipt
+    exists to state truthfully.
+    """
     subject = seed.subject(subject_ref)
     pack = seed.policy_pack()
-    requested = policy_ref or pack["policy_ref"]
-    if requested != pack["policy_ref"]:
-        raise ValueError(f"Unsupported policy_ref: {requested}")
-    results = ratify_checks.run_all(
-        subject, identify_result, status_result, artefact_overrides=artefact_overrides
-    )
+    if policy_ref and policy_ref != pack["policy_ref"]:
+        raise ValueError(
+            f"Unknown policy reference {policy_ref!r}. This build evaluates "
+            f"{pack['policy_ref']!r} and cannot assess against any other pack."
+        )
+    results = ratify_checks.run_all(subject, identify_result, status_result)
 
     return {
         "subject_ref": subject_ref,
+        # The pack that was evaluated, never the caller's label for it.
         "policy_ref": pack["policy_ref"],
         "policy_version": pack["policy_version"],
         "policy_status": pack["status"],
+        # Content identities. The version and snapshot labels above can stay
+        # the same while the rules or data change; these cannot.
         "policy_digest": seed.policy_digest(),
-        "data_snapshot": seed.snapshot_id(),
         "dataset_digest": seed.dataset_digest(),
         "check_results": [check.as_dict() for check in results],
-        "claim_results": claim_results(subject, artefact_overrides) if subject else [],
+        "claim_results": claim_results(subject) if subject else [],
     }
-

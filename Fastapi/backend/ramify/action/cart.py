@@ -20,7 +20,6 @@ from ramify.storage import read_json, write_json_atomic
 from ramify.timing import now
 
 CART_NAME = "cart.json"
-DEMO_CART_NAME = "david_demo_cart.json"
 BASKET_ACTIONS = (
     "add_to_mock_cart",
     "purchase_autonomously",
@@ -32,16 +31,16 @@ class CartRefused(Exception):
     """Raised when a line or checkout cannot proceed safely."""
 
 
-def _cart_path(cart_name: str = CART_NAME) -> Path:
+def _cart_path() -> Path:
     from ramify.crypto import keys
 
     directory = keys.local_data_store()
     directory.mkdir(parents=True, exist_ok=True)
-    return directory / cart_name
+    return directory / CART_NAME
 
 
-def _read(cart_name: str = CART_NAME) -> dict:
-    cart = read_json(_cart_path(cart_name), lambda: {"lines": [], "orders": [], "requisitions": []})
+def _read() -> dict:
+    cart = read_json(_cart_path(), lambda: {"lines": [], "orders": [], "requisitions": []})
     if not isinstance(cart, dict):
         raise CartRefused("The local basket store is not a JSON object.")
     if (
@@ -56,47 +55,98 @@ def _read(cart_name: str = CART_NAME) -> dict:
     return cart
 
 
-def _write(cart: dict, cart_name: str = CART_NAME) -> None:
-    write_json_atomic(_cart_path(cart_name), cart)
+def _write(cart: dict) -> None:
+    write_json_atomic(_cart_path(), cart)
 
 
-def _permitted_transaction_actions(receipt: dict) -> set[str]:
-    permitted = set(receipt.get("permitted_actions", []))
-    permitted.update(receipt.get("human_authorised_actions", []))
-    return permitted
-
-
-def _assert_receipt_authority(
-    receipt: dict, *, required_any: tuple[str, ...] | set[str] | None = None
-) -> None:
-    """Require intact, current and action-appropriate one-time authority."""
+def _assert_receipt_authority(receipt: dict) -> None:
+    """Require an intact, fresh receipt from an explicit purchase journey."""
     if receipt.get("assessment_context") != "purchase":
         raise CartRefused(
             "This receipt came from an exploratory/demo check, not an active purchase journey."
         )
 
     report = verify_receipt(receipt, now=now())
-    if not report.get("purchase_authority_valid"):
+    if not report.get("time_window_valid"):
         failed = [c["name"] for c in report.get("checks", []) if not c.get("passed")]
-        detail = ", ".join(failed) or "integrity/validity check"
+        detail = ", ".join(failed) or "integrity/freshness check"
         raise CartRefused(
             f"This receipt is no longer valid purchase authority ({detail}). Run the check again."
         )
+    _assert_trusted_snapshot_unchanged(receipt)
 
-    receipt_id = receipt.get("receipt_id", "")
-    if receipt_id and store.has_successor(receipt_id):
+
+def _objective_facts(receipt: dict) -> dict:
+    """The parts of a decision that describe the product, not the agent."""
+    return {
+        "objective_posture": receipt.get("objective_posture"),
+        "standing": (receipt.get("status_result") or {}).get("standing"),
+        "unit_price_cents": (receipt.get("order") or {}).get("unit_price_cents"),
+        "checks": {
+            check.get("check_id"): (check.get("outcome"), sorted(check.get("reason_codes", [])))
+            for check in receipt.get("check_results", [])
+        },
+    }
+
+
+def _assert_trusted_snapshot_unchanged(receipt: dict) -> None:
+    """Refuse authority sealed against product facts that have since changed.
+
+    A receipt's signature proves what was true when it was sealed. If the
+    trusted local data moved on afterwards (a recall, revoked evidence, a new
+    price), the receipt is authentic but stale, and checking out on it would
+    act on facts that no longer hold (David, 1 Oct, item 3).
+
+    The sealed dataset digest is the fast path: unchanged data means unchanged
+    facts. When it differs, the product is reassessed against the current
+    local data and refused only if its own facts changed, so an edit to an
+    unrelated product does not void every basket. No network call is made.
+    """
+    if receipt.get("dataset_digest") == seed.dataset_digest():
+        return
+    from ramify import engine
+
+    try:
+        current = engine.assess(
+            receipt["subject_ref"],
+            actor_ref=receipt.get("actor_ref", "consumer_v1"),
+            quantity=int((receipt.get("order") or {}).get("quantity") or 1),
+            context="purchase",
+            persist_receipt=False,
+        )["receipt"]
+    except Exception as exc:
         raise CartRefused(
-            "This receipt has been superseded by a later decision and is no longer transaction authority."
+            "The product could not be reassessed against the current trusted data. Run the check again."
+        ) from exc
+    if _objective_facts(current) != _objective_facts(receipt):
+        raise CartRefused(
+            "The trusted product data has changed since this decision was sealed "
+            f"(now {current.get('objective_posture')}, "
+            f"standing {(current.get('status_result') or {}).get('standing')}). "
+            "Run the check again."
         )
 
-    if required_any:
-        permitted = _permitted_transaction_actions(receipt)
-        required = set(required_any)
-        if not permitted.intersection(required):
-            raise CartRefused(
-                f"The signed decision was {receipt.get('actor_decision', 'unknown')} and permits "
-                f"{', '.join(sorted(permitted)) or 'no transaction action'}, not the requested transaction path."
-            )
+
+def _authorised_unattended(receipt: dict) -> bool:
+    """Whether the signed decision itself selected an unattended purchase."""
+    return receipt.get("selected_action") == "purchase_autonomously"
+
+
+def _assert_permits_basket_action(receipt: dict) -> None:
+    """Require a receipt whose decision actually permits a basket purchase.
+
+    Admission and checkout both need this. Checkout used to verify only that
+    the receipt was authentic and unexpired, which says nothing about posture,
+    so a line referencing a blocked or requisition-only decision could be
+    written into the basket file and sealed into an order.
+    """
+    permitted = set(receipt.get("permitted_actions", []))
+    permitted.update(receipt.get("human_authorised_actions", []))
+    if not permitted.intersection(BASKET_ACTIONS):
+        raise CartRefused(
+            f"The decision was {receipt.get('actor_decision', 'unknown')}, which permits "
+            f"{', '.join(sorted(permitted)) or 'nothing'}. Nothing can be added to the basket on that. Requisition-only authority must use the requisition path."
+        )
 
 
 def _receipt_already_used(cart: dict, receipt_id: str) -> bool:
@@ -111,24 +161,30 @@ def _receipt_already_used(cart: dict, receipt_id: str) -> bool:
     return any(req.get("receipt_ref") == receipt_id for req in cart.get("requisitions", []))
 
 
-def _receipt_consumed(cart: dict, receipt_id: str) -> bool:
-    """Whether one-time authority has already produced a completed transaction."""
+def _reference_already_consumed(cart: dict, receipt_id: str) -> bool:
+    """Whether a receipt has already been spent on a sealed order or requisition.
+
+    The current basket lines are deliberately not consulted: at checkout they
+    are the lines being validated, so counting them would reject every order.
+    """
     if any(
         line.get("receipt_ref") == receipt_id
         for order in cart.get("orders", [])
         for line in order.get("lines", [])
     ):
         return True
-    return any(
-        req.get("receipt_ref") == receipt_id
-        or any(line.get("receipt_ref") == receipt_id for line in req.get("lines", []))
-        for req in cart.get("requisitions", [])
-    )
+    return any(req.get("receipt_ref") == receipt_id for req in cart.get("requisitions", []))
 
 
-def contents(cart_name: str = CART_NAME) -> dict:
+def receipt_consumed(receipt_id: str) -> bool:
+    """Whether a receipt has already been spent on a sealed order or requisition."""
     with _CART_LOCK:
-        cart = _read(cart_name)
+        return _reference_already_consumed(_read(), receipt_id)
+
+
+def contents() -> dict:
+    with _CART_LOCK:
+        cart = _read()
         lines = list(cart["lines"])
         return {
             "lines": lines,
@@ -140,13 +196,14 @@ def contents(cart_name: str = CART_NAME) -> dict:
         }
 
 
-def add(receipt_id: str, *, cart_name: str = CART_NAME, record_action: bool = True) -> dict:
+def add(receipt_id: str) -> dict:
     """Add one transaction line on the authority of one signed receipt."""
     receipt = store.get(receipt_id)
     if receipt is None:
         raise CartRefused("That receipt is not in the ledger.")
 
-    _assert_receipt_authority(receipt, required_any=BASKET_ACTIONS)
+    _assert_receipt_authority(receipt)
+    _assert_permits_basket_action(receipt)
 
     order = receipt.get("order")
     if not isinstance(order, dict) or any(
@@ -168,7 +225,7 @@ def add(receipt_id: str, *, cart_name: str = CART_NAME, record_action: bool = Tr
     subject = seed.subject(receipt["subject_ref"]) or {}
 
     with _CART_LOCK:
-        cart = _read(cart_name)
+        cart = _read()
         if _receipt_already_used(cart, receipt["receipt_id"]):
             raise CartRefused(
                 "This receipt has already been used for a basket/order line. "
@@ -189,22 +246,21 @@ def add(receipt_id: str, *, cart_name: str = CART_NAME, record_action: bool = Tr
             "actor_label": receipt["actor_label"],
             "objective_posture": receipt["objective_posture"],
             "actor_decision": receipt["actor_decision"],
-            "unattended": receipt.get("selected_action") == "purchase_autonomously",
+            "unattended": _authorised_unattended(receipt),
             "human_authorised": bool(receipt.get("human_authorised_actions")),
             "human_review_outcome": (receipt.get("human_review") or {}).get("outcome"),
             "supersedes_receipt": receipt.get("supersedes_receipt"),
             "added_at": rfc3339_nano(now()),
         }
         cart["lines"].append(line)
-        _write(cart, cart_name)
+        _write(cart)
 
     actual_action = (
         "purchase_autonomously"
         if receipt.get("selected_action") == "purchase_autonomously"
         else "add_to_mock_cart"
     )
-    if record_action:
-        _record_transaction_action(receipt, actual_action)
+    _record_transaction_action(receipt, actual_action)
     return line
 
 
@@ -228,12 +284,17 @@ def _record_transaction_action(receipt: dict, action: str) -> None:
     )
 
 
-def create_requisition(receipt_id: str, *, cart_name: str = CART_NAME, record_action: bool = True) -> dict:
+def create_requisition(receipt_id: str) -> dict:
     """Create a signed simulated requisition without putting it in the consumer basket."""
     receipt = store.get(receipt_id)
     if receipt is None:
         raise CartRefused("That receipt is not in the ledger.")
-    _assert_receipt_authority(receipt, required_any={"create_mock_requisition"})
+    _assert_receipt_authority(receipt)
+
+    permitted = set(receipt.get("permitted_actions", []))
+    permitted.update(receipt.get("human_authorised_actions", []))
+    if "create_mock_requisition" not in permitted:
+        raise CartRefused("This receipt does not authorise a purchase requisition.")
 
     order = receipt.get("order")
     if not isinstance(order, dict) or any(
@@ -250,7 +311,7 @@ def create_requisition(receipt_id: str, *, cart_name: str = CART_NAME, record_ac
         raise CartRefused("The signed order values are internally inconsistent.")
 
     with _CART_LOCK:
-        cart = _read(cart_name)
+        cart = _read()
         if _receipt_already_used(cart, receipt["receipt_id"]):
             raise CartRefused(
                 "This receipt has already been used for a basket, order or requisition. "
@@ -299,29 +360,28 @@ def create_requisition(receipt_id: str, *, cart_name: str = CART_NAME, record_ac
         }
         sealed = seal(record)
         cart["requisitions"] = cart.get("requisitions", []) + [sealed]
-        _write(cart, cart_name)
+        _write(cart)
 
-    if record_action:
-        _record_transaction_action(receipt, "create_mock_requisition")
+    _record_transaction_action(receipt, "create_mock_requisition")
     return sealed
 
 
-def remove(line_id: str, *, cart_name: str = CART_NAME) -> bool:
+def remove(line_id: str) -> bool:
     with _CART_LOCK:
-        cart = _read(cart_name)
+        cart = _read()
         before = len(cart["lines"])
         cart["lines"] = [line for line in cart["lines"] if line.get("line_id") != line_id]
         if len(cart["lines"]) == before:
             return False
-        _write(cart, cart_name)
+        _write(cart)
         return True
 
 
-def clear(*, cart_name: str = CART_NAME) -> None:
+def clear() -> None:
     with _CART_LOCK:
-        cart = _read(cart_name)
+        cart = _read()
         cart["lines"] = []
-        _write(cart, cart_name)
+        _write(cart)
 
 
 def _assert_line_matches_receipt(line: dict, receipt: dict) -> None:
@@ -340,57 +400,67 @@ def _assert_line_matches_receipt(line: dict, receipt: dict) -> None:
     for field, value in expected.items():
         if line.get(field) != value:
             raise CartRefused(f"A basket line {field} no longer matches its signed receipt.")
+    # The autonomy statement in a signed order comes from this flag, so it must
+    # be the receipt's authorised action, not an editable basket value (David,
+    # 1 Oct, item 4).
+    if bool(line.get("unattended", False)) != _authorised_unattended(receipt):
+        raise CartRefused("A basket line autonomy state no longer matches its signed receipt.")
     if bool(line.get("human_authorised", False)) != bool(receipt.get("human_authorised_actions")):
         raise CartRefused("A basket line human-authorisation state no longer matches its signed receipt.")
     if line.get("supersedes_receipt") != receipt.get("supersedes_receipt"):
         raise CartRefused("A basket line successor linkage no longer matches its signed receipt.")
 
 
-def _validate_lines_before_checkout(lines: list[dict], cart_state: dict) -> None:
+def _validate_lines_before_checkout(cart: dict, lines: list[dict]) -> None:
     """Recheck every authority immediately before sealing the order.
 
-    The complete transaction is validated as one unit: every line must still
-    permit a consumer-basket action, one receipt may appear only once, and no
-    receipt may already have been consumed by an earlier order/requisition.
+    Checked per line and across the set. Per-line checks alone cannot see a
+    receipt used twice, so two copies of one signed line each passed and the
+    order came out for twice the signed quantity.
     """
     seen: set[str] = set()
     for line in lines:
         receipt_ref = line.get("receipt_ref", "")
-        if not receipt_ref:
-            raise CartRefused("A basket line has no receipt reference.")
-        if receipt_ref in seen:
-            raise CartRefused(
-                "The same one-time receipt authority appears more than once in this basket."
-            )
-        seen.add(receipt_ref)
-
-        if _receipt_consumed(cart_state, receipt_ref):
-            raise CartRefused(
-                "A basket line refers to receipt authority that has already been consumed."
-            )
-
         receipt = store.get(receipt_ref)
         if receipt is None:
             raise CartRefused("A basket line no longer has its decision receipt.")
         if receipt.get("payload_hash") != line.get("payload_hash"):
             raise CartRefused("A basket line no longer matches the receipt that admitted it.")
-        _assert_receipt_authority(receipt, required_any=BASKET_ACTIONS)
+        _assert_receipt_authority(receipt)
+        _assert_permits_basket_action(receipt)
         _assert_line_matches_receipt(line, receipt)
 
+        if receipt_ref in seen:
+            raise CartRefused(
+                "One decision receipt authorises one basket line. The basket names "
+                "the same receipt more than once. Run the check again for a new transaction."
+            )
+        seen.add(receipt_ref)
 
-def checkout(*, cart_name: str = CART_NAME) -> dict:
+        if _reference_already_consumed(cart, receipt_ref):
+            raise CartRefused(
+                "This receipt has already been used for an order or requisition. "
+                "Run the check again for a new transaction."
+            )
+
+
+def checkout() -> dict:
     """Seal an order record over a freshly revalidated basket, then empty it."""
     with _CART_LOCK:
-        cart = _read(cart_name)
+        cart = _read()
         lines = list(cart["lines"])
         if not lines:
             raise CartRefused("The basket is empty.")
 
-        _validate_lines_before_checkout(lines, cart)
+        _validate_lines_before_checkout(cart, lines)
 
         issued_at = now()
         human_count = sum(1 for line in lines if line.get("human_authorised"))
-        unattended_count = sum(1 for line in lines if line.get("unattended"))
+        # Counted from the signed receipts, not the basket file, so the signed
+        # summary cannot claim autonomy the decision did not grant.
+        unattended_count = sum(
+            1 for line in lines if _authorised_unattended(store.get(line["receipt_ref"]) or {})
+        )
         normal_count = len(lines) - human_count - unattended_count
         customer_summary = {
             "headline": "RAMIFY checked every item before this simulated order was recorded.",
@@ -445,5 +515,5 @@ def checkout(*, cart_name: str = CART_NAME) -> dict:
         sealed = seal(record)
         cart["orders"] = cart.get("orders", []) + [sealed]
         cart["lines"] = []
-        _write(cart, cart_name)
+        _write(cart)
         return sealed

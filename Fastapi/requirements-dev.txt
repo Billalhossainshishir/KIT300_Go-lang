@@ -1,7 +1,9 @@
 # Test and release-evidence dependencies. Install with:
-#   python -m pip install -r requirements-dev.txt
+#   .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+# The release record (scripts/capture_release_evidence.py) runs pytest.
 -r requirements.txt
 pytest>=8
 
-# Optional browser journeys skip explicitly when Playwright is unavailable.
+# Optional: the browser journeys in backend/tests/test_browser_e2e_optional.py.
+# They skip, and the skip is recorded, when Playwright is not installed.
 # playwright>=1.40

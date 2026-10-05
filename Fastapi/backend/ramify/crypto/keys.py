@@ -28,7 +28,6 @@ ISSUER_REFS = (
     "ramify:demo:issuer:GMP_AU_demo",
 )
 RAMIFY_SIGNER = "ramify:demo:signer:receipt"
-SIGNER_FILES = ("signer_key.json", "signer_public_key.json", "signer_history.json")
 
 
 class SignerKeyError(RuntimeError):
@@ -97,7 +96,7 @@ def write_seed_material(keypairs: dict[str, dict[str, str]]) -> None:
     # During a seed/rekey operation the generated signer may be installed into
     # the current machine's local data store, but its private material is never
     # copied into the distributable project tree.
-    install_signer_key(force=True)
+    install_signer_key()
 
 
 def _write_embedded_pubkeys(keypairs: dict[str, dict[str, str]]) -> None:
@@ -113,6 +112,7 @@ def _write_embedded_pubkeys(keypairs: dict[str, dict[str, str]]) -> None:
     for ref in sorted(keypairs):
         lines.append(f'    "{ref}": "{keypairs[ref]["public_hex"]}",')
     lines.append("}")
+    # newline="\n": on Windows, write_text otherwise produces a CRLF file.
     EMBEDDED_PUBKEYS_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
@@ -144,14 +144,16 @@ def _sync_runtime_signer_public(private: Ed25519PrivateKey) -> Path:
     return public_target
 
 
+SIGNER_FILES = ("signer_key.json", "signer_public_key.json", "signer_history.json")
+
+
 def _current_signer_public_hex() -> str | None:
-    """Return the public half of the signer this store currently knows, if any."""
+    """The public half of whatever signer this store holds now, if any."""
     store = local_data_store()
     try:
         raw = read_json(store / "signer_key.json", dict).get(RAMIFY_SIGNER)
         if isinstance(raw, str):
-            private = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(raw))
-            return _to_raw_public(private.public_key()).hex()
+            return _to_raw_public(Ed25519PrivateKey.from_private_bytes(bytes.fromhex(raw)).public_key()).hex()
     except (StoreCorrupt, AttributeError, TypeError, ValueError):
         pass
     try:
@@ -164,14 +166,18 @@ def _current_signer_public_hex() -> str | None:
 
 
 def retired_signer_keys() -> list[str]:
-    """Public keys retained from signers this installation used previously."""
+    """Public keys of signers this store used before its current one.
+
+    Kept so a receipt exported before a key was lost or rotated can still be
+    checked against the key that signed it. Public material only.
+    """
     try:
         value = read_json(local_data_store() / "signer_history.json", list)
     except StoreCorrupt:
         return []
     if not isinstance(value, list):
         return []
-    return [key.lower() for key in value if isinstance(key, str) and len(key) == 64]
+    return [k.lower() for k in value if isinstance(k, str) and len(k) == 64]
 
 
 def _retire_signer_being_replaced(new_public_hex: str) -> None:
@@ -185,7 +191,11 @@ def _retire_signer_being_replaced(new_public_hex: str) -> None:
 
 
 def _write_runtime_signer(private: Ed25519PrivateKey) -> Path:
-    """Persist a signer, retaining the public half of any signer it replaces."""
+    """Persist one machine-local synthetic signer and its public half.
+
+    If another signer was here before, its public key is kept in
+    signer_history.json rather than lost with it.
+    """
     store = local_data_store()
     store.mkdir(parents=True, exist_ok=True)
     _retire_signer_being_replaced(_to_raw_public(private.public_key()).hex())
@@ -199,45 +209,13 @@ def _write_runtime_signer(private: Ed25519PrivateKey) -> Path:
     return private_target
 
 
-def _store_has_signing_history(store: Path) -> bool:
-    """Return True when local state already depends on the signer identity."""
-    for name in ("receipts.jsonl", "actions.jsonl"):
-        path = store / name
-        if path.exists() and path.stat().st_size > 0:
-            return True
+def install_signer_key() -> Path:
+    """Install a synthetic runtime signer without shipping private key material.
 
-    cart_path = store / "cart.json"
-    if cart_path.exists():
-        try:
-            payload = read_json(cart_path, dict)
-            if any(payload.get(key) for key in ("lines", "orders", "requisitions")):
-                return True
-        except StoreCorrupt:
-            # Corrupt historical state must not trigger silent identity rotation.
-            return True
-    return False
-
-
-def install_signer_key(*, force: bool = False) -> Path:
-    """Install a synthetic runtime signer without silent identity rotation.
-
-    Normal first run may create a signer.  If receipt/transaction history is
-    already present and the private signer is missing, installation fails closed
-    unless an explicit seed/rekey operation passes ``force=True``.
+    Seed/rekey can install the just-generated signer from the temporary
+    seed_private directory. A normal downloaded demo has no seed_private tree,
+    so first run generates a fresh machine-local signer instead.
     """
-    store = local_data_store()
-    target = store / "signer_key.json"
-    if target.exists() and not force:
-        # Keep the installed identity rather than overwriting it merely because
-        # seed material happens to be available.
-        payload = read_json(target, dict)
-        raw = payload[RAMIFY_SIGNER]
-        private = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(raw))
-        _sync_runtime_signer_public(private)
-        return target
-
-    # Calling install_signer_key() is an explicit recovery/seed action. Silent
-    # rotation is prevented in load_signer_private_key(), the normal runtime path.
     seed_file = SEED_PRIVATE_DIR / "keys.json"
     if seed_file.exists():
         keypairs = json.loads(seed_file.read_text(encoding="utf-8"))
@@ -256,13 +234,21 @@ def load_signer_private_key() -> Ed25519PrivateKey:
     signer identity and avoids invalidating receipts merely because the
     application package was upgraded.
     """
-    store = local_data_store()
-    target = store / "signer_key.json"
+    target = local_data_store() / "signer_key.json"
     if not target.exists():
-        if _store_has_signing_history(store):
+        # First run and key loss look identical at this line, and they are not.
+        # A ledger beside a missing key means receipts were signed by an
+        # identity that is now gone: generating a replacement would leave every
+        # historical receipt failing signature verification, which on a
+        # tamper-evidence product reads as tampering rather than as the file
+        # loss it actually is. Only a genuinely fresh store may mint a signer.
+        ledger = local_data_store() / "receipts.jsonl"
+        if ledger.exists() and ledger.stat().st_size > 0:
             raise SignerKeyError(
-                "RAMIFY signing material is missing while existing receipt/transaction history remains. "
-                "The signer will not be rotated silently; use an explicit recovery or rekey procedure."
+                "The RAMIFY signing key is missing but this machine already has a "
+                "receipt ledger. Those receipts were signed by the missing key and "
+                "cannot be verified without it. Restore the key from backup, or "
+                "explicitly reset/rekey the demo signer, which starts a new ledger."
             )
         install_signer_key()
     try:
@@ -335,13 +321,21 @@ def public_keys() -> dict[str, str]:
 
 
 def fingerprint(public_hex: str) -> str:
-    """Stable SHA-256 fingerprint over the raw Ed25519 public key bytes."""
+    """A comparable name for a public key: SHA-256 over its raw 32 bytes."""
     import hashlib
+
     return "sha256:" + hashlib.sha256(bytes.fromhex(public_hex)).hexdigest()
 
 
 def signer_fingerprint() -> str | None:
-    """Fingerprint of the signer currently trusted by this installation."""
+    """Fingerprint of the key this machine verifies receipts against.
+
+    Each installation mints its own signer, and a proof pack ships the public
+    half alongside the receipts it signed. A receipt verifying therefore proves
+    only that it matches the key it came with. Showing the fingerprint lets a
+    person compare it with the value RAMIFY publishes, which is the check that
+    actually establishes who signed.
+    """
     raw = public_keys().get(RAMIFY_SIGNER)
     return fingerprint(raw) if raw else None
 

@@ -185,7 +185,8 @@ class Direction5_TamperEvidentAndAppendOnly(unittest.TestCase):
             "immutable decision",
         )
         for path in list(PACKAGE_ROOT.rglob("*.py")) + list(WEB_DIR.rglob("*")):
-            if not path.is_file():
+            # Logo images are binary and say nothing about receipts.
+            if not path.is_file() or path.suffix.lower() in {".png", ".jpg", ".jpeg"}:
                 continue
             body = path.read_text(encoding="utf-8").lower()
             with self.subTest(file=path.name):
@@ -297,8 +298,10 @@ class Direction7_ObjectiveTrustSeparateFromActorPolicy(unittest.TestCase):
         # no parameter through which another agent's decision could reach it.
         import inspect
 
+        # `profile` is the same actor's own policy, passed in so one assessment
+        # evaluates one version of it (review R-01); it carries no other agent.
         parameters = set(inspect.signature(actor_policy.apply).parameters)
-        self.assertEqual(parameters, {"objective_posture", "actor_ref", "subject", "order"})
+        self.assertEqual(parameters, {"objective_posture", "actor_ref", "subject", "order", "profile"})
 
         fields = set(actor_policy.ActorDecision.__dataclass_fields__)
         for forbidden in ("other_decisions", "peer_decisions", "votes", "consensus"):
@@ -355,19 +358,15 @@ class Direction9_HonestyBoundary(unittest.TestCase):
         self.assertIn("Synthetic", receipt["notice"])
         self.assertIn("certifies nothing", receipt["notice"])
 
-    def test_every_page_exposes_the_shared_scope_notice(self):
-        # The current UX deliberately removed repeated disclaimer banners.
-        # Every page still mounts the shared footer, and that footer carries
-        # the synthetic/not-for-real-purchasing boundary in one consistent place.
-        shell = (WEB_DIR / "scripts" / "shell.js").read_text(encoding="utf-8").lower()
-        self.assertIn("synthetic data. not for real purchasing", shell)
-        self.assertIn("function mountfooter", shell)
-
+    def test_every_page_carries_a_visible_disclaimer(self):
+        # Static markup rather than something injected at runtime, so a page
+        # that fails to reach the API still tells the reader what it is.
         for page in WEB_DIR.glob("pages/*.html"):
             body = page.read_text(encoding="utf-8").lower()
             with self.subTest(page=page.name):
-                self.assertIn("<footer", body)
-                self.assertIn("/shell.js", body)
+                self.assertIn('class="disclaimer"', body)
+                self.assertIn("synthetic", body)
+                self.assertIn("not for real purchasing", body)
 
     def test_signatures_are_real_rather_than_simulated(self):
         source = (PACKAGE_ROOT / "crypto" / "sign.py").read_text(encoding="utf-8")

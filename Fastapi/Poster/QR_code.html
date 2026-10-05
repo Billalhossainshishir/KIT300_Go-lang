@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="RAMIFY OS explained in plain English with simple diagrams showing how decisions, evidence and verification work." />
+<title>RAMIFY OS — How It Works</title>
+<style>
+:root{
+  --bg:#f6f8fc;
+  --panel:#ffffff;
+  --ink:#162033;
+  --muted:#667085;
+  --line:#e4e8f0;
+  --primary:#5b5ce2;
+  --primary-soft:#eef0ff;
+  --teal:#138a72;
+  --teal-soft:#ecfbf7;
+  --orange:#d97706;
+  --orange-soft:#fff7e8;
+  --red:#c63d4f;
+  --red-soft:#fff1f3;
+  --blue:#2f6fed;
+  --blue-soft:#eef5ff;
+  --shadow:0 18px 55px rgba(24,39,75,.08);
+  --radius:24px;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at 10% -5%, rgba(91,92,226,.12), transparent 28%),
+    radial-gradient(circle at 100% 0%, rgba(19,138,114,.08), transparent 25%),
+    var(--bg);
+  color:var(--ink);
+}
+a{text-decoration:none;color:inherit}
+button{font:inherit}
+
+.page{max-width:1180px;margin:auto;padding:20px}
+
+.topbar{
+  position:sticky;top:10px;z-index:30;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 14px 12px 18px;
+  background:rgba(255,255,255,.90);
+  border:1px solid rgba(228,232,240,.95);
+  backdrop-filter:blur(15px);
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(24,39,75,.06);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900}
+.brandmark{
+  width:38px;height:38px;border-radius:12px;
+  display:grid;place-items:center;color:#fff;font-weight:900;
+  background:linear-gradient(135deg,var(--primary),var(--teal));
+  box-shadow:0 10px 25px rgba(91,92,226,.20)
+}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav a{
+  padding:9px 10px;border-radius:10px;
+  color:var(--muted);font-size:12px;font-weight:750;
+}
+.nav a:hover{background:#f3f5f9;color:var(--ink)}
+
+.hero{
+  margin:22px 0 18px;
+  padding:42px;
+  border-radius:30px;
+  background:rgba(255,255,255,.96);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  display:grid;
+  grid-template-columns:1.25fr .75fr;
+  gap:28px;
+  align-items:center;
+  position:relative;
+  overflow:hidden;
+}
+.hero:after{
+  content:"";
+  position:absolute;
+  width:330px;height:330px;border-radius:50%;
+  right:-120px;top:-120px;
+  border:1px solid rgba(91,92,226,.14);
+  box-shadow:0 0 0 40px rgba(91,92,226,.025),0 0 0 82px rgba(19,138,114,.018);
+}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 11px;border-radius:999px;
+  background:var(--primary-soft);
+  color:var(--primary);
+  font-size:11px;letter-spacing:.11em;text-transform:uppercase;font-weight:900;
+}
+h1{
+  margin:16px 0 14px;
+  font-size:clamp(42px,5vw,66px);
+  line-height:1;
+  letter-spacing:-.05em;
+}
+.lead{
+  margin:0;
+  max-width:760px;
+  color:var(--muted);
+  font-size:18px;
+  line-height:1.65;
+}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.btn{
+  border:1px solid var(--line);
+  background:#fff;
+  padding:11px 15px;
+  border-radius:12px;
+  font-weight:800;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(24,39,75,.08)}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.hero-cards{display:grid;grid-template-columns:1fr 1fr;gap:11px;position:relative;z-index:2}
+.hero-card{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:17px;
+  padding:16px;
+  min-height:105px;
+}
+.hero-card small{display:block;color:var(--muted);font-size:11px;font-weight:700}
+.hero-card strong{display:block;font-size:21px;margin-top:7px;letter-spacing:-.03em}
+
+section{margin:20px 0}
+.section-head{
+  display:flex;justify-content:space-between;gap:20px;align-items:end;
+  margin-bottom:11px;
+}
+.section-head h2{
+  margin:0;font-size:27px;letter-spacing:-.03em
+}
+.section-head p{
+  margin:0;max-width:700px;
+  color:var(--muted);font-size:13px;line-height:1.55
+}
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.pad{padding:24px}
+
+.simple-banner{
+  padding:15px 17px;
+  border-radius:15px;
+  background:linear-gradient(135deg,#f7f7ff,#f1fbf8);
+  border:1px solid #dfe4f4;
+  color:#3f4b61;
+  font-size:13px;
+  line-height:1.6;
+  margin-top:14px;
+}
+
+.journey{
+  display:grid;
+  grid-template-columns:repeat(9,1fr);
+  align-items:stretch;
+  gap:10px;
+  overflow-x:auto;
+  padding:4px 2px 2px;
+}
+.step{
+  min-width:165px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:18px;
+  background:#fff;
+  cursor:pointer;
+  transition:.2s ease;
+}
+.step:hover,.step.active{
+  transform:translateY(-3px);
+  border-color:rgba(91,92,226,.5);
+  box-shadow:0 12px 30px rgba(91,92,226,.11);
+}
+.step .num{
+  font-size:10px;letter-spacing:.09em;
+  color:var(--primary);font-weight:900
+}
+.step h3{margin:9px 0 6px;font-size:17px}
+.step p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+.arrow{
+  display:flex;align-items:center;justify-content:center;
+  min-width:22px;color:#a2aabd;font-size:21px
+}
+.explain{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:190px 1fr;
+  gap:18px;
+  padding:18px;
+  border-radius:16px;
+  background:#f8fafc;
+  border:1px solid var(--line);
+}
+.explain small{
+  display:block;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);font-size:10px;font-weight:900
+}
+.explain h3{margin:6px 0 0;font-size:19px}
+.explain p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
+
+.diagram-grid{
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  gap:16px;
+}
+.flow-card{
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:18px;
+  background:#fff;
+}
+.flow-title{
+  display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px
+}
+.flow-title h3{margin:0;font-size:17px}
+.flow-title span{font-size:11px;color:var(--muted)}
+.flow{
+  display:grid;
+  gap:10px;
+}
+.flow-row{
+  display:grid;
+  grid-template-columns:42px 1fr auto;
+  gap:12px;
+  align-items:center;
+  padding:13px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  transition:.18s ease;
+}
+.flow-row:hover{transform:translateX(4px);border-color:#cfd5e4}
+.flow-icon{
+  width:42px;height:42px;border-radius:12px;
+  display:grid;place-items:center;
+  font-weight:900;
+  background:var(--blue-soft);color:var(--blue)
+}
+.flow-row strong{display:block;font-size:13px}
+.flow-row small{display:block;color:var(--muted);font-size:11.5px;line-height:1.4;margin-top:3px}
+.pill{
+  padding:6px 8px;border-radius:999px;
+  font-size:10px;font-weight:900;white-space:nowrap;
+  background:var(--teal-soft);color:var(--teal)
+}
+.pill.orange{background:var(--orange-soft);color:var(--orange)}
+.pill.red{background:var(--red-soft);color:var(--red)}
+
+.visual{
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:14px;
+  padding:18px;
+  border-radius:18px;
+  background:linear-gradient(180deg,#fbfcff,#f6f9fc);
+  border:1px solid var(--line);
+}
+.visual-path{
+  display:grid;
+  grid-template-columns:1fr 44px 1fr 44px 1fr;
+  align-items:center;
+  gap:8px;
+}
+.visual-box{
+  min-height:115px;
+  padding:16px 12px;
+  border-radius:15px;
+  border:1px solid #dce2ed;
+  background:#fff;
+  text-align:center;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.visual-box strong{font-size:14px}
+.visual-box span{display:block;margin-top:6px;color:var(--muted);font-size:11px;line-height:1.45}
+.visual-arrow{text-align:center;color:#a2aabd;font-size:21px}
+.gate{
+  margin-top:4px;
+  padding:14px 15px;
+  border-radius:13px;
+  text-align:center;
+  background:var(--orange-soft);
+  border:1px solid #fed7aa;
+  color:#9a3412;
+  font-size:12px;
+  line-height:1.5;
+  font-weight:700;
+}
+
+.tabs{
+  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;
+}
+.tab{
+  padding:9px 12px;border:1px solid var(--line);
+  border-radius:11px;background:#fff;
+  color:var(--muted);font-size:12px;font-weight:800;
+  cursor:pointer;
+}
+.tab.active{
+  background:var(--ink);color:#fff;border-color:var(--ink)
+}
+.tab-panel{display:none}
+.tab-panel.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+.story{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px
+}
+.story-card{
+  padding:16px;border:1px solid var(--line);
+  border-radius:16px;background:#fff
+}
+.story-card .label{
+  font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--muted);font-weight:900
+}
+.story-card strong{display:block;margin-top:7px;font-size:14px}
+.story-card p{margin:6px 0 0;color:var(--muted);font-size:11.5px;line-height:1.5}
+
+.compare{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px
+}
+.compare-box{
+  border:1px solid var(--line);
+  border-radius:17px;
+  padding:18px;
+  background:#fff
+}
+.compare-box.good{background:var(--teal-soft);border-color:#b8eadf}
+.compare-box.bad{background:var(--red-soft);border-color:#f5c5ce}
+.compare-box h3{margin:0 0 7px;font-size:16px}
+.compare-box p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+
+.sequence{
+  display:grid;
+  gap:8px
+}
+.sequence-row{
+  display:grid;
+  grid-template-columns:135px 24px 1fr;
+  gap:10px;
+  align-items:center;
+  padding:12px 13px;
+  border-radius:13px;
+  border:1px solid var(--line);
+  background:#fff
+}
+.sequence-row .who{font-weight:850;font-size:12px;color:#344054}
+.sequence-row .arr{text-align:center;color:#a2aabd}
+.sequence-row .what{font-size:12px;color:var(--muted);line-height:1.45}
+
+.tech{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:11px;
+}
+.tech-card{
+  padding:15px;
+  border:1px solid var(--line);
+  border-radius:15px;background:#fff
+}
+.tech-card small{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:900}
+.tech-card strong{display:block;margin-top:6px;font-size:14px}
+.tech-card span{display:block;margin-top:5px;color:var(--muted);font-size:11.5px;line-height:1.45}
+
+.footer{
+  padding:26px 4px 35px;
+  color:var(--muted);
+  display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;
+  font-size:11px
+}
+
+@media(max-width:900px){
+  .hero,.diagram-grid{grid-template-columns:1fr}
+  .hero{padding:28px}
+  .nav{display:none}
+  .story,.tech{grid-template-columns:1fr 1fr}
+  .explain{grid-template-columns:1fr}
+  .visual-path{grid-template-columns:1fr}
+  .visual-arrow{transform:rotate(90deg)}
+}
+@media(max-width:560px){
+  .page{padding:12px}
+  .hero{padding:23px;border-radius:22px}
+  h1{font-size:42px}
+  .hero-cards,.story,.tech,.compare{grid-template-columns:1fr}
+  .section-head{display:block}
+  .section-head p{margin-top:6px}
+  .sequence-row{grid-template-columns:1fr}
+  .sequence-row .arr{transform:rotate(90deg)}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brandmark">R</div>
+      <span>RAMIFY OS · How It Works</span>
+    </div>
+    <div class="nav">
+      <a href="#journey">Journey</a>
+      <a href="#flow">Data Flow</a>
+      <a href="#trust">Trust</a>
+      <a href="#sequence">Sequence</a>
+      <a href="#tech">Technical View</a>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div>
+      <div class="eyebrow">Simple explanation · technical details underneath</div>
+      <h1>RAMIFY OS</h1>
+      <p class="lead">
+        RAMIFY OS helps a person make a decision step by step. It keeps a clear record of
+        what was chosen, what information was used, and whether the final decision record
+        has been changed or not.
+      </p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#journey">See how it works ↓</a>
+        <a class="btn" href="#trust">Why verification matters</a>
+      </div>
+    </div>
+
+    <div class="hero-cards">
+      <div class="hero-card"><small>Main user journey</small><strong>5 simple steps</strong></div>
+      <div class="hero-card"><small>Decision record</small><strong>Receipt</strong></div>
+      <div class="hero-card"><small>Change detection</small><strong>SHA-256</strong></div>
+      <div class="hero-card"><small>Signature check</small><strong>Ed25519</strong></div>
+    </div>
+  </header>
+
+  <section id="journey">
+    <div class="section-head">
+      <div><h2>1. The user journey</h2></div>
+      <p>For the user, RAMIFY stays simple. The system guides them through five clear stages.</p>
+    </div>
+
+    <div class="card pad">
+      <div class="journey">
+        <div class="step active" data-title="Identify" data-text="The user explains what they need help with. RAMIFY captures the situation, the goal, and the basic context before showing any options.">
+          <div class="num">01</div>
+          <h3>Identify</h3>
+          <p>What is the problem?</p>
+        </div>
+        <div class="arrow">→</div>
+
+        <div class="step" data-title="Resolve" data-text="RAMIFY shows possible choices and useful information. The user can compare options instead of being pushed straight to one answer.">
+          <div class="num">02</div>
+          <h3>Resolve</h3>
+          <p>What are my options?</p>
+        </div>
+        <div class="arrow">→</div>
+
+        <div class="step" data-title="Status" data-text="The system shows where the decision currently stands: what has been chosen, what is still missing, and whether the decision is ready to move forward.">
+          <div class="num">03</div>
+          <h3>Status</h3>
+          <p>Am I ready to continue?</p>
+        </div>
+        <div class="arrow">→</div>
+
+        <div class="step" data-title="Verify" data-text="RAMIFY checks the decision record and the supporting information. It makes sure the record has not been changed and the digital signature is valid.">
+          <div class="num">04</div>
+          <h3>Verify</h3>
+          <p>Can this decision be trusted?</p>
+        </div>
+        <div class="arrow">→</div>
+
+        <div class="step" data-title="Assess" data-text="The user sees the final result and can review how the decision was reached. The decision record can also be checked later if needed.">
+          <div class="num">05</div>
+          <h3>Assess</h3>
+          <p>What is the final outcome?</p>
+        </div>
+      </div>
+
+      <div class="explain">
+        <div>
+          <small>Selected step</small>
+          <h3 id="stepTitle">Identify</h3>
+        </div>
+        <p id="stepText">The user explains what they need help with. RAMIFY captures the situation, the goal, and the basic context before showing any options.</p>
+      </div>
+
+      <div class="simple-banner">
+        <strong>Simple idea:</strong> the front end is easy for the user, while the system quietly keeps a clear record of the decision in the background.
+      </div>
+    </div>
+  </section>
+
+  <section id="flow">
+    <div class="section-head">
+      <div><h2>2. What happens behind the screen?</h2></div>
+      <p>This is the main data flow, explained without technical jargon.</p>
+    </div>
+
+    <div class="card pad">
+      <div class="diagram-grid">
+        <div class="flow-card">
+          <div class="flow-title">
+            <h3>Decision data flow</h3>
+            <span>From user input to final action</span>
+          </div>
+
+          <div class="flow">
+            <div class="flow-row">
+              <div class="flow-icon">1</div>
+              <div><strong>User gives information</strong><small>The person enters their situation, needs and choices.</small></div>
+              <span class="pill">INPUT</span>
+            </div>
+
+            <div class="flow-row">
+              <div class="flow-icon">2</div>
+              <div><strong>RAMIFY processes the decision</strong><small>The system keeps track of options, selections and current status.</small></div>
+              <span class="pill">PROCESS</span>
+            </div>
+
+            <div class="flow-row">
+              <div class="flow-icon">3</div>
+              <div><strong>Supporting information is saved</strong><small>Important evidence and references are linked to the decision.</small></div>
+              <span class="pill">EVIDENCE</span>
+            </div>
+
+            <div class="flow-row">
+              <div class="flow-icon">4</div>
+              <div><strong>A Decision Receipt is created</strong><small>A clear record is made showing what was decided and what information was used.</small></div>
+              <span class="pill orange">RECEIPT</span>
+            </div>
+
+            <div class="flow-row">
+              <div class="flow-icon">5</div>
+              <div><strong>The receipt is checked</strong><small>RAMIFY checks that the receipt has not been changed and that its digital signature is valid.</small></div>
+              <span class="pill">CHECK</span>
+            </div>
+
+            <div class="flow-row">
+              <div class="flow-icon">6</div>
+              <div><strong>Final action is allowed or blocked</strong><small>Only a trusted decision is allowed to move forward.</small></div>
+              <span class="pill orange">ACTION</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="visual">
+          <div class="flow-title">
+            <h3>Simple picture</h3>
+            <span>Easy to explain during a demo</span>
+          </div>
+
+          <div class="visual-path">
+            <div class="visual-box">
+              <strong>User Decision</strong>
+              <span>What the person wants to do</span>
+            </div>
+            <div class="visual-arrow">→</div>
+            <div class="visual-box">
+              <strong>Decision Receipt</strong>
+              <span>A record of the decision and evidence</span>
+            </div>
+            <div class="visual-arrow">→</div>
+            <div class="visual-box">
+              <strong>Verification</strong>
+              <span>Check that the record is still genuine</span>
+            </div>
+          </div>
+
+          <div class="gate">
+            If everything is valid → RAMIFY allows the action.<br>
+            If something looks wrong → RAMIFY stops the action or asks for review.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="trust">
+    <div class="section-head">
+      <div><h2>3. Why do we use SHA-256 and Ed25519?</h2></div>
+      <p>You do not need to understand cryptography to understand the purpose. These tools help RAMIFY check whether a decision record can still be trusted.</p>
+    </div>
+
+    <div class="card pad">
+      <div class="tabs">
+        <button class="tab active" data-tab="plain">Plain English</button>
+        <button class="tab" data-tab="technical">Technical View</button>
+        <button class="tab" data-tab="tamper">Tamper Example</button>
+      </div>
+
+      <div class="tab-panel active" id="plain">
+        <div class="story">
+          <div class="story-card">
+            <div class="label">Step 1</div>
+            <strong>Make a record</strong>
+            <p>RAMIFY creates a Decision Receipt that stores the important details of the decision.</p>
+          </div>
+          <div class="story-card">
+            <div class="label">Step 2</div>
+            <strong>Create a fingerprint</strong>
+            <p>SHA-256 creates a unique digital fingerprint of that receipt.</p>
+          </div>
+          <div class="story-card">
+            <div class="label">Step 3</div>
+            <strong>Add a digital signature</strong>
+            <p>Ed25519 signs the record so RAMIFY can later check that it came from the expected source.</p>
+          </div>
+          <div class="story-card">
+            <div class="label">Step 4</div>
+            <strong>Check before action</strong>
+            <p>If the fingerprint or signature does not match, the action is stopped.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="technical">
+        <div class="tech">
+          <div class="tech-card"><small>Receipt</small><strong>Canonical decision record</strong><span>Stores decision, evidence references and metadata in a stable format.</span></div>
+          <div class="tech-card"><small>Integrity</small><strong>SHA-256</strong><span>Creates a digest that changes if the receipt content changes.</span></div>
+          <div class="tech-card"><small>Authenticity</small><strong>Ed25519</strong><span>Checks that the receipt was signed by the expected key.</span></div>
+          <div class="tech-card"><small>Control</small><strong>Action Gate</strong><span>Requires a valid receipt before the workflow can continue.</span></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tamper">
+        <div class="compare">
+          <div class="compare-box good">
+            <h3>Receipt is valid</h3>
+            <p>The digital fingerprint matches and the signature is valid. RAMIFY treats the record as unchanged and allows the workflow to continue.</p>
+          </div>
+          <div class="compare-box bad">
+            <h3>Receipt was changed</h3>
+            <p>The fingerprint or signature does not match. RAMIFY treats the record as unsafe and blocks the final action or sends it for review.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sequence">
+    <div class="section-head">
+      <div><h2>4. A real example from start to finish</h2></div>
+      <p>This is the same process shown as a simple sequence.</p>
+    </div>
+
+    <div class="card pad">
+      <div class="sequence">
+        <div class="sequence-row"><div class="who">User</div><div class="arr">→</div><div class="what">Enters their need and makes a choice.</div></div>
+        <div class="sequence-row"><div class="who">RAMIFY Interface</div><div class="arr">→</div><div class="what">Collects the information and shows the next step.</div></div>
+        <div class="sequence-row"><div class="who">Decision Logic</div><div class="arr">→</div><div class="what">Checks the current choice, status and supporting information.</div></div>
+        <div class="sequence-row"><div class="who">Decision Receipt</div><div class="arr">→</div><div class="what">Stores what was decided and what evidence was used.</div></div>
+        <div class="sequence-row"><div class="who">Verification</div><div class="arr">→</div><div class="what">Checks the digital fingerprint and signature.</div></div>
+        <div class="sequence-row"><div class="who">Action Gate</div><div class="arr">→</div><div class="what">Allows the final action only if the receipt is valid.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div><h2>5. Human review</h2></div>
+      <p>Sometimes a person may need to review or change a decision. RAMIFY keeps the history instead of hiding the earlier decision.</p>
+    </div>
+
+    <div class="card pad">
+      <div class="visual-path">
+        <div class="visual-box">
+          <strong>Original Receipt</strong>
+          <span>The first decision stays saved.</span>
+        </div>
+        <div class="visual-arrow">→</div>
+        <div class="visual-box">
+          <strong>Human Review</strong>
+          <span>A person reviews the case and records the reason.</span>
+        </div>
+        <div class="visual-arrow">→</div>
+        <div class="visual-box">
+          <strong>New Receipt</strong>
+          <span>A new signed receipt is created and linked to the first one.</span>
+        </div>
+      </div>
+
+      <div class="simple-banner">
+        This means RAMIFY does not simply overwrite the past. It keeps a clear history of what happened and why.
+      </div>
+    </div>
+  </section>
+
+  <section id="tech">
+    <div class="section-head">
+      <div><h2>6. Technical building blocks</h2></div>
+      <p>For technical reviewers, these are the main parts behind the experience.</p>
+    </div>
+
+    <div class="card pad">
+      <div class="tech">
+        <div class="tech-card"><small>Interface</small><strong>RAMIFY Frontend</strong><span>Shows the guided journey and user status.</span></div>
+        <div class="tech-card"><small>Backend</small><strong>FastAPI</strong><span>Handles routes, validation and workflow state.</span></div>
+        <div class="tech-card"><small>Decision Layer</small><strong>Decision Logic</strong><span>Tracks options, status and readiness.</span></div>
+        <div class="tech-card"><small>Evidence</small><strong>Evidence Store</strong><span>Keeps references to supporting information.</span></div>
+        <div class="tech-card"><small>Record</small><strong>Decision Receipt</strong><span>Stores the decision and its important context.</span></div>
+        <div class="tech-card"><small>Integrity</small><strong>SHA-256</strong><span>Detects if receipt content has changed.</span></div>
+        <div class="tech-card"><small>Signature</small><strong>Ed25519</strong><span>Checks that the receipt is authentic.</span></div>
+        <div class="tech-card"><small>Control</small><strong>Action Gate</strong><span>Blocks unverified actions.</span></div>
+      </div>
+
+      <div class="simple-banner">
+        <strong>Local-first demo:</strong> RAMIFY can run on <strong>127.0.0.1</strong>, so the core demonstration does not depend on a public online service. Optional local AI support can also be added without making verification depend on the AI model.
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <span>RAMIFY OS · QR Technical Companion</span>
+    <span>Simple for non-technical readers · Detailed enough for technical reviewers</span>
+  </div>
+
+</div>
+
+<script>
+const steps=[...document.querySelectorAll(".step")];
+const stepTitle=document.getElementById("stepTitle");
+const stepText=document.getElementById("stepText");
+
+steps.forEach(step=>{
+  step.addEventListener("click",()=>{
+    steps.forEach(s=>s.classList.remove("active"));
+    step.classList.add("active");
+    stepTitle.textContent=step.dataset.title;
+    stepText.textContent=step.dataset.text;
+  });
+});
+
+const tabs=[...document.querySelectorAll(".tab")];
+const panels=[...document.querySelectorAll(".tab-panel")];
+
+tabs.forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    tabs.forEach(t=>t.classList.remove("active"));
+    panels.forEach(p=>p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.tab).classList.add("active");
+  });
+});
+
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.animate(
+        [
+          {opacity:0, transform:"translateY(14px)"},
+          {opacity:1, transform:"translateY(0)"}
+        ],
+        {duration:450, easing:"ease-out", fill:"both"}
+      );
+      observer.unobserve(entry.target);
+    }
+  });
+},{threshold:.12});
+
+document.querySelectorAll("section").forEach(section=>observer.observe(section));
+</script>
+</body>
+</html>

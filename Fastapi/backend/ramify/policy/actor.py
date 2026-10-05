@@ -200,34 +200,48 @@ def apply(
     actor_ref: str,
     subject: dict | None,
     order: dict | None = None,
+    profile: dict | None = None,
 ) -> ActorDecision:
-    """Narrow an objective posture according to one persona's policy."""
-    profile = profiles.profile(actor_ref)
+    """Narrow an objective posture according to one persona's policy.
+
+    Pass the `profile` the rest of the assessment uses; looking it up again
+    here would let an edit between stages mix two versions of one agent.
+    """
+    profile = profile if profile is not None else profiles.profile(actor_ref)
     if profile is None:
         raise KeyError(f"unknown actor profile: {actor_ref}")
 
     order = order or {}
-    decision = objective_posture
-    applied: list[dict] = []
-    reason_codes: list[str] = []
 
-    for rule in profile.get("narrowing_rules", []):
-        if not _rule_applies(rule, objective_posture, profile, subject, order):
-            continue
-        candidate = rule["narrow_to"]
-        # A rule that would loosen the outcome is ignored, not obeyed — an
-        # advisory hold cannot be talked back down by a tolerant persona.
-        if RESTRICTIVENESS[candidate] <= RESTRICTIVENESS[decision]:
-            continue
-        decision = candidate
-        applied.append(
-            {
-                "rule_id": rule["id"],
-                "kind": RULE_KINDS.get(rule["id"], COMMERCIAL),
-                "narrowed_to": candidate,
-                "reason_code": rule.get("reason_code", ""),
-            }
-        )
+    # Every rule that applies and restricts beyond the objective posture is a
+    # cause of the result. Choosing the final posture and recording its causes
+    # are separate steps: deciding as the rules were walked dropped a later
+    # rule that reached the same posture as an earlier one, along with its
+    # reason (David, 1 Oct). A rule that would loosen the outcome is ignored,
+    # not obeyed — an advisory hold cannot be talked back down by a tolerant
+    # persona.
+    applicable = [
+        rule
+        for rule in profile.get("narrowing_rules", [])
+        if _rule_applies(rule, objective_posture, profile, subject, order)
+        and RESTRICTIVENESS[rule["narrow_to"]] > RESTRICTIVENESS[objective_posture]
+    ]
+    decision = max(
+        [objective_posture] + [rule["narrow_to"] for rule in applicable],
+        key=lambda posture: RESTRICTIVENESS[posture],
+    )
+    applied: list[dict] = [
+        {
+            "rule_id": rule["id"],
+            "kind": RULE_KINDS.get(rule["id"], COMMERCIAL),
+            "narrowed_to": rule["narrow_to"],
+            "reason_code": rule.get("reason_code", ""),
+            "determines_outcome": rule["narrow_to"] == decision,
+        }
+        for rule in applicable
+    ]
+    reason_codes: list[str] = []
+    for rule in applicable:
         if rule.get("reason_code") and rule["reason_code"] not in reason_codes:
             reason_codes.append(rule["reason_code"])
 
@@ -249,20 +263,20 @@ def apply(
     )
 
 
-def permitted_actions(actor_ref: str, decision: str) -> list[str]:
-    profile = profiles.profile(actor_ref)
+def permitted_actions(actor_ref: str, decision: str, profile: dict | None = None) -> list[str]:
+    profile = profile if profile is not None else profiles.profile(actor_ref)
     if profile is None:
         return ["halt"]
     return list(profile["permitted_actions"].get(decision, ["halt"]))
 
 
-def will_purchase_unattended(actor_ref: str, decision: str) -> bool:
+def will_purchase_unattended(actor_ref: str, decision: str, profile: dict | None = None) -> bool:
     """Whether this persona buys with no person involved.
 
     Autonomy changes which permitted action is taken, never the posture, so it
     cannot make an outcome more permissive than the assessment allowed.
     """
-    profile = profiles.profile(actor_ref)
+    profile = profile if profile is not None else profiles.profile(actor_ref)
     if profile is None or profile.get("purchase_style", "cart") != "cart":
         return False
     return decision in profile.get("auto_purchase_on", [])

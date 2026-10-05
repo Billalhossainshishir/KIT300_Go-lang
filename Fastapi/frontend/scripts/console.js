@@ -853,7 +853,7 @@ function renderConditions(result) {
   const intro = result.narrowed
     ? `<p style="margin:0;font-size:14px;">
          Your agent tightened this from <strong>${esc(result.objective_posture)}</strong> to
-         <strong>${esc(result.actor_decision)}</strong>. Nothing about the product changed —
+         <strong>${esc(result.actor_decision)}</strong>. Nothing about the product changed:
          every check above returns the same result for everyone. What changed is who is asking.
        </p>`
     : `<p style="margin:0;font-size:14px;">
@@ -984,7 +984,7 @@ function renderReceipt(result) {
     ? findings
         .map(
           (c) => `<li><span class="pill pill-${OUTCOME_PILL[c.outcome]}">${esc(c.outcome)}</span>
-                  <span><strong>${esc(c.label)}</strong> — ${esc(c.detail)}</span></li>`
+                  <span><strong>${esc(c.label)}:</strong> ${esc(c.detail)}</span></li>`
         )
         .join("")
     : `<li><span class="pill pill-pass">pass</span>
@@ -1136,16 +1136,9 @@ async function refreshReceiptStatusSummary(receipt) {
     const intact = report.integrity_verified ?? report.verified;
     integrity.textContent = intact ? "Verified" : "Failed";
     integrity.className = intact ? "status-good" : "status-bad";
-    if (report.purchase_authority_valid == null) {
-      authority.textContent = "Not applicable";
-      authority.className = "status-neutral";
-    } else if (report.purchase_authority_valid) {
-      authority.textContent = "Current";
-      authority.className = "status-good";
-    } else {
-      authority.textContent = "Not current";
-      authority.className = "status-warn";
-    }
+    const label = authorityLabel(report);
+    authority.textContent = label.text;
+    authority.className = label.className;
   } catch (error) {
     integrity.textContent = "Could not verify";
     authority.textContent = "Could not verify";
@@ -1283,7 +1276,7 @@ function renderWhyPanel(result) {
     title = "Agent policy";
     headline = `RAMIFY's product truth is ${String(result.objective_posture || "unknown").replaceAll("_", " ")}. ${result.actor_label} tightened the permitted outcome to ${String(result.actor_decision || "unknown").replaceAll("_", " ")} because of ${policyReason}.`;
     if (primary) {
-      policyNote = `<p class="why-secondary"><strong>Product finding:</strong> ${esc(primary.label)} — ${esc(primary.detail)}</p>`;
+      policyNote = `<p class="why-secondary"><strong>Product finding:</strong> ${esc(primary.label)}: ${esc(primary.detail)}</p>`;
     }
   } else if (primary) {
     title = primary.label;

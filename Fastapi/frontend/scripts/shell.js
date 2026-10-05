@@ -1,5 +1,9 @@
 "use strict";
 
+// The RAMIFY OS symbol, traced from the supplied logo, as its four leaves so
+// they can grow in one after another. Inline so it takes the tile's colour.
+const RAMIFY_SYMBOL = `<svg class="ramify-symbol" viewBox="215 281 826 564" aria-hidden="true" focusable="false"><g fill="currentColor" fill-rule="evenodd"><path class="leaf leaf-1" d="M215.5 281.5 H414.4 C422 308 432 330 448.2 353.2 C465.7 379.5 486.2 401.5 521 431.2 C553 458.4 571.4 478.6 586.5 503 C600 525 609 550 610 575 C587 563 562 551 544 544.7 C523 536.7 506.6 532.2 460.9 522 C420 512.9 401.8 508.1 381.5 501.1 C330.2 483.3 286 456.5 255.4 424.8 C239.4 408.2 229.9 394 223.1 376.7 C218 363.5 215.5 350.5 215.5 336 Z"/><path class="leaf leaf-2" d="M1040.5 281.5 H839.6 C830 314 819 337 803 360 C786 385 766 402 736 427.8 C704 455.2 685.7 474.7 670.7 497.5 C655 521 645 548 644 575 C663 565 689 553 708 545.5 C733.8 535.7 749.3 531.5 803.2 519.5 C872 504.3 916.5 486.5 959.5 457.2 C973.8 447.5 983.1 439.9 995.9 427.5 C1022.6 401.8 1040.5 372 1040.5 336 Z"/><path class="leaf leaf-3" d="M215.5 488.5 C277 518 345 540 420.5 558 C491.5 575.1 499.8 577.6 519 587.7 C533.5 595.3 543.7 602.8 555.5 614.5 C579 638 591 664 591 695 V844.5 H291 C249.3 844.5 215.5 810.7 215.5 769 Z"/><path class="leaf leaf-4" d="M1040.5 487 C967 519 905 540 837 556.5 C759.2 575.4 755.8 576.4 734.9 587.1 C716.2 596.8 698.3 611.7 686 627.8 C671 647.5 663 670.8 663 695 V844.5 H965 C1006.7 844.5 1040.5 810.7 1040.5 769 Z"/></g></svg>`;
+
 // Shared across every page. Plain JavaScript, no framework, no build step.
 //
 // Nothing here decides anything. Verdicts arrive already sealed inside a
@@ -208,8 +212,8 @@ function mountShell(current) {
     "afterbegin",
     `<header class="topbar">
        <div class="topbar-inner">
-         <a class="brand" href="/shop" aria-label="RAMIFY OS — open shop">
-           <span class="brand-mark" aria-hidden="true">R</span>
+         <a class="brand" href="/shop" aria-label="RAMIFY OS, open the shop">
+           <span class="brand-mark" aria-hidden="true">${RAMIFY_SYMBOL}</span>
            <span class="brand-copy"><span class="wordmark">RAMIFY OS</span><span class="tagline">Product trust, explained clearly</span></span>
          </a>
          <nav class="nav-primary" aria-label="Main navigation">${primary}</nav>
@@ -434,7 +438,7 @@ function renderLight(light, posture, aside = "") {
       <div class="light-text">
         <div class="label">${esc(light.label)}</div>
         <div class="meaning">${esc(light.meaning)}</div>
-        ${light.warning ? `<div class="warn-chip">There is a finding attached — worth reading first</div>` : ""}
+        ${light.warning ? `<div class="warn-chip">A finding is attached. Read it first.</div>` : ""}
       </div>
       <div class="light-aside">
         system code<span class="posture">${esc(posture)}</span>
@@ -550,6 +554,25 @@ function conditionList(conditions) {
 
 // ── receipt verification ─────────────────────────────────────────────────
 
+// One reading of a verification report, shared by every page that shows it.
+// Record integrity, the time window, the permitted action and whether the
+// authority was already used are separate questions; a receipt can be
+// authentic and in its window yet permit no purchase, or already be spent.
+const AUTHORITY_LABELS = {
+  current: ["Current", "status-good", "CURRENT. Intact, in its window, permits a purchase and has not been used."],
+  current_unchecked_use: ["In window", "status-good", "IN WINDOW and permits a purchase. Whether it was already used is not known to this verifier."],
+  already_used: ["Already used", "status-warn", "ALREADY USED. Authentic history, but it cannot authorise another transaction."],
+  no_purchase_permitted: ["No purchase permitted", "status-warn", "NONE. The signed decision does not permit a purchase."],
+  window_closed: ["Window closed", "status-warn", "EXPIRED WINDOW. The sealed record may still be authentic. Run the check again."],
+  integrity_failed: ["Not trusted", "status-bad", "NONE. The record failed its integrity checks."],
+  not_applicable: ["Not applicable", "status-neutral", "not applicable to this record type."],
+};
+
+function authorityLabel(report) {
+  const [text, className, line] = AUTHORITY_LABELS[report.authority_status] || AUTHORITY_LABELS.not_applicable;
+  return { text, className, line };
+}
+
 async function verifyInto(terminalId, receipt, wasTampered) {
   const report = await api("/api/v0/receipt/verify", receipt);
   const terminal = $(terminalId);
@@ -561,11 +584,7 @@ async function verifyInto(terminalId, receipt, wasTampered) {
   const integrityLine = integrityVerified
     ? "Receipt integrity: VERIFIED."
     : "Receipt integrity: FAILED.";
-  const authorityLine = report.purchase_authority_valid == null
-    ? "Purchase authority: not applicable to this record type."
-    : report.purchase_authority_valid
-      ? "Purchase authority: CURRENT."
-      : "Purchase authority: NOT CURRENT. The sealed record may still be authentic.";
+  const authorityLine = `Purchase authority: ${authorityLabel(report).line}`;
   terminal.textContent = [
     "$ ramify-verify < receipt.json",
     "",
@@ -630,7 +649,7 @@ function mountFirstRunWelcome() {
     <button type="button" class="welcome-close" id="welcome-close" aria-label="Close and open the shop"><span>×</span></button>
     <div class="welcome-grid">
       <section class="welcome-story">
-        <div class="welcome-mark"><span>R</span><i aria-hidden="true"></i></div>
+        <div class="welcome-mark"><span>${RAMIFY_SYMBOL}</span><i aria-hidden="true"></i></div>
         <div class="eyebrow">WELCOME TO RAMIFY OS</div>
         <h2>See how RAMIFY checks a purchase before action.</h2>
         <p>Choose the shop or the guided tour. RAMIFY keeps the evidence, policy and signed receipt trail clear underneath.</p>
@@ -723,3 +742,40 @@ function installAdvancedMotion() {
   document.documentElement.classList.toggle("ui-motion-ok", motionOK);
   document.documentElement.classList.add("ui-motion-lite");
 }
+// Site-wide motion: cards and panels ease in as they scroll into view,
+// including ones rendered after load (results, receipts, queues). Skipped
+// entirely when the reader prefers reduced motion, and never applied without
+// IntersectionObserver, so content cannot be left hidden.
+(function initSiteMotion() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!("IntersectionObserver" in window) || !("MutationObserver" in window)) return;
+  const SELECTOR = ".card, .panel, .story-card, .queue-item, .persona, .cart-line, .page-head, " +
+    ".journey-stage, .proof-pack-grid article, .meeting-card, .human-receipt-card, .receipt-doc";
+  const seen = new WeakSet();
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("v2-in");
+      observer.unobserve(entry.target);
+    });
+  }, { rootMargin: "0px 0px -6% 0px", threshold: 0.04 });
+  const watch = (root) => {
+    const found = root.matches?.(SELECTOR) ? [root] : [];
+    root.querySelectorAll?.(SELECTOR).forEach((el) => found.push(el));
+    found.forEach((el, i) => {
+      if (seen.has(el) || el.closest(".info-main, dialog, .drawer")) return;
+      seen.add(el);
+      el.classList.add("v2-reveal");
+      el.style.setProperty("--v2-delay", `${Math.min(i, 6) * 45}ms`);
+      observer.observe(el);
+    });
+  };
+  const start = () => {
+    document.body.classList.add("v2-motion");
+    watch(document.body);
+    new MutationObserver((records) => records.forEach((r) => r.addedNodes.forEach((n) => n.nodeType === 1 && watch(n))))
+      .observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
+})();

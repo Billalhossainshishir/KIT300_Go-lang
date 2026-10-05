@@ -12,3 +12,9 @@ build/
 runtime_data/
 .local_state/
 *.log
+
+# Issuer private keys used to sign evidence artefacts. Never commit.
+seed_private/
+
+# macOS Finder metadata
+.DS_Store

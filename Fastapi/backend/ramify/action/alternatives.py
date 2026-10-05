@@ -63,7 +63,16 @@ def find(subject_ref: str, actor_ref: str, quantity: int, blocked_outcome: dict)
         outcome = engine.assess(
             ref, actor_ref, None, quantity, context="suggestion", persist_receipt=False
         )
-        if outcome["requires_human"] or not outcome["can_add_to_cart"]:
+        # The agent's own transaction path counts: a procurement agent
+        # requisitions rather than adds to a cart, and filtering on the cart
+        # alone left it with no alternatives at all (David, 1 Oct).
+        if outcome["requires_human"]:
+            continue
+        if outcome["can_add_to_cart"]:
+            path = "basket"
+        elif outcome["can_create_requisition"]:
+            path = "requisition"
+        else:
             continue
 
         candidate_price = outcome["order"].get("line_total_cents")
@@ -78,6 +87,7 @@ def find(subject_ref: str, actor_ref: str, quantity: int, blocked_outcome: dict)
                 "actor_decision": outcome["actor_decision"],
                 "why": _reason_summary(outcome),
                 "assessment_context": "exploratory",
+                "transaction_path": path,
                 "is_named_replacement": record.get("supersedes") == subject_ref
                 or subject.get("superseded_by") == ref,
             }

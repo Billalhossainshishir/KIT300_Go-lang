@@ -15,8 +15,8 @@ from pathlib import Path
 from uuid import uuid4
 from io import BytesIO
 import json
+import tempfile
 import zipfile
-from threading import Lock
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -40,7 +40,7 @@ from ramify.api.models import (
 )
 from ramify.crypto.canonical import rfc3339_nano
 from ramify.crypto import keys
-from ramify.crypto.sign import verify_receipt
+from ramify.crypto.sign import authority_status, verify_receipt
 from ramify.data import seed
 from ramify.action import alternatives
 from ramify.policy import profiles, vocabulary
@@ -57,6 +57,8 @@ PAGE_DIR = FRONTEND / "pages"
 SCRIPT_DIR = FRONTEND / "scripts"
 STYLE_DIR = FRONTEND / "styles"
 IMAGE_DIR = PROJECT_ROOT / "product_images"
+BRAND_DIR = FRONTEND / "brand"
+BRAND_MEDIA_TYPES = {".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg"}
 VERSION = (PROJECT_ROOT / "VERSION.txt").read_text(encoding="utf-8").strip()
 
 def _build_id() -> str:
@@ -74,7 +76,6 @@ def _build_id() -> str:
 
 
 BUILD_ID = _build_id()
-DEMO_TAMPER_LOCK = Lock()
 
 app = FastAPI(
     title="RAMIFY OS Decision Receipt Interface",
@@ -112,30 +113,46 @@ async def signer_key_corrupt(request, exc: keys.SignerKeyError):
     )
 
 
+VERSIONED_ASSET_SUFFIXES = (".css", ".js", ".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico")
+
+
 @app.middleware("http")
 async def no_store(request, call_next):
-    """Never let a browser hold on to a page or an asset.
+    """Never let a browser hold on to a page, a decision or an unversioned asset.
 
     A cached stylesheet does not announce itself — the page simply looks like
     nothing changed. The milliseconds a cache would save are not worth showing
     a client last week's build.
+
+    The exception is a static asset requested with a version (`?v=`). The
+    pages bump that version whenever the file changes, so the URL itself names
+    one build and can be cached for good; refusing it sent the ~300 KB
+    stylesheet on every page (review R-07). Pages, API responses and anything
+    requested without a version stay uncached.
     """
     response = await call_next(request)
+    if (
+        request.url.query.startswith("v=")
+        and request.url.path.lower().endswith(VERSIONED_ASSET_SUFFIXES)
+        and response.status_code == 200
+    ):
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
 
 
-# This is a loopback-only demo. Refuse DNS-rebound hostnames and browser
-# state-changing requests that were initiated by another site. ``testserver``
-# is the hostname used by FastAPI's in-process TestClient.
+# Names this local demo answers to. `testserver` is the in-process test client.
+# Anything else in a Host header means a hostname was pointed at 127.0.0.1 by
+# someone else's DNS, which is how a remote page reads a loopback service.
 LOCAL_HOSTNAMES = frozenset({"127.0.0.1", "localhost", "::1", "testserver"})
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
 def _hostname(netloc: str) -> str:
-    """Return a hostname without its port, including bracketed IPv6 hosts."""
+    """The host part of a Host header or URL authority, without the port."""
     netloc = netloc.strip().lower()
     if netloc.startswith("["):
         return netloc[1:netloc.find("]")] if "]" in netloc else netloc
@@ -144,18 +161,20 @@ def _hostname(netloc: str) -> str:
 
 @app.middleware("http")
 async def refuse_parity_mode(request, call_next):
-    """Never expose HTTP while deterministic hash-parity mode is enabled.
+    """Never serve with the hash-parity switch on.
 
-    That mode deliberately pins time/receipt identifiers for reproducible
-    comparisons. It is safe for direct engine tests, not for a serving demo.
+    RAMIFY_DEMO_DETERMINISTIC pins the clock and the receipt ID so two
+    implementations can compare hashes. On a live server every receipt then
+    shares one ID, so adding one product's receipt to the basket could add
+    another product, and no receipt ever expires.
     """
     if seed.deterministic_mode():
         return JSONResponse(
             status_code=503,
             content={
                 "detail": (
-                    "RAMIFY_DEMO_DETERMINISTIC is set. It is for hash-parity "
-                    "tests only and cannot serve the application. Unset it and restart."
+                    "RAMIFY_DEMO_DETERMINISTIC is set. It is for hash-parity tests only "
+                    "and cannot serve the application. Unset it and restart."
                 )
             },
         )
@@ -164,7 +183,14 @@ async def refuse_parity_mode(request, call_next):
 
 @app.middleware("http")
 async def local_same_origin_only(request, call_next):
-    """Protect the unauthenticated loopback demo from cross-site state changes."""
+    """Refuse rebound hostnames, and state changes started by another site.
+
+    Nothing in the API authenticates a caller, and several writes take no
+    body, so a page on any website could previously post a form to 127.0.0.1
+    and empty the basket or seal an order. A browser always names the page
+    that started a cross-origin request in ``Origin``; clients that are not
+    browsers usually send none, and are allowed.
+    """
     host = request.headers.get("host", "")
     if _hostname(host) not in LOCAL_HOSTNAMES:
         return JSONResponse(status_code=400, content={"detail": "Unrecognised Host header."})
@@ -198,6 +224,8 @@ def healthz() -> dict:
         "default_launcher_loopback_only": True,  # legacy compatibility field
         "documented_launch_loopback_only": True,
         "core_external_network_calls": False,
+        # The value to publish, so receipts from this instance can be checked
+        # against something other than the key that travels with them.
         "signer_key_fingerprint": keys.signer_fingerprint(),
         # Legacy fields remain for older UI/tests, but deliberately do not claim
         # the application can introspect Uvicorn's actual bind/network behaviour.
@@ -367,7 +395,7 @@ def api_action(request: ActionEventRequest) -> dict:
             detail="Only an explicit purchase journey may create Action Gate events.",
         )
     authority = verify_receipt(receipt, now=now())
-    if not authority.get("purchase_authority_valid"):
+    if not authority.get("time_window_valid"):
         raise HTTPException(
             status_code=409,
             detail="This receipt is not current, intact purchase authority. Run the check again.",
@@ -541,8 +569,21 @@ def api_agent_reset(ref: str) -> dict:
 
 @app.get("/api/v0/review/queue")
 def api_review_queue() -> dict:
+    """Open reviews a person can still answer.
+
+    The review endpoint refuses a receipt whose purchase-authority window has
+    lapsed, so listing one offered buttons that could only fail and kept the
+    nav badge counting work nobody could do. The same `verify_receipt` check
+    decides both, so the queue and the endpoint cannot disagree. A lapsed
+    receipt stays in the ledger and on Activity.
+    """
+    checked_at = now()
     return {
-        "open": store.review_queue(),
+        "open": [
+            receipt
+            for receipt in store.review_queue()
+            if verify_receipt(receipt, now=checked_at).get("time_window_valid")
+        ],
         "resolved": store.resolved_reviews(20),
     }
 
@@ -553,8 +594,22 @@ def api_receipt_verify(receipt: dict) -> dict:
 
     The browser panel and the standalone `ramify-verify` tool call the same
     function, so the two cannot drift apart.
+
+    The standalone tool has no ledger, so it cannot say whether a receipt's
+    authority has already been spent. The server can, and fills that in here:
+    a receipt consumed by an order or requisition, or answered by a human
+    successor, is authentic history but not current authority.
     """
-    return verify_receipt(receipt)
+    report = verify_receipt(receipt)
+    if report.get("time_window_valid") is not None:
+        receipt_id = receipt.get("receipt_id") if isinstance(receipt, dict) else None
+        used = bool(receipt_id) and (
+            cart.receipt_consumed(receipt_id) or store.has_successor(receipt_id)
+        )
+        report["transaction_authority_unused"] = not used
+        report["purchase_authority_valid"] = bool(report["purchase_authority_valid"]) and not used
+        report["authority_status"] = authority_status(report)
+    return report
 
 
 @app.post("/api/v0/receipt/review")
@@ -572,26 +627,18 @@ def api_receipt_review(request: ReviewRequest) -> dict:
             status_code=409,
             detail="Only a receipt from an active purchase journey can enter human review.",
         )
-    if original.get("supersedes_receipt") or original.get("human_review"):
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "A human-review successor is terminal and cannot be reviewed again to mint "
-                "fresh transaction authority. Run a new product assessment if a new decision is required."
-            ),
-        )
     if original.get("actor_decision") not in store.AWAITING_REVIEW:
         raise HTTPException(
             status_code=409,
             detail="This decision does not require human review.",
         )
-    if store.has_successor(original["receipt_id"]):
+    if store.is_review_answered(original) or store.has_successor(original["receipt_id"]):
         raise HTTPException(
             status_code=409,
             detail="This review has already been answered. The original receipt remains unchanged.",
         )
     original_report = verify_receipt(original, now=now())
-    if not original_report.get("purchase_authority_valid"):
+    if not original_report.get("time_window_valid"):
         raise HTTPException(
             status_code=409,
             detail="This review request is no longer current and intact. Run the product check again.",
@@ -610,7 +657,7 @@ def api_receipt_review(request: ReviewRequest) -> dict:
         reviewed_time + timedelta(seconds=builder.RECEIPT_TTL_SECONDS)
     )
     outcome_label = (
-        "Declined — leave the item unchanged"
+        "Declined: the item was left unchanged"
         if request.outcome == "confirmed"
         else "Approved once for this simulated transaction"
     )
@@ -630,6 +677,9 @@ def api_receipt_review(request: ReviewRequest) -> dict:
         "reviewed_at": reviewed_at,
         "reviewed_decision": original["actor_decision"],
         "decision_scope": "this simulated transaction only",
+        # Nothing authenticates the caller of this endpoint, and an agent can
+        # reach it as easily as a person can. The sealed record therefore says
+        # what is known, that a name was supplied, rather than who decided.
         "identity_verified": False,
         "reviewer_attestation": (
             "Reviewer name and role are recorded as supplied with the request. The "
@@ -648,6 +698,9 @@ def api_receipt_review(request: ReviewRequest) -> dict:
         # persona must remain a requisition workflow rather than silently turning
         # into a consumer basket purchase after human review. The successor is
         # separate authority; it never rewrites the machine decision.
+        # The style comes from the sealed receipt, not the live profile. Reading
+        # the profile let an edit between decision and review, or deleting a
+        # custom agent, turn a procurement decision into a consumer purchase.
         style = original.get("actor_purchase_style")
         if style not in profiles.PURCHASE_STYLES:
             raise HTTPException(
@@ -718,11 +771,6 @@ def api_receipt_review(request: ReviewRequest) -> dict:
             status_code=409,
             detail="This review was answered by another request. Refresh Needs me to see it.",
         ) from exc
-    except store.InvalidSuccessorTarget as exc:
-        raise HTTPException(
-            status_code=409,
-            detail="Only the original machine review receipt may receive a human successor.",
-        ) from exc
     event = store.record_action(
         {
             "event_id": f"ramify:demo:act:{uuid4().hex}",
@@ -761,9 +809,28 @@ def api_receipts(limit: int = Query(40, ge=1, le=200)) -> dict:
     }
 
 
+class _RecordingZip:
+    """Writes into a zip and keeps each file's bytes for the pack manifest."""
+
+    def __init__(self, archive: zipfile.ZipFile) -> None:
+        self.archive = archive
+        self.files: dict[str, bytes] = {}
+
+    def writestr(self, name: str, data) -> None:
+        data = data.encode("utf-8") if isinstance(data, str) else data
+        self.files[name] = data
+        self.archive.writestr(name, data)
+
+
 @app.get("/api/v0/proof-pack")
 def api_proof_pack() -> StreamingResponse:
-    """Generate the five-scenario Quick Proof Pack with an explicit manifest."""
+    """Download a small proof pack a client or assessor can inspect offline.
+
+    The pack is generated from deterministic assessments using synthetic demo
+    data. It contains signed receipts, a verification README and the public
+    demo notes. It is evidence of the local prototype behaviour, not a real
+    product certification.
+    """
     examples = [
         ("01_APPROVED_Apex", "ramify:demo:supp:apex-mg-glyc-120", "consumer_v1"),
         ("02_EXPIRED_Evidence", "ramify:demo:supp:greenline-ashw-ksm66-90", "consumer_v1"),
@@ -771,12 +838,11 @@ def api_proof_pack() -> StreamingResponse:
         ("04_RECALL_Block", "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K", "consumer_v1"),
         ("05_SUBSTITUTION", "ramify:demo:supp:stonefield-zinc-gluc-50-90", "consumer_v1"),
     ]
-    from ramify.crypto import keys as crypto_keys
-
     buffer = BytesIO()
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        zf = _RecordingZip(archive)
         receipts = []
-        receipt_entries = []
+        proof_pack_filenames: list[str] = []
         for label, subject_ref, actor_ref in examples:
             outcome = engine.assess(
                 subject_ref, actor_ref, None, 1, context="proof_pack", persist_receipt=False
@@ -784,75 +850,96 @@ def api_proof_pack() -> StreamingResponse:
             receipt = outcome["receipt"]
             receipts.append(receipt)
             filename = f"receipts/{label}_{receipt['receipt_id'].replace(':', '-')}.json"
-            raw = (json.dumps(receipt, indent=2, sort_keys=True) + "\n").encode("utf-8")
-            zf.writestr(filename, raw)
-            receipt_entries.append({
-                "filename": filename,
-                "sha256": "sha256:" + hashlib.sha256(raw).hexdigest(),
-                "receipt_id": receipt["receipt_id"],
-            })
-
-        # The first receipt creation may install the machine-local signer on a
-        # fresh demo. Capture public keys only after those receipts are sealed,
-        # otherwise the pack could contain the unrelated embedded signer key.
-        public_keys = crypto_keys.public_keys()
-        signer_hex = public_keys.get("ramify:demo:signer:receipt", "")
-        signer_fingerprint = (
-            "sha256:" + hashlib.sha256(bytes.fromhex(signer_hex)).hexdigest()
-            if signer_hex else None
-        )
-
-        manifest = {
-            "schema": "ramify-proof-pack-manifest-v1",
-            "pack_type": "quick",
-            "app_version": VERSION,
-            "data_snapshot": seed.snapshot_id(),
-            "dataset_digest": seed.dataset_digest(),
-            "policy_ref": seed.policy_pack()["policy_ref"],
-            "policy_digest": seed.policy_digest(),
-            "verifier_version": "portable-verify-v2",
-            "signer_key_fingerprint": signer_fingerprint,
-            "expected_receipts": receipt_entries,
-            "verification_scope": "Historical sealed-record integrity against included public demonstration keys; not current purchase authority or evidence revalidation.",
-        }
-        manifest = proof_pack.sign_manifest(manifest)
-        zf.writestr("manifest.json", json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+            proof_pack_filenames.append(filename)
+            zf.writestr(
+                filename,
+                json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+            )
         zf.writestr(
             "README.txt",
             "RAMIFY OS Quick Proof Pack\n"
             f"Version: {VERSION}\n"
             f"Data snapshot: {seed.snapshot_id()}\n\n"
-            "Synthetic demonstration evidence only. These receipts do not certify a real product, seller, regulator or laboratory.\n"
-            "The manifest declares the expected files, build/data/policy identity, verifier version and signer-key fingerprint, and is signed by the same runtime signer as the receipts.\n"
-            f"Signer fingerprint: {signer_fingerprint}\n"
-            "A proof pack cannot vouch for its own included signer key. Compare this fingerprint with GET /healthz on the issuing RAMIFY instance before attributing authorship.\n"
-            f"Example receipt: {receipt_entries[0]['filename']}\n"
-            "Portable verification: python -m pip install cryptography ; python verify_receipts.py\n"
-            "Successful verification establishes historical sealed-record integrity, not current purchase authority.\n",
+            "Synthetic demonstration evidence only. These receipts do not certify a real product, seller, regulator or laboratory.\n\n"
+            "What this proves:\n"
+            "- The RAMIFY engine can produce signed, tamper-evident decision receipts.\n"
+            "- Different scenarios produce different permitted actions.\n"
+            "- A receipt can be verified outside the browser using the same verification logic.\n\n"
+            "Portable verification (after extracting this ZIP):\n"
+            "  python -m pip install cryptography\n"
+            "  python verify_receipts.py\n\n"
+            "The included verifier is self-contained and uses trust/public_keys.json; it does not import the RAMIFY application.\n\n"
+            "Which key signed these receipts:\n"
+            f"  {keys.signer_fingerprint()}\n"
+            "The public key travels inside this pack, and a pack cannot vouch for its own key.\n"
+            "A PASS proves the receipts match the key they arrived with. Compare the fingerprint\n"
+            "above with the one the issuing RAMIFY instance publishes (GET /healthz,\n"
+            "signer_key_fingerprint) before treating the receipts as issued by it.\n\n"
+            "Receipt files included:\n"
+            + "".join(f"- {name}\n" for name in proof_pack_filenames)
+            + "\nDecision boundary:\n"
+            "- LangGraph/Ollama/Llama may interpret free-form text and explain a sealed receipt.\n"
+            "- RESOLVE, RATIFY, agent policy, Action Gate and signing remain deterministic.\n",
         )
         zf.writestr(
             "receipt_index.json",
-            json.dumps([{
-                "receipt_id": r["receipt_id"], "subject_ref": r["subject_ref"],
-                "product_name": r.get("product_name"), "objective_posture": r.get("objective_posture"),
-                "actor_decision": r.get("actor_decision"), "payload_hash": r.get("payload_hash"),
-            } for r in receipts], indent=2, sort_keys=True) + "\n",
+            json.dumps(
+                [
+                    {
+                        "receipt_id": r["receipt_id"],
+                        "subject_ref": r["subject_ref"],
+                        "product_name": r.get("product_name"),
+                        "objective_posture": r.get("objective_posture"),
+                        "actor_decision": r.get("actor_decision"),
+                        "payload_hash": r.get("payload_hash"),
+                        "signature_algorithm": r.get("signature_algorithm", "Ed25519"),
+                    }
+                    for r in receipts
+                ],
+                indent=2,
+                sort_keys=True,
+            ) + "\n",
         )
-        zf.writestr("verify_receipts.py", (PROJECT_ROOT / "scripts" / "portable_verify.py").read_text(encoding="utf-8"))
+        portable_verifier = PROJECT_ROOT / "scripts" / "portable_verify.py"
+        zf.writestr("verify_receipts.py", portable_verifier.read_text(encoding="utf-8"))
         zf.writestr("requirements.txt", "cryptography>=42\n")
-        zf.writestr("trust/public_keys.json", json.dumps(public_keys, indent=2, sort_keys=True) + "\n")
-        zf.writestr("policy/policy_pack_demo_v1.json", json.dumps(seed.policy_pack(), indent=2, sort_keys=True) + "\n")
-        zf.writestr("evidence/evidence_signatures.json", json.dumps(seed.evidence_signatures(), indent=2, sort_keys=True) + "\n")
-        zf.writestr("evidence/record_signatures.json", json.dumps(seed.record_signatures(), indent=2, sort_keys=True) + "\n")
+        zf.writestr(
+            "VERIFYING_SCOPE.txt",
+            "SHA-256 detects changes to the canonical receipt payload.\n"
+            "Ed25519 proves that the synthetic RAMIFY demo signer issued the receipt.\n"
+            "Embedded issuer public keys are synthetic demonstration trust anchors.\n"
+            "Production would require protected key storage, rotation, revocation and governance.\n",
+        )
+        zf.writestr(
+            "policy/policy_pack_demo_v1.json",
+            json.dumps(seed.policy_pack(), indent=2, sort_keys=True) + "\n",
+        )
+        zf.writestr(
+            "evidence/evidence_signatures.json",
+            json.dumps(seed.evidence_signatures(), indent=2, sort_keys=True) + "\n",
+        )
+        from ramify.crypto import keys as crypto_keys
+        zf.writestr(
+            "trust/public_keys.json",
+            json.dumps(crypto_keys.public_keys(), indent=2, sort_keys=True) + "\n",
+        )
         for evidence_ref, signature_meta in seed.evidence_signatures().items():
             storage_path = signature_meta.get("storage_path")
-            if storage_path:
-                source = seed.DATA_DIR / storage_path
-                if source.is_file():
-                    zf.writestr(f"evidence/artefacts/{source.name}", source.read_bytes())
+            if not storage_path:
+                continue
+            source = seed.DATA_DIR / storage_path
+            if source.is_file():
+                zf.writestr(f"evidence/artefacts/{source.name}", source.read_bytes())
+        archive.writestr(
+            proof_pack.MANIFEST_NAME,
+            proof_pack.build_manifest(
+                "RAMIFY Quick Proof Pack", zf.files, {"version": VERSION, "build_id": BUILD_ID}
+            ),
+        )
     buffer.seek(0)
     return StreamingResponse(
-        buffer, media_type="application/zip",
+        buffer,
+        media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="RAMIFY-Quick-Proof-Pack.zip"'},
     )
 
@@ -999,10 +1086,11 @@ def api_explain(request: ExplainRequest) -> JSONResponse:
     result = explain.explain_receipt(request.receipt)
     return JSONResponse(
         {
-            "authoritative_summary": result.get("authoritative_summary", result["text"]),
             "explanation": result["text"],
+            # Always present, always derived from the receipt alone, so the
+            # interface can show the decision without depending on the model.
+            "decision_summary": explain.deterministic_summary(request.receipt),
             "source": result["source"],
-            "model_text_accepted": bool(result.get("model_text_accepted")),
             "presentation_only": True,
             "authoritative": False,
         }
@@ -1012,7 +1100,13 @@ def api_explain(request: ExplainRequest) -> JSONResponse:
 
 @app.post("/api/v0/demo/evidence-tamper")
 def api_demo_evidence_tamper(request: SubjectRequest) -> dict:
-    """Prove evidence tamper detection using an isolated in-memory byte copy."""
+    """Run a safe evidence-tamper demonstration on an isolated copy.
+
+    This endpoint is only for the local synthetic client demo. It changes a
+    temporary copy of one evidence artefact, proves that RATIFY rejects the
+    modified bytes, and discards the copy. The shipped artefact is never
+    written and no tampered receipt is persisted.
+    """
     records = [
         seed.evidence(ref)
         for ref, raw in seed.seed().get("evidence", {}).items()
@@ -1021,29 +1115,48 @@ def api_demo_evidence_tamper(request: SubjectRequest) -> dict:
     records = [record for record in records if record and record.get("storage_path")]
     if not records:
         raise HTTPException(status_code=404, detail="No evidence artefact is available for this subject.")
+
     record = records[0]
+    data_root = seed.DATA_DIR.resolve()
     artefact_path = (seed.DATA_DIR / record["storage_path"]).resolve()
     try:
-        artefact_path.relative_to(seed.DATA_DIR.resolve())
+        artefact_path.relative_to(data_root)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail="Evidence path is outside the synthetic data directory.") from exc
     if not artefact_path.is_file():
         raise HTTPException(status_code=404, detail="Evidence artefact is missing.")
 
     original = artefact_path.read_bytes()
-    tampered = original + b"\nRAMIFY SYNTHETIC IN-MEMORY TAMPER DEMO.\n"
-    clean_finding = ratify_checks.evaluate_evidence_integrity_bytes(record, original, request.subject_ref)
-    tampered_finding = ratify_checks.evaluate_evidence_integrity_bytes(record, tampered, request.subject_ref)
-    outcome = engine.assess(
-        request.subject_ref,
-        "consumer_v1",
-        quantity=1,
-        context="guided_demo",
-        persist_receipt=False,
-        evidence_overrides={record["ref"]: tampered},
-    )
+    clean_finding = ratify_checks.evaluate_evidence_integrity(record, request.subject_ref)
+
+    # Tamper a private copy of this subject's artefacts and point only this
+    # request's assessment at it. The shipped file is never written, so a
+    # concurrent assessment cannot see the change and a process killed mid-way
+    # cannot leave evidence modified (David's U2).
+    with tempfile.TemporaryDirectory(prefix="ramify-tamper-demo-") as scratch:
+        copy_root = Path(scratch)
+        for evidence in records:
+            source = (seed.DATA_DIR / evidence["storage_path"]).resolve()
+            target = copy_root / evidence["storage_path"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_file():
+                target.write_bytes(source.read_bytes())
+        (copy_root / record["storage_path"]).write_bytes(
+            original + b"\nRAMIFY SYNTHETIC TAMPER DEMO: one byte-level change.\n"
+        )
+        with ratify_checks.artefacts_from(copy_root):
+            tampered_finding = ratify_checks.evaluate_evidence_integrity(record, request.subject_ref)
+            outcome = engine.assess(
+                request.subject_ref,
+                "consumer_v1",
+                quantity=1,
+                context="guided_demo",
+                persist_receipt=False,
+            )
+    untouched = artefact_path.read_bytes() == original
+
     evidence_check = next(
-        (item for item in outcome.get("receipt", {}).get("check_results", []) if item.get("check_id") == "evidence_freshness"),
+        (item for item in (outcome or {}).get("receipt", {}).get("check_results", []) if item.get("check_id") == "evidence_freshness"),
         {},
     )
     return {
@@ -1052,58 +1165,21 @@ def api_demo_evidence_tamper(request: SubjectRequest) -> dict:
         "clean_integrity": clean_finding,
         "tampered_integrity": tampered_finding,
         "ratify_outcome": evidence_check.get("outcome"),
-        "objective_posture": outcome.get("objective_posture"),
-        "reason_codes": outcome.get("reason_codes", []),
-        "shared_artefact_modified": False,
-        "artefact_restored": True,
-        "note": "Synthetic isolated demonstration; the shared evidence artefact was never modified.",
+        "objective_posture": (outcome or {}).get("objective_posture"),
+        "reason_codes": (outcome or {}).get("reason_codes", []),
+        # Kept for existing callers: the shipped artefact is unchanged because
+        # it was never written.
+        "artefact_restored": untouched,
+        "isolated_copy": True,
+        "note": "Synthetic demonstration on a temporary copy; the shipped evidence artefact was never modified.",
     }
 
 
 @app.post("/api/v0/demo/cart/reset")
 def api_demo_cart_reset() -> dict:
-    """Clear the dedicated David-demo cart without touching the normal basket."""
-    cart.clear(cart_name=cart.DEMO_CART_NAME)
-    return {"cleared": True, "simulated": True, "normal_cart_untouched": True}
-
-
-@app.post("/api/v0/demo/checkout-proof")
-def api_demo_checkout_proof() -> dict:
-    """Exercise real cart authority checks in a dedicated demonstration cart."""
-    cart.clear(cart_name=cart.DEMO_CART_NAME)
-    assessment = engine.assess(
-        "ramify:demo:supp:apex-mg-glyc-120",
-        "consumer_v1",
-        quantity=1,
-        context="purchase",
-    )
-    verification = verify_receipt(assessment["receipt"], now=now())
-    line = cart.add(
-        assessment["receipt_ref"],
-        cart_name=cart.DEMO_CART_NAME,
-        record_action=False,
-    )
-    order = cart.checkout(cart_name=cart.DEMO_CART_NAME)
-    return {
-        "assessment": assessment,
-        "verification": verification,
-        "line": line,
-        "order": order,
-        "normal_cart_untouched": True,
-        "note": "Dedicated demonstration cart; the normal consumer basket is not cleared or modified.",
-    }
-
-
-@app.get("/api/v0/demo/absent-status")
-def api_demo_absent_status() -> dict:
-    """Dedicated proof that truly absent status is represented as unknown."""
-    finding = ratify_checks.check_standing({})
-    return {
-        "input": "no status record supplied",
-        "standing": "unknown",
-        "check": finding.as_dict(),
-        "reason_codes": finding.reason_codes,
-    }
+    """Clear only the synthetic local basket before the scripted client demo."""
+    cart.clear()
+    return {"cleared": True, "simulated": True}
 
 
 @app.get("/api/v0/proof-pack/extended")
@@ -1142,6 +1218,16 @@ ASSET_DIRS = {
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(PAGE_DIR / PAGES[""])
+
+
+@app.get("/brand/{name}")
+def brand_asset(name: str) -> FileResponse:
+    """The RAMIFY OS logo files, kept apart from product images."""
+    media_type = BRAND_MEDIA_TYPES.get(Path(name).suffix.lower())
+    asset = (BRAND_DIR / name).resolve()
+    if media_type and asset.is_file() and asset.parent == BRAND_DIR.resolve():
+        return FileResponse(asset, media_type=media_type)
+    raise HTTPException(status_code=404, detail="not found")
 
 
 @app.get("/{name}")

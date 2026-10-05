@@ -1,4 +1,4 @@
-RAMIFY OS v11.0.7 - RUN WITH WINDOWS CMD
+RAMIFY OS v11.0.6 - RUN WITH WINDOWS CMD
 =========================================
 
 Open Command Prompt in this extracted project folder.
@@ -59,7 +59,7 @@ OPTIONAL: RUN THE AUTOMATED TEST SUITE
 --------------------------------------
 From the project root in CMD, run:
 
-   .\.venv\Scripts\python.exe -m pytest -q
+   .\.venv\Scripts\python.exe -m unittest discover -s backend\tests -t backend
 
 OPTIONAL: CHECK THE RELEASE PACKAGE
 -----------------------------------
@@ -79,4 +79,5 @@ DAVID MEETING VERIFICATION DEMO
 From the project root after installing requirements:
   .\.venv\Scripts\python.exe scripts\david_live_verification_demo.py
 
-This meeting-safe script uses temporary RAMIFY state, proves clean receipt/action verification, demonstrates receipt tamper failure, tests an isolated modified copy of signed evidence bytes so the shared artefact is never edited, and confirms recovery.
+This meeting-safe script uses temporary RAMIFY state, proves clean receipt/action verification, demonstrates receipt tamper failure, temporarily tampers one signed evidence artefact to prove RATIFY detects the changed bytes, restores the artefact, and confirms recovery.
+It exits with a non-zero code if any proof fails, so a broken demonstration cannot pass silently.

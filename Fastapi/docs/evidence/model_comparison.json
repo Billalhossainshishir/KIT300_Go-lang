@@ -1,0 +1,313 @@
+{
+  "experiment": "two independently configured agents on different local models",
+  "captured_at": "2026-10-02T12:40:41.752476+00:00",
+  "host": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "python": "3.14.4"
+  },
+  "ollama": "http://127.0.0.1:11434",
+  "agents": [
+    {
+      "name": "A",
+      "model": "llama3.1",
+      "actor_ref": "autonomous_buyer_v1"
+    },
+    {
+      "name": "B",
+      "model": "mistral",
+      "actor_ref": "procurement_v1"
+    }
+  ],
+  "boundary": "Models choose a catalogue item only. RAMIFY's assessment, actor policy, Action Gate and signing are deterministic and identical for both agents. Interpretation time is reported separately from the deterministic path.",
+  "runs": [
+    {
+      "agent": "A",
+      "model": "llama3.1",
+      "model_digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+      "adapter": "langgraph+ollama:llama3.1",
+      "actor_ref": "autonomous_buyer_v1",
+      "request": "magnesium glycinate capsules, about 120",
+      "interpretation": {
+        "identifier": "ramify:demo:supp:apex-mg-glyc-120",
+        "confidence": 1.0,
+        "note": "Apex Nutrients Magnesium Glycinate, 120 capsules"
+      },
+      "model_interpretation_ms": 5602.8,
+      "ramify": {
+        "subject_ref": "ramify:demo:supp:apex-mg-glyc-120",
+        "objective_posture": "allow",
+        "actor_decision": "allow",
+        "selected_action": "purchase_autonomously",
+        "reason_codes": [],
+        "receipt_id": "ramify:demo:rcpt:0c00889f6d49422e8dccd896ac912b66",
+        "actor_profile_digest": "sha256:da7ecf2da8397d6e8956ccf5072ded20f3c349d39c8ec82f307c0bb13655f5c4"
+      },
+      "outcome": {
+        "action": "checked_out",
+        "unattended": true,
+        "order_id": "ramify:demo:order:a795814a39c0486c9fc724fce3781bb0",
+        "order_verified": true
+      },
+      "deterministic_path_ms": 27.1
+    },
+    {
+      "agent": "A",
+      "model": "llama3.1",
+      "model_digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+      "adapter": "langgraph+ollama:llama3.1",
+      "actor_ref": "autonomous_buyer_v1",
+      "request": "vitamin C 1000mg tablets",
+      "interpretation": {
+        "identifier": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+        "confidence": 1.0,
+        "note": "Northbeam Vitamin C 1000mg, 100 tablets"
+      },
+      "model_interpretation_ms": 2153.5,
+      "ramify": {
+        "subject_ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+        "objective_posture": "allow",
+        "actor_decision": "allow",
+        "selected_action": "purchase_autonomously",
+        "reason_codes": [],
+        "receipt_id": "ramify:demo:rcpt:e34502cf0ab94633a7231ea9f4648887",
+        "actor_profile_digest": "sha256:da7ecf2da8397d6e8956ccf5072ded20f3c349d39c8ec82f307c0bb13655f5c4"
+      },
+      "outcome": {
+        "action": "checked_out",
+        "unattended": true,
+        "order_id": "ramify:demo:order:875186311c9f4f46b5ee905254c0de78",
+        "order_verified": true
+      },
+      "deterministic_path_ms": 26.1
+    },
+    {
+      "agent": "A",
+      "model": "llama3.1",
+      "model_digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+      "adapter": "langgraph+ollama:llama3.1",
+      "actor_ref": "autonomous_buyer_v1",
+      "request": "medium nitrile gloves",
+      "interpretation": {
+        "identifier": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+        "confidence": 1.0,
+        "note": "Harborline Nitrile Examination Gloves"
+      },
+      "model_interpretation_ms": 2054.8,
+      "ramify": {
+        "subject_ref": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+        "objective_posture": "block",
+        "actor_decision": "block",
+        "selected_action": "halt",
+        "reason_codes": [
+          "active_recall_on_batch"
+        ],
+        "receipt_id": "ramify:demo:rcpt:534ebfd878124566833571d30f7e40b8",
+        "actor_profile_digest": "sha256:da7ecf2da8397d6e8956ccf5072ded20f3c349d39c8ec82f307c0bb13655f5c4"
+      },
+      "outcome": {
+        "action": "stopped",
+        "detail": "decision block permits no transaction"
+      },
+      "deterministic_path_ms": 13.3
+    },
+    {
+      "agent": "A",
+      "model": "llama3.1",
+      "model_digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+      "adapter": "langgraph+ollama:llama3.1",
+      "actor_ref": "autonomous_buyer_v1",
+      "request": "ashwagandha root extract",
+      "interpretation": {
+        "identifier": "ramify:demo:supp:greenline-ashw-ksm66-90",
+        "confidence": 1.0,
+        "note": "Greenline Botanicals Ashwagandha KSM-66"
+      },
+      "model_interpretation_ms": 2085.0,
+      "ramify": {
+        "subject_ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+        "objective_posture": "allow_with_warning",
+        "actor_decision": "hold",
+        "selected_action": "create_review_task",
+        "reason_codes": [
+          "evidence_expired",
+          "autonomy_withheld_on_warned_outcome"
+        ],
+        "receipt_id": "ramify:demo:rcpt:ec02e9fe872b44269ef49970e79b1cf9",
+        "actor_profile_digest": "sha256:da7ecf2da8397d6e8956ccf5072ded20f3c349d39c8ec82f307c0bb13655f5c4"
+      },
+      "outcome": {
+        "action": "requested_human_review",
+        "in_review_queue": true
+      },
+      "deterministic_path_ms": 19.5
+    },
+    {
+      "agent": "A",
+      "model": "llama3.1",
+      "model_digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+      "adapter": "langgraph+ollama:llama3.1",
+      "actor_ref": "autonomous_buyer_v1",
+      "request": "zinc picolinate",
+      "interpretation": {
+        "identifier": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+        "confidence": 1.0,
+        "note": "Stonefield Zinc Picolinate 50mg, 90 capsules"
+      },
+      "model_interpretation_ms": 2093.3,
+      "ramify": {
+        "subject_ref": "ramify:demo:supp:stonefield-zinc-picolinate-50-90",
+        "objective_posture": "allow",
+        "actor_decision": "allow",
+        "selected_action": "purchase_autonomously",
+        "reason_codes": [],
+        "receipt_id": "ramify:demo:rcpt:16f7956ccf204c86826c44b3d16392b6",
+        "actor_profile_digest": "sha256:da7ecf2da8397d6e8956ccf5072ded20f3c349d39c8ec82f307c0bb13655f5c4"
+      },
+      "outcome": {
+        "action": "checked_out",
+        "unattended": true,
+        "order_id": "ramify:demo:order:fcf88c96f6ea417ba9f079e1d7148b1b",
+        "order_verified": true
+      },
+      "deterministic_path_ms": 25.5
+    },
+    {
+      "agent": "B",
+      "model": "mistral",
+      "model_digest": "6577803aa9a036369e481d648a2baebb381ebc6e897f2bb9a766a2aa7bfbc1cf",
+      "adapter": "langgraph+ollama:mistral",
+      "actor_ref": "procurement_v1",
+      "request": "magnesium glycinate capsules, about 120",
+      "interpretation": {
+        "identifier": "ramify:demo:supp:apex-mg-glyc-120",
+        "confidence": 1.0,
+        "note": "Request matches exactly"
+      },
+      "model_interpretation_ms": 4680.6,
+      "ramify": {
+        "subject_ref": "ramify:demo:supp:apex-mg-glyc-120",
+        "objective_posture": "allow",
+        "actor_decision": "allow",
+        "selected_action": "create_mock_requisition",
+        "reason_codes": [],
+        "receipt_id": "ramify:demo:rcpt:2d27981cde3a4282a28476605c8a11ce",
+        "actor_profile_digest": "sha256:d0e0f465b7e813980ba2fbacc5e43a5c9bc545bffa4ce270c6da7374376cdb5d"
+      },
+      "outcome": {
+        "action": "requisition_created",
+        "requisition_id": "ramify:demo:req:80a0c34bd99b4f299adcfe0d186f745d"
+      },
+      "deterministic_path_ms": 21.2
+    },
+    {
+      "agent": "B",
+      "model": "mistral",
+      "model_digest": "6577803aa9a036369e481d648a2baebb381ebc6e897f2bb9a766a2aa7bfbc1cf",
+      "adapter": "langgraph+ollama:mistral",
+      "actor_ref": "procurement_v1",
+      "request": "vitamin C 1000mg tablets",
+      "interpretation": {
+        "identifier": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+        "confidence": 1.0,
+        "note": "Match for Vitamin C 1000mg tablets"
+      },
+      "model_interpretation_ms": 2449.6,
+      "ramify": {
+        "subject_ref": "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A",
+        "objective_posture": "allow",
+        "actor_decision": "hold",
+        "selected_action": "create_review_task",
+        "reason_codes": [
+          "seller_not_on_approved_vendor_list"
+        ],
+        "receipt_id": "ramify:demo:rcpt:9adb4576314f42a6844d17e071ffec45",
+        "actor_profile_digest": "sha256:d0e0f465b7e813980ba2fbacc5e43a5c9bc545bffa4ce270c6da7374376cdb5d"
+      },
+      "outcome": {
+        "action": "requested_human_review",
+        "in_review_queue": true
+      },
+      "deterministic_path_ms": 17.5
+    },
+    {
+      "agent": "B",
+      "model": "mistral",
+      "model_digest": "6577803aa9a036369e481d648a2baebb381ebc6e897f2bb9a766a2aa7bfbc1cf",
+      "adapter": "langgraph+ollama:mistral",
+      "actor_ref": "procurement_v1",
+      "request": "medium nitrile gloves",
+      "interpretation": {
+        "identifier": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+        "confidence": 1.0,
+        "note": "Request matches product name exactly"
+      },
+      "model_interpretation_ms": 1967.2,
+      "ramify": {
+        "subject_ref": "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K",
+        "objective_posture": "block",
+        "actor_decision": "block",
+        "selected_action": "halt",
+        "reason_codes": [
+          "active_recall_on_batch"
+        ],
+        "receipt_id": "ramify:demo:rcpt:57dcb78b7efe4548931409b100bb6aaf",
+        "actor_profile_digest": "sha256:d0e0f465b7e813980ba2fbacc5e43a5c9bc545bffa4ce270c6da7374376cdb5d"
+      },
+      "outcome": {
+        "action": "stopped",
+        "detail": "decision block permits no transaction"
+      },
+      "deterministic_path_ms": 9.7
+    },
+    {
+      "agent": "B",
+      "model": "mistral",
+      "model_digest": "6577803aa9a036369e481d648a2baebb381ebc6e897f2bb9a766a2aa7bfbc1cf",
+      "adapter": "langgraph+ollama:mistral",
+      "actor_ref": "procurement_v1",
+      "request": "ashwagandha root extract",
+      "interpretation": {
+        "identifier": "ramify:demo:supp:greenline-ashw-ksm66-90",
+        "confidence": 1.0,
+        "note": "Ashwagandha root extract product"
+      },
+      "model_interpretation_ms": 1836.9,
+      "ramify": {
+        "subject_ref": "ramify:demo:supp:greenline-ashw-ksm66-90",
+        "objective_posture": "allow_with_warning",
+        "actor_decision": "hold",
+        "selected_action": "create_review_task",
+        "reason_codes": [
+          "evidence_expired",
+          "warned_outcome_requires_a_person"
+        ],
+        "receipt_id": "ramify:demo:rcpt:1b9d8d751cce4685a547501dea505d39",
+        "actor_profile_digest": "sha256:d0e0f465b7e813980ba2fbacc5e43a5c9bc545bffa4ce270c6da7374376cdb5d"
+      },
+      "outcome": {
+        "action": "requested_human_review",
+        "in_review_queue": true
+      },
+      "deterministic_path_ms": 20.6
+    },
+    {
+      "agent": "B",
+      "model": "mistral",
+      "model_digest": "6577803aa9a036369e481d648a2baebb381ebc6e897f2bb9a766a2aa7bfbc1cf",
+      "adapter": "langgraph+ollama:mistral",
+      "actor_ref": "procurement_v1",
+      "request": "zinc picolinate",
+      "interpretation": {
+        "identifier": null,
+        "confidence": 0.0,
+        "note": "Local model suggested an identifier outside the supplied catalogue, so RAMIFY discarded it."
+      },
+      "model_interpretation_ms": 1494.0,
+      "ramify": null,
+      "outcome": {
+        "action": "stopped",
+        "detail": "the model did not identify a catalogue item"
+      }
+    }
+  ]
+}

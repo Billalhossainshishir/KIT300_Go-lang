@@ -28,7 +28,7 @@ Point to the evidence panel:
 Say: **“A signature can be valid while a certificate is expired. Integrity and validity answer different questions.”**
 
 ## 4. Evidence tamper proof
-Click **Tamper evidence copy and reassess**. The endpoint creates a modified in-memory copy of one synthetic evidence artefact and sends those bytes through the real RATIFY path. The shared source file is never edited. Expected result: `hash_mismatch`, RATIFY `fail`, objective `block`, shared artefact changed `no`.
+Click **Tamper evidence copy and reassess**. The endpoint temporarily modifies one synthetic evidence artefact, runs the real RATIFY path, then restores the original bytes in a `finally` block. Expected result: `hash_mismatch`, RATIFY `fail`, objective `block`, source restored `yes`.
 
 ## 5. One product truth
 Click **Run Consumer vs Procurement**. Northbeam should show objective `allow` for both actors. Consumer remains `allow`; Procurement narrows to `hold` because the seller is outside its approved-vendor arrangement.
@@ -36,7 +36,7 @@ Click **Run Consumer vs Procurement**. Northbeam should show objective `allow` f
 Say: **“The product truth did not change. Only delegated actor authority changed.”**
 
 ## 6. Action Gate and checkout
-Click **Run clean purchase → basket → checkout**. The endpoint uses a dedicated David-demo cart, creates a fresh purchase-context assessment, verifies its purchase authority, admits it to that isolated cart and creates a signed demo order. The normal consumer basket is not cleared or modified.
+Click **Run clean purchase → basket → checkout**. The script resets only the synthetic local basket, creates a fresh purchase-context assessment, verifies its purchase authority, admits it to the basket and creates a signed order.
 
 Say: **“The browser button is not authority. The backend re-reads the signed receipt.”**
 
@@ -55,7 +55,7 @@ Click **Run Ridgeway incomplete scenario**. The scenario has missing evidence/cl
 Show Quick versus Extended separately. The Quick pack uses five representative scenarios, including seller risk = Covelane N95 and substitution = Stonefield Zinc Gluconate.
 
 ## 11. Testing evidence
-Current packaged regression result: **422 passed, 7 explicit environment-dependent skips, 1,316 subtests, 0 failures**.
+Current packaged regression result: **379 passed, 4 optional skipped, 1,312 subtests, 0 failures**.
 
 Before assessed handover, capture the team's real repository commit SHA, clean/dirty state, timestamp and exact test command. Do not invent Git provenance from the exported ZIP.
 
@@ -68,6 +68,6 @@ Say: **“This is a local capstone demonstrator using real SHA-256 and Ed25519 m
 ## Terminal backup
 If the browser is unavailable, run:
 
-`.\.venv\Scripts\python.exe scripts\david_live_verification_demo.py`
+`python scripts/david_live_verification_demo.py`
 
 It provides the clean receipt, receipt-tamper and evidence-tamper proof from the terminal.

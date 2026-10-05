@@ -225,18 +225,29 @@ async function compare(receipt, button) {
     </div>`;
 }
 
-// Three kinds of stop, and they need different words. "Your own rule" and
-// "nothing on file to judge" and "a finding against the product" are not
-// variations on each other. Derived from the objective posture rather than
-// from the reason codes, so a new code cannot quietly get filed as a finding.
+// Four kinds of stop, and they need different words. "Your own rule",
+// "a warning plus your own rule", "nothing on file to judge" and "a finding
+// against the product" are not variations on each other. Derived from the
+// objective posture rather than from the reason codes, so a new code cannot
+// quietly get filed as a finding. A warned product is never described as one
+// the checks raised nothing about (David, 1 Oct).
 function stopKind(r) {
-  if (["allow", "allow_with_warning"].includes(r.objective_posture)) return "commercial";
+  if (r.objective_posture === "allow") return "commercial";
+  if (r.objective_posture === "allow_with_warning") return "warning";
   if (r.objective_posture === "escalate") return "incomplete";
   return "finding";
 }
 
+// Matches the server: alternatives route around the agent's own commercial
+// rules, never around a trust-derived one.
+function offersAlternatives(r) {
+  const rules = r.actor_applied_rules || [];
+  return ["commercial", "warning"].includes(stopKind(r)) &&
+    rules.length > 0 && rules.every((rule) => rule.kind === "commercial");
+}
+
 function openItem(r) {
-  const commercial = stopKind(r) === "commercial";
+  const commercial = offersAlternatives(r);
   return `
     <div class="queue-item ${esc(toneOf(r))} ${personaClass(r.actor_ref)}" id="item-${esc(r.receipt_id)}">
       <div class="queue-head">
@@ -248,7 +259,7 @@ function openItem(r) {
       <div class="queue-meta">${esc(r.receipt_id)} · sealed ${esc(r.timestamp)}</div>
       <div class="queue-actions">
         <button class="btn btn-sm btn-stop" data-decide="confirmed" data-receipt="${esc(r.receipt_id)}">
-          Decline — leave item</button>
+          Decline item</button>
         <button class="btn btn-sm btn-go" data-decide="overridden" data-receipt="${esc(r.receipt_id)}">
           Authorise once</button>
         <button class="btn btn-sm btn-ghost" data-detail="${esc(r.receipt_id)}"
@@ -274,12 +285,16 @@ function openItem(r) {
 // to overrule their agent needs the sentence; somebody auditing the decision
 // needs the codes. Neither should have to leave the page for the other.
 const WHAT_HAPPENED = {
-  commercial: (r) => `The checks raised nothing that would stop anyone buying this — the
+  commercial: (r) => `The checks raised nothing that would stop anyone buying this. The
     product's own assessment came back <strong>${esc(r.objective_posture)}</strong>. It stopped
     here because of a rule you gave <strong>${esc(r.actor_label)}</strong>, and your agent will
     not quietly spend past its own instructions.`,
+  warning: (r) => `The checks raised a warning about this product. Its own assessment came
+    back <strong>${esc(r.objective_posture)}</strong>, and that warning stands whatever you decide.
+    Separately, <strong>${esc(r.actor_label)}</strong> stopped here under its own rules, which add
+    a restriction on top of the warning.`,
   incomplete: () => `There is not enough on file to judge this one either way. Nothing bad is
-    recorded against it — the evidence a decision would rest on is missing, and the agent is
+    recorded against it; the evidence a decision would rest on is missing, and the agent is
     saying so rather than rounding the gap up to a yes.`,
   finding: (r) => `Something is recorded against this product itself. The assessment came back
     <strong>${esc(r.objective_posture)}</strong> before any of your agent's own rules were
@@ -287,7 +302,10 @@ const WHAT_HAPPENED = {
 };
 
 const OVERRIDE_ADVICE = {
-  commercial: "Reasonable here — the stop was your own rule, not a finding about the product.",
+  commercial: "Reasonable here: the stop was your own rule, not a finding about the product.",
+  warning:
+    "Read the warning below first. Authorising accepts that finding as well as setting aside " +
+    "your agent's own rule.",
   incomplete:
     "You would be accepting it without the evidence, which is a real choice but should be a " +
     "deliberate one.",
@@ -315,7 +333,7 @@ function detailPanel(r) {
       ${r.primary_reason ? `<p><strong>The deciding reason:</strong> ${esc(r.primary_reason)}.</p>` : ""}
       <h4>What your two choices do</h4>
       <ul>
-        <li><strong>Decline — leave item.</strong> No basket line or requisition is created. A linked human
+        <li><strong>Decline item.</strong> No basket line or requisition is created. A linked human
           receipt records that a person reviewed the stop and chose not to proceed.</li>
         <li><strong>Authorise once.</strong> A linked human receipt records that a person accepted
           responsibility for this simulated transaction only. ${esc(OVERRIDE_ADVICE[kind])}</li>
@@ -385,11 +403,20 @@ async function decide(receiptId, outcome, button) {
       ? "Reviewed and declined for this simulated transaction."
       : "Reviewed and authorised once for this simulated transaction.");
 
-  const result = await api("/api/v0/receipt/review", {
-    receipt_id: receiptId,
-    outcome,
-    reviewer_note: note,
-  });
+  let result;
+  try {
+    result = await api("/api/v0/receipt/review", {
+      receipt_id: receiptId,
+      outcome,
+      reviewer_note: note,
+    });
+  } catch (error) {
+    // The authority window can lapse while the page sits open. Say so and
+    // reload, which drops the item, rather than leaving dead buttons.
+    toast(error.message, "bad");
+    setTimeout(load, 540);
+    return;
+  }
 
   if (card) card.classList.add("resolving");
   if (outcome === "overridden") {

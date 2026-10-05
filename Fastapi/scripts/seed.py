@@ -26,7 +26,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 from ramify.crypto import keys  # noqa: E402
 from ramify.data import seed as seed_data  # noqa: E402
-from ramify.ratify.evidence_binding import encoded_binding  # noqa: E402
 
 ARTEFACT_DIR = seed_data.GENERATED_DIR / "artefacts"
 
@@ -35,27 +34,45 @@ def _load_raw_seed() -> dict:
     return json.loads(seed_data.SEED_PATH.read_text(encoding="utf-8"))
 
 
-def _evidence_body(dataset: dict, record: dict) -> bytes:
-    subject = dataset["subjects"].get(record["subject_ref"], {})
-    claims = list(subject.get("claims", []))
-    binding = encoded_binding(record, claims)
-    return (
-        "RAMIFY synthetic evidence v2\n"
-        f"binding-json: {binding}\n"
-        "\n"
-        f"{record['artefact']}\n"
-        "\nSynthetic demonstration artefact. Certifies nothing.\n"
-    ).encode("utf-8")
-
-
 def write_artefacts_and_sign() -> dict[str, dict[str, str]]:
-    """Write each artefact, bind its decision metadata, hash it and sign it."""
+    """Write each artefact, hash it, sign the hash."""
     dataset = _load_raw_seed()
     ARTEFACT_DIR.mkdir(parents=True, exist_ok=True)
 
+    claims_by_ref = {
+        claim["ref"]: claim
+        for subject in dataset["subjects"].values()
+        for claim in subject.get("claims", [])
+    }
+
     signatures: dict[str, dict[str, str]] = {}
     for ref, record in sorted(dataset["evidence"].items()):
-        body = _evidence_body(dataset, record)
+        # Every field that decides a verdict goes into the signed header, so the
+        # unsigned manifest cannot change it without the change being detected:
+        # validity start, record status, which claims this evidence supports,
+        # and each supported claim's state and value. (David's E1.)
+        supported = sorted({record.get("claim_ref"), *(record.get("supports_claim_refs") or [])} - {None})
+        header = [
+            record["type"],
+            f"issuer: {record['issuer_ref']}",
+            f"subject: {record['subject_ref']}",
+            f"issued: {record['issued_at']}",
+            f"expires: {record['expires_at']}",
+            f"valid_from: {record['valid_from']}",
+            f"status: {record['record_status']}",
+            f"supports: {', '.join(supported)}",
+        ]
+        for claim_ref in supported:
+            claim = claims_by_ref.get(claim_ref)
+            if claim is not None:
+                header.append(f"claim-state {claim_ref}: {claim['state']}")
+                header.append(f"claim-value {claim_ref}: {claim['value']}")
+        body = (
+            "\n".join(header) + "\n"
+            f"\n{record['artefact']}\n"
+            "\nSynthetic demonstration artefact. Certifies nothing.\n"
+        ).encode("utf-8")
+
         artefact_path = ARTEFACT_DIR / f"{ref.replace(':', '_')}.txt"
         artefact_path.write_bytes(body)
 
@@ -64,10 +81,11 @@ def write_artefacts_and_sign() -> dict[str, dict[str, str]]:
         signatures[ref] = {
             "content_hash": "sha256:" + digest.hex(),
             "signature": base64.b64encode(issuer_key.sign(digest)).decode("ascii"),
-            "storage_path": str(artefact_path.relative_to(seed_data.DATA_DIR)),
+            "storage_path": artefact_path.relative_to(seed_data.DATA_DIR).as_posix(),
         }
 
     seed_data.GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+    # newline="\n": on Windows, write_text otherwise produces CRLF files.
     seed_data.EVIDENCE_SIGNATURES_PATH.write_text(
         json.dumps(signatures, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
     )
@@ -75,10 +93,16 @@ def write_artefacts_and_sign() -> dict[str, dict[str, str]]:
 
 
 def sign_records() -> dict[str, dict[str, dict[str, str]]]:
-    """Sign recall-status and seller-authority records with their demo issuers."""
+    """Sign every recall-status and seller-authority record with its issuer.
+
+    These records decide verdicts as directly as evidence does, and were
+    trusted as plain JSON until the 26 September audit (N4). Each is hashed as
+    canonical JSON and signed; RATIFY verifies the signature before using it.
+    """
     from ramify.ratify.checks import SELLER_AUTHORITY_ISSUER
+
     dataset = _load_raw_seed()
-    signed = {"statuses": {}, "sellers": {}}
+    signed: dict[str, dict[str, dict[str, str]]] = {"statuses": {}, "sellers": {}}
     for kind, records in (("statuses", dataset["statuses"]), ("sellers", dataset["sellers"])):
         for ref, record in sorted(records.items()):
             issuer_ref = record["issuer_ref"] if kind == "statuses" else SELLER_AUTHORITY_ISSUER
@@ -87,7 +111,9 @@ def sign_records() -> dict[str, dict[str, dict[str, str]]]:
             signed[kind][ref] = {
                 "issuer_ref": issuer_ref,
                 "content_hash": "sha256:" + digest.hex(),
-                "signature": base64.b64encode(keys.load_issuer_private_key(issuer_ref).sign(digest)).decode("ascii"),
+                "signature": base64.b64encode(
+                    keys.load_issuer_private_key(issuer_ref).sign(digest)
+                ).decode("ascii"),
             }
     seed_data.RECORD_SIGNATURES_PATH.write_text(
         json.dumps(signed, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
@@ -103,7 +129,7 @@ def do_seed() -> None:
 
 
 def do_rekey() -> None:
-    print("Regenerating demo keys. The previous runtime signer public key will be retained for historical verification.")
+    print("Regenerating keys. Every receipt issued by the previous keys stops verifying.")
     _generate()
 
 
@@ -114,7 +140,6 @@ def _generate() -> None:
     print(f"Wrote public keys to {keys.EMBEDDED_PUBKEYS_PATH.name}")
 
     seed_data.evidence_signatures.cache_clear()
-    seed_data.record_signatures.cache_clear()
     signatures = write_artefacts_and_sign()
     print(f"Signed {len(signatures)} evidence artefacts")
     records = sign_records()
@@ -123,24 +148,42 @@ def _generate() -> None:
 
 
 def do_reset() -> None:
-    """Reset mutable demo data while preserving the installed signer identity."""
+    """Clear transaction data from the local store, keeping the signing identity.
+
+    Resetting a machine and rotating its keys are different operations. Reset
+    used to delete the whole store, signer included, and a distributed copy
+    has no seed material to restore it from, so every reset silently minted a
+    new identity and stranded every receipt issued before it.
+    """
     store = keys.local_data_store()
-    store.mkdir(parents=True, exist_ok=True)
+    if store.exists():
+        for child in store.iterdir():
+            if child.name in keys.SIGNER_FILES:
+                continue
+            if child.is_dir():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
+        print(f"Cleared receipts, basket, orders and agent edits from {store}")
 
-    # Validate or create the signer *before* deleting any history. If historical
-    # state exists but the private signer is missing/corrupt, this fails closed
-    # instead of silently rotating identity and invalidating old receipts.
-    keys.load_signer_private_key()
+    if (store / "signer_key.json").exists():
+        keys.load_signer_private_key()
+        print(f"Kept the runtime signing key in {store}. Keys unchanged.")
+        return
 
-    preserved = set(keys.SIGNER_FILES)
-    for child in list(store.iterdir()):
-        if child.name in preserved:
-            continue
-        if child.is_dir():
-            shutil.rmtree(child)
-        else:
-            child.unlink()
-    print(f"Reset mutable demo data in {store}; signer identity preserved.")
+    # No private key: either a genuinely fresh store, or an identity that was
+    # lost. Minting one is the explicit recovery step; any previous public key
+    # is retained so receipts exported before the loss still verify.
+    had_previous = keys._current_signer_public_hex() is not None
+    keys.install_signer_key()
+    if had_previous:
+        print(
+            f"No signing key was found, so a new one was generated in {store}. The "
+            "previous signer's public key is retained in signer_history.json, so "
+            "receipts exported before this reset still verify against it."
+        )
+    else:
+        print(f"Installed a new runtime signing key in {store}.")
 
 
 def main() -> None:

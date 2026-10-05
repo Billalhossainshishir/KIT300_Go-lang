@@ -293,7 +293,7 @@ async function checkAll() {
     `Checked ${feed.length} record${feed.length === 1 ? "" : "s"}.`,
     "",
     `  unchanged since issued   ${intact + expired}`,
-    `  past their one-hour window ${expired}   (still unchanged — only the purchase-authority validity window lapsed)`,
+    `  past their one-hour window ${expired}   (still unchanged; only the purchase-authority validity window lapsed)`,
     `  altered                  ${broken.length}`,
     "",
     ...broken.flatMap((b) => [

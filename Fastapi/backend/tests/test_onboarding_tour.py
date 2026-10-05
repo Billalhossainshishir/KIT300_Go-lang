@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -59,7 +60,7 @@ def test_rebuilt_tour_uses_one_clear_primary_action_and_real_catalogue_product()
     assert 'id="walkthrough-back"' in page
     assert '.walkthrough-product-image img' in css
     assert 'object-fit:contain' in css
-    assert '/tour.js?v=11.0.7-uxfix-rebuild' in page
+    assert re.search(r'/tour\.js\?v=[\w.-]+-rebuild"', page)
 
 
 def test_guided_flows_do_not_wait_for_live_llm():

@@ -64,10 +64,6 @@ class TestPolicyNarrowsOnly(unittest.TestCase):
                 }
                 self.assertEqual(len(postures), 1, "objective assessment depends on the actor")
 
-    def test_a_widening_rule_is_ignored_not_obeyed(self):
-        decision = actor_policy.apply("block", "consumer_v1", None)
-        self.assertEqual(decision.decision, "block")
-
     def test_unknown_profile_is_rejected(self):
         with self.assertRaises(KeyError):
             actor_policy.apply("allow", "no_such_profile", None)

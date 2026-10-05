@@ -28,7 +28,7 @@ function downloadReceipt(receipt) {
 function render(rows) {
   const slot = $("human-receipt");
   if (!rows.length) {
-    slot.innerHTML = `<div class="empty-state"><div class="glyph">H</div><div class="big">No human decision has been recorded yet.</div><div>Run an orange case, open <a href="/review">Needs me</a>, and decide it.</div></div>`;
+    slot.innerHTML = `<div class="empty-state"><div class="glyph glyph-mark">${RAMIFY_SYMBOL}</div><div class="big">No human decision has been recorded yet.</div><div>Run an orange case, open <a href="/review">Needs me</a>, and decide it.</div></div>`;
     return;
   }
 
@@ -50,7 +50,7 @@ function render(rows) {
           <div class="seal ${approved ? "approved" : "declined"}">${approved ? "✓" : "—"}</div>
           <div>
             <div class="eyebrow">SYSTEM-SEALED HUMAN DECISION RECEIPT</div>
-            <h2>${esc(summary.headline || (approved ? "Approved once for this simulated transaction" : "Declined — leave the item unchanged"))}</h2>
+            <h2>${esc(summary.headline || (approved ? "Approved once for this simulated transaction" : "Declined: the item was left unchanged"))}</h2>
             <p>${esc(r.product_name || r.subject_ref)}</p>
           </div>
         </div>
@@ -150,16 +150,9 @@ async function refreshHumanReceiptStatus(receipt) {
     const intact = report.integrity_verified ?? report.verified;
     integrity.textContent = intact ? "Verified" : "Failed";
     integrity.className = intact ? "status-good" : "status-bad";
-    if (report.purchase_authority_valid == null) {
-      authority.textContent = "Not applicable";
-      authority.className = "status-neutral";
-    } else if (report.purchase_authority_valid) {
-      authority.textContent = "Current";
-      authority.className = "status-good";
-    } else {
-      authority.textContent = "Not current / consumed";
-      authority.className = "status-warn";
-    }
+    const label = authorityLabel(report);
+    authority.textContent = label.text;
+    authority.className = label.className;
   } catch {
     integrity.textContent = "Could not verify";
     authority.textContent = "Could not verify";

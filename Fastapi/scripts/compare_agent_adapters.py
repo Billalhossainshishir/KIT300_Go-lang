@@ -1,4 +1,9 @@
-"""Report optional adapter availability without making a trust decision."""
+"""Report optional adapter availability without making a trust decision.
+
+This only lists what is installed. The comparative experiment itself, two
+agents on different models each going from free text to checkout, review or a
+stop, is scripts/run_model_comparison.py.
+"""
 import json
 from ramify.agent.langgraph_adapter import LangGraphAdapter
 from ramify.agent.pydanticai_adapter import PydanticAIAdapter

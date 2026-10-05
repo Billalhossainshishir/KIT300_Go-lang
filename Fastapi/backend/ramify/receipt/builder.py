@@ -64,6 +64,7 @@ def build(
     context: str = "decision",
     supersedes_receipt: str | None = None,
     purchase_style: str | None = None,
+    actor_profile_digest: str | None = None,
 ) -> dict:
     """Assemble a receipt from finished values, then seal it."""
     issued_at = now()
@@ -74,15 +75,18 @@ def build(
         "receipt_id": new_receipt_id(),
         "subject_ref": subject_ref,
         "product_name": product_name or "",
-        "data_snapshot": verify_result.get("data_snapshot", seed.snapshot_id()),
-        "dataset_digest": verify_result.get("dataset_digest", seed.dataset_digest()),
+        "data_snapshot": seed.snapshot_id(),
         "assessment_context": context,
         "policy_ref": verify_result["policy_ref"],
-        "policy_digest": verify_result.get("policy_digest", seed.policy_digest()),
         "policy_version": verify_result["policy_version"],
         "policy_status": verify_result["policy_status"],
+        "policy_digest": verify_result["policy_digest"],
+        "dataset_digest": verify_result["dataset_digest"],
         "actor_ref": actor_decision["actor_ref"],
         "actor_label": actor_decision["actor_label"],
+        # The exact agent policy evaluated, by content, so a receipt can be
+        # matched to one version of the profile (review R-01).
+        "actor_profile_digest": actor_profile_digest,
         "call_trace": call_trace,
         "canonical_state": resolve_record["canonical_state"],
         "check_results": verify_result["check_results"],
@@ -108,11 +112,6 @@ def build(
         "timestamp": rfc3339_nano(issued_at),
         "expires_at": rfc3339_nano(expires_at),
         "latencies_us": dict(latencies_us),
-        "timing_scope": {
-            "signed_measurement": "deterministic five-primitive evaluation through Action Gate",
-            "excludes": ["receipt signing", "receipt persistence", "HTTP/network/rendering"],
-            "note": "Full request timing, when reported, is release evidence outside the signed decision payload.",
-        },
         "notice": NOTICE,
     }
 
@@ -129,8 +128,9 @@ def build(
     if supersedes_receipt:
         receipt["supersedes_receipt"] = supersedes_receipt
     if purchase_style:
-        # Seal the transaction path used when the agent decided so a later
-        # profile edit cannot change what a human review is allowed to grant.
+        # Which transaction path this agent was on when it decided. Sealed so a
+        # later human review grants the same kind of authority, rather than
+        # whatever the editable profile happens to say by then.
         receipt["actor_purchase_style"] = purchase_style
 
     # Nothing may be written into `receipt` past this point.

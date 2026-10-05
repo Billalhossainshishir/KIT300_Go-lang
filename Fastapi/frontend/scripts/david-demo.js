@@ -108,7 +108,7 @@ async function runCheckout() {
   const verify = proof.verification;
   const basket = proof.line;
   const checkout = proof.order;
-  out.innerHTML = `<div class="trust-chain-proof"><span><small>1</small><b>Decision receipt</b><em>${esc(assessment.receipt_ref.slice(-12))}</em></span><i>→</i><span><small>2</small><b>Re-verified</b><em>${verify.purchase_authority_valid ? "current + intact" : "not valid"}</em></span><i>→</i><span><small>3</small><b>Demo-cart authority</b><em>${esc(basket.line_id?.slice(-12) || "admitted")}</em></span><i>→</i><span><small>4</small><b>Signed demo order</b><em>${esc(checkout.order_id?.slice(-12) || "created")}</em></span></div><p class="detail-note">Checkout re-reads the decision receipt and transaction-critical values. This proof uses a dedicated demo cart; the normal basket is not cleared or modified.</p>`;
+  out.innerHTML = `<div class="trust-chain-proof"><span><small>1</small><b>Decision receipt</b><em>${esc(assessment.receipt_ref.slice(-12))}</em></span><i>→</i><span><small>2</small><b>Re-verified</b><em>${esc(authorityLabel(verify).text)}</em></span><i>→</i><span><small>3</small><b>Demo-cart authority</b><em>${esc(basket.line_id?.slice(-12) || "admitted")}</em></span><i>→</i><span><small>4</small><b>Signed demo order</b><em>${esc(checkout.order_id?.slice(-12) || "created")}</em></span></div><p class="detail-note">Checkout re-reads the decision receipt and transaction-critical values. This proof uses a dedicated demo cart; the normal basket is not cleared or modified.</p>`;
 }
 
 

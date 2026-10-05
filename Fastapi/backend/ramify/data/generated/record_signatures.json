@@ -3,89 +3,89 @@
     "ramify:demo:seller:Ashcroft_Medical_Distribution": {
       "content_hash": "sha256:47e9f0bd4badbea6395990e601faab00f7c8db8236bfa3d56aa246ec36fcbbc6",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "wFk4cN2/pLbCf7F2sy8d8cvnHee/WrYNoTTqyBtetj7aYEWrywsmnYrKEn4I3s6qGFBvlr4zCQIpuUIdNkoABw=="
+      "signature": "Mn4UDPCYPw74uz+XGpUynGq1VSaRBPbzdqE/E6raxE3rdiCTHFrw/pzljxl6lU6Ssl6c4ByJ6kL9S2TFoRbuDw=="
     },
     "ramify:demo:seller:Coastline_Pharmacy_Group": {
       "content_hash": "sha256:a146807db8e8f19792bacba4159025b29bf6db05e9920a703c85fd517c61e96d",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "s0BijQWis8VX1RWf/H/DVN35OZYG0o717wPzyRmmVGvO6Q5W5Tr22uE9c5kLsvQqgAejk7CrE3Gj1A0BTfxeBg=="
+      "signature": "nbVy0PPCj7VQkyd2Fj9U4+RfuhBAE/uUA8QWMFp3631CpJAsGanmfyrbjhEnX4pSeNjZRsBCVnfBjIVVBHQ2CQ=="
     },
     "ramify:demo:seller:Grovewood_Wellness": {
       "content_hash": "sha256:87fb7f2752309b23b9cbf844e57252444d18b0ac966ac57a854921e2f98d66ca",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "RvnwV0TK6MuGbTxLZq8HGbVo+M+c9OnTis6vVaoN0SW3Su0uq2pxMoV2fk8E+KFhfwDlU4mj3AuyTekjNGqFAg=="
+      "signature": "0CKIUfyyzxs0g602N5wLvCdr7/8Anl7/jtsYE1G3qO/LfBuKoE/khr4jSnLeK12lqU7JsklLoE5yOF4Cq5oJDw=="
     },
     "ramify:demo:seller:Kestrel_Direct_Imports": {
       "content_hash": "sha256:2177479680825221f1698dc9695dd38afb08edf978d0eccc5631ab3bb61eb3c9",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "pjYtfy44STNYOfYz4Gh7/yOlFrsYVrTKCm7DxEkGdd+5uaE8x4FhqENe+uy7H836NsX6L2m7pG0iWFpmJA3xCg=="
+      "signature": "Gi+2m1rmbMNI9g38bEhcjqoAgCyy6UrlX1/ChoJqZZ3N8pdIfIeNjgcr8KvHhq7j2mvZU/rcLlHQ1/JrAQ8xCg=="
     },
     "ramify:demo:seller:Meridian_Health_Supply": {
       "content_hash": "sha256:6343d758453a11d69b77b67d9f5e67d8cea7bda6050075d50697b68739bd6b85",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "exxHTWRiCTPfUHK6IP2EiqwoFsBva6Nl8mQEtyW1d+wmjAYSLsf1Ybvi7P5DnpGPrfgHRPCWVGZ67EtRSM3/Cg=="
+      "signature": "t3i0X6+iF7As+LmB6CZjTfHbQhUyqfv2dkYtF/dJiwev5Rv8k1BTDq26BJwgOoHJ2zHhC19TQnDeHoFyqjizAQ=="
     }
   },
   "statuses": {
     "ramify:demo:ppe:covelane-n95-resp-b2026-01-B": {
       "content_hash": "sha256:fb0097ccd387eb6802fe1649205e21c4fd98593849f6d22ad4e5637ca3b76fe7",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "w8FWKLcgXx0ePE3nv9Vs8cOE7uknqHyszcSeYAeM8o8e+VfvELV8hnmQKzzG2ed7X6RzbuwUv2NJkdO7yID6CQ=="
+      "signature": "ilehawmN58RrnntcuLSs1PngGLGprOqTiB6G7kK/OZo5mrBVmmJ743Yv7HkunqoqU8xX5EjJzhfBUn/tizd8Cw=="
     },
     "ramify:demo:ppe:harborline-nitrile-gloves-m-b2025-09-K": {
       "content_hash": "sha256:adc73d3d435b51d1d583bd31330bdd219a7dad8d9b30bb3afd82f07c63b09a76",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "vaS4iBTfEDm4jWVL/wb5k45FlWUS9OHtMnLw2m94Pbi1WbeXMOm1tcC+SWXumvJNAA9toJdhk0yKQDbSTcN9AQ=="
+      "signature": "jUxaFMecgfhgGJxbchMzY54TF526YoKcdhOEKRbx0Zo1UoniLUIozdvK2rzTpukEghVQws8d2VEPfxO74qB+AQ=="
     },
     "ramify:demo:ppe:merridale-faceshield-std": {
       "content_hash": "sha256:8006f2788fbe79891d4ceed8c20e5a59dd7ef7fdfa7d285eeb93d1c3b1378612",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "/AynEtRCtg6RR0ik6blDsgdPqZ61Xbaq0tj5QlLZB5/l4GcJQxlMysnRlC4abRkMIm8xAh//EOeWjsdR7W5RBQ=="
+      "signature": "sCo5BPZpVfCl6zoqbtDLSsoSZVOQrZ9N19kXkIqD/S65U0QwPvp7o/jIk1vfMNoWWXqb/c6im+pFjmBpB3yWBg=="
     },
     "ramify:demo:supp:apex-mg-glyc-120": {
       "content_hash": "sha256:8006f2788fbe79891d4ceed8c20e5a59dd7ef7fdfa7d285eeb93d1c3b1378612",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "/AynEtRCtg6RR0ik6blDsgdPqZ61Xbaq0tj5QlLZB5/l4GcJQxlMysnRlC4abRkMIm8xAh//EOeWjsdR7W5RBQ=="
+      "signature": "sCo5BPZpVfCl6zoqbtDLSsoSZVOQrZ9N19kXkIqD/S65U0QwPvp7o/jIk1vfMNoWWXqb/c6im+pFjmBpB3yWBg=="
     },
     "ramify:demo:supp:brightway-vitd3-5000-b2024-11-Z": {
       "content_hash": "sha256:fd694bc2fa8624dd00e625a2d9bf40adbfc76d941ab3dc07a4843c39a1413c05",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "za6X7WbDM/DrOevUKFHsQgb5pMxPyNrI5W76xdgXA4ZfATULD6zA13+HZUrbugP2uxUPZzpVRvC7l1S+4O1nCw=="
+      "signature": "tBcXor7O/qGD01Ij3IJyNh77jnn9XXHKffcK3ZJNgjhXX12135F3xfVywQkG9n1WqpsD209XN1P/oIwx9Tp7Cw=="
     },
     "ramify:demo:supp:brightway-vitd3-5000-b2025-06-M": {
       "content_hash": "sha256:e3538fb05b6c2f9940f000015bd472033f12cce43352534e49c71fb4ff6c456f",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "v+my5EemTzlr2dwpqJZpMcTEI2iSNlC4HFPrmcr0xfy2vVfq20kC79OOBw6kEN/MKTjGxDF+BL5wKfQLvlX6Bw=="
+      "signature": "O9OslmahfQooexTU3seWCDO4YT1Q7k8BAPhxwBfbFbAbOkwGPv+q4YnZeublU1/pLzbUefelyA8gwSYi/sgKAA=="
     },
     "ramify:demo:supp:greenline-ashw-ksm66-90": {
       "content_hash": "sha256:8006f2788fbe79891d4ceed8c20e5a59dd7ef7fdfa7d285eeb93d1c3b1378612",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "/AynEtRCtg6RR0ik6blDsgdPqZ61Xbaq0tj5QlLZB5/l4GcJQxlMysnRlC4abRkMIm8xAh//EOeWjsdR7W5RBQ=="
+      "signature": "sCo5BPZpVfCl6zoqbtDLSsoSZVOQrZ9N19kXkIqD/S65U0QwPvp7o/jIk1vfMNoWWXqb/c6im+pFjmBpB3yWBg=="
     },
     "ramify:demo:supp:northbeam-vitc-1000-b2025-03-A": {
       "content_hash": "sha256:1c584ec6ad16afece7518960e8006aeac29f9c45f7377d52c640e2af25bffec9",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "PrkWRp+/G08WboqHh8Az+bD/8QFx8qLtSDILZYvAg6UqlLOyM3WwRLOITfRZEJD+21i8yF3dMwBBUqdNdszmCA=="
+      "signature": "HcMM54nM3LjqHMm8T1sP3FMtPjgWEbSy90cCcW5TmIRELyA5oy87KUFGrOKl5bpb/Kl+7vGYWi1iUsysos0jDg=="
     },
     "ramify:demo:supp:ridgeway-multivit-b2026-02-C": {
       "content_hash": "sha256:2e69f9064d28b5fab3ee2ff10390bcfcb5f0b3fd453aae359f335e146a769df4",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "dm8BJVICC5pcioQLX8GnlpkyH1y7mM0UC5Q/URcQq4xgpd/no2u7VB29O0litAroLF1EM4vlPs5jyD/a2gZYDA=="
+      "signature": "JLaxCLFxWR3RlBmpA+aQq9B0sZoPOxj47TG/EPW0vzCfVL5RWCrqQDOBPkYFem3ziSsG0ZaLzT0N5ZiFtbpbDQ=="
     },
     "ramify:demo:supp:stonefield-zinc-gluc-50-90": {
       "content_hash": "sha256:8006f2788fbe79891d4ceed8c20e5a59dd7ef7fdfa7d285eeb93d1c3b1378612",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "/AynEtRCtg6RR0ik6blDsgdPqZ61Xbaq0tj5QlLZB5/l4GcJQxlMysnRlC4abRkMIm8xAh//EOeWjsdR7W5RBQ=="
+      "signature": "sCo5BPZpVfCl6zoqbtDLSsoSZVOQrZ9N19kXkIqD/S65U0QwPvp7o/jIk1vfMNoWWXqb/c6im+pFjmBpB3yWBg=="
     },
     "ramify:demo:supp:stonefield-zinc-picolinate-50-90": {
       "content_hash": "sha256:8006f2788fbe79891d4ceed8c20e5a59dd7ef7fdfa7d285eeb93d1c3b1378612",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "/AynEtRCtg6RR0ik6blDsgdPqZ61Xbaq0tj5QlLZB5/l4GcJQxlMysnRlC4abRkMIm8xAh//EOeWjsdR7W5RBQ=="
+      "signature": "sCo5BPZpVfCl6zoqbtDLSsoSZVOQrZ9N19kXkIqD/S65U0QwPvp7o/jIk1vfMNoWWXqb/c6im+pFjmBpB3yWBg=="
     },
     "ramify:demo:supp:tidalpoint-omega3-1000-b2025-12-D": {
       "content_hash": "sha256:2285fadd63063c69c3f1bbffecfb6ab2ac7d540e0e63b45e1fb93081f1ffe08b",
       "issuer_ref": "ramify:demo:issuer:Regulator_AU_demo",
-      "signature": "s8OSTLTLWgCuStWV9Jj7u1ffHHWvykgFRlHiMe4dlMP4SyEGsRfPlcb5JGGp2UA7JIfFkxaEdwHpnOECtqKHBQ=="
+      "signature": "Dn0FOsSA7sE1b4f+Fzack2TX0owHmspwasEWx09bUU3T9Etu2i6gtBRThlAxPu7AdtizkYk/pBzqlhgVM27BAw=="
     }
   }
 }

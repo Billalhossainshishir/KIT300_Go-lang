@@ -32,12 +32,6 @@ BLOCK = "block"
 # How much each posture restricts an agent. The actor stage may raise this rank
 # but never lower it. `escalate` outranks `hold` because an incomplete
 # assessment permits strictly fewer automated actions than a known advisory.
-EXPECTED_CHECK_IDS = {
-    "identity", "standing", "seller_authority", "mandatory_evidence",
-    "evidence_freshness", "claims_and_category", "conflicting_information",
-}
-VALID_OUTCOMES = {PASS, REVIEW, FAIL, INCOMPLETE}
-
 RESTRICTIVENESS = {
     ALLOW: 0,
     ALLOW_WITH_WARNING: 1,
@@ -76,28 +70,49 @@ def _collect_reason_codes(checks: list[CheckResult]) -> list[str]:
     return codes
 
 
-def evaluate(checks: list[CheckResult], standing: str, *, require_complete: bool = False) -> PrecedenceOutcome:
-    if require_complete:
-        ids = [c.check_id for c in checks]
-        missing = EXPECTED_CHECK_IDS.difference(ids)
-        duplicates = sorted({x for x in ids if ids.count(x) > 1})
-        unknown_ids = sorted(set(ids).difference(EXPECTED_CHECK_IDS))
-        unknown_outcomes = sorted({c.outcome for c in checks if c.outcome not in VALID_OUTCOMES})
-        if missing or duplicates or unknown_ids or unknown_outcomes or len(checks) != len(EXPECTED_CHECK_IDS):
-            details = []
-            if missing: details.append("missing checks: " + ", ".join(sorted(missing)))
-            if duplicates: details.append("duplicate checks: " + ", ".join(duplicates))
-            if unknown_ids: details.append("unknown checks: " + ", ".join(unknown_ids))
-            if unknown_outcomes: details.append("unknown outcomes: " + ", ".join(unknown_outcomes))
-            return PrecedenceOutcome(
-                posture=ESCALATE, matched_rule=6, primary_rule=6,
-                primary_condition="invalid or incomplete RATIFY check set; fail closed",
-                matched_conditions=[{
-                    "rule": 6, "condition": "; ".join(details) or "invalid check set",
-                    "posture": ESCALATE, "is_primary_reason": True, "determined_posture": True,
-                }],
-                reason_codes=["ratify_check_set_invalid"],
-            )
+def _check_set_problems(checks: list[CheckResult], expected: tuple[str, ...] | None) -> list[str]:
+    from ramify.ratify.checks import KNOWN_OUTCOMES
+
+    problems = []
+    if not checks:
+        problems.append("no checks were supplied")
+    unknown = sorted({str(c.outcome) for c in checks if c.outcome not in KNOWN_OUTCOMES})
+    if unknown:
+        problems.append("unknown outcome(s): " + ", ".join(unknown))
+    if expected is not None:
+        supplied = [c.check_id for c in checks]
+        missing = [cid for cid in expected if cid not in supplied]
+        repeated = sorted({cid for cid in supplied if supplied.count(cid) > 1})
+        if missing:
+            problems.append("missing check(s): " + ", ".join(missing))
+        if repeated:
+            problems.append("repeated check(s): " + ", ".join(repeated))
+    return problems
+
+
+def evaluate(
+    checks: list[CheckResult], standing: str, expected: tuple[str, ...] | None = None
+) -> PrecedenceOutcome:
+    # An empty list, or one whose outcomes fall outside the vocabulary, used to
+    # match none of the failure buckets and fall through to allow when standing
+    # was clean (David's E4). A check set that cannot be read is a fault in the
+    # engine, not a finding about the product, and it must never be approvable,
+    # so it blocks rather than escalating to a person.
+    problems = _check_set_problems(checks, expected)
+    if problems:
+        condition = "the check set is incomplete or malformed: " + "; ".join(problems)
+        return PrecedenceOutcome(
+            posture=BLOCK,
+            matched_rule=0,
+            primary_rule=0,
+            primary_condition=condition,
+            matched_conditions=[{
+                "rule": 0, "condition": condition, "posture": BLOCK,
+                "is_primary_reason": True, "determined_posture": True,
+            }],
+            reason_codes=["check_set_invalid"],
+        )
+
     by_outcome = {
         FAIL: [c for c in checks if c.outcome == FAIL],
         REVIEW: [c for c in checks if c.outcome == REVIEW],

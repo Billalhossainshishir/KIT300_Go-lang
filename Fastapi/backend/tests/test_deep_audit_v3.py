@@ -227,21 +227,23 @@ class TestEvidenceHardening(unittest.TestCase):
         self.assertEqual(result.outcome, checks.FAIL)
         self.assertIn("claim_evidence_binding_invalid", result.reason_codes)
 
+    # Values now need a stated serving basis to be compared at all (David's E4);
+    # without one they are "incomparable", never silently equal.
     def test_policy_tolerance_treats_small_omega3_difference_as_equal(self):
         group = [
-            {"value": "EPA 180mg / DHA 120mg"},
-            {"value": "EPA 183mg / DHA 124mg"},
+            {"value": "EPA 180mg / DHA 120mg per softgel"},
+            {"value": "EPA 183mg / DHA 124mg per softgel"},
         ]
-        conflict, detail = checks._claim_values_conflict("ingredient_claim", group)
-        self.assertFalse(conflict, detail)
+        status, detail = checks._claim_values_conflict("ingredient_claim", group)
+        self.assertEqual(status, "consistent", detail)
 
     def test_policy_tolerance_detects_large_omega3_difference(self):
         group = [
-            {"value": "EPA 180mg / DHA 120mg"},
-            {"value": "EPA 300mg / DHA 200mg"},
+            {"value": "EPA 180mg / DHA 120mg per softgel"},
+            {"value": "EPA 300mg / DHA 200mg per softgel"},
         ]
-        conflict, _ = checks._claim_values_conflict("ingredient_claim", group)
-        self.assertTrue(conflict)
+        status, _ = checks._claim_values_conflict("ingredient_claim", group)
+        self.assertEqual(status, "conflict")
 
 
 class TestHumanAndProofPack(TempStoreCase):

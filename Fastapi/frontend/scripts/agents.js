@@ -20,7 +20,7 @@ async function boot() {
   const cat = await catalogue();
 
   $("product").innerHTML = cat.products
-    .map((p) => `<option value="${esc(p.subject_ref)}">${esc(p.name)} — ${money(p.price_cents)}</option>`)
+    .map((p) => `<option value="${esc(p.subject_ref)}">${esc(p.name)} · ${money(p.price_cents)}</option>`)
     .join("");
 
   $("run").addEventListener("click", compare);
@@ -356,7 +356,7 @@ async function refreshPreview() {
         <div class="check" style="grid-template-columns:150px 1fr;padding:6px 0;">
           <span class="clabel" style="font-family:var(--mono);font-size:12px;">${esc(posture)}</span>
           <span class="cdetail">${esc(actions.map((a) => a.replace(/_/g, " ")).join(", "))}
-            ${transactionAvailable ? "" : '<span style="color:var(--ink-4);"> — no transaction action</span>'}</span>
+            ${transactionAvailable ? "" : '<span style="color:var(--ink-4);"> · no transaction action</span>'}</span>
         </div>`;
       })
       .join("");

@@ -19,6 +19,10 @@ from ramify.crypto.canonical import canonicalise_receipt, rfc3339_nano
 
 HASH_PREFIX = "sha256:"
 PERMITTED_SCOPES = ("product", "batch", "serial", "jurisdiction")
+
+# Which decision actions may stand behind each kind of transaction record.
+# Mirrors cart.BASKET_ACTIONS and the requisition path; defined here because
+# cart imports this module.
 RECORD_ACTIONS = {
     "order_record": frozenset({"add_to_mock_cart", "purchase_autonomously"}),
     "requisition_record": frozenset({"create_mock_requisition"}),
@@ -59,41 +63,33 @@ def _check_hash(receipt: dict) -> tuple[bool, str]:
     return True, "content matches the sealed hash"
 
 
-def _signature_key(receipt: dict) -> tuple[str | None, str | None]:
-    """Return (public-key hex, label) for the key that actually verifies this receipt."""
+def _check_signature(receipt: dict) -> tuple[bool, str]:
     encoded = receipt.get("signature")
     if not encoded:
-        return None, None
+        return False, "receipt carries no signature"
+    public_key = keys.load_public_key(keys.RAMIFY_SIGNER)
+    if public_key is None:
+        return False, "no RAMIFY signer public key is embedded in this verifier"
+    signature = base64.b64decode(encoded)
+    digest = payload_digest(receipt)
     try:
-        signature = base64.b64decode(encoded, validate=True)
-        digest = payload_digest(receipt)
-    except (ValueError, TypeError):
-        return None, None
-
-    current_hex = keys.public_keys().get(keys.RAMIFY_SIGNER)
-    candidates = []
-    if isinstance(current_hex, str):
-        candidates.append((current_hex, "current"))
-    candidates.extend((raw, "retired") for raw in keys.retired_signer_keys())
-    for raw, label in candidates:
+        public_key.verify(signature, digest)
+        return True, "Ed25519 signature verifies against the RAMIFY signer key (see signer_key_fingerprint)"
+    except (InvalidSignature, ValueError):
+        pass
+    # A receipt issued before the signer was replaced is still checked against
+    # the key that signed it, and the result says so rather than passing it
+    # off as the current signer's.
+    for retired in keys.retired_signer_keys():
         try:
-            Ed25519PublicKey.from_public_bytes(bytes.fromhex(raw)).verify(signature, digest)
-            return raw, label
+            Ed25519PublicKey.from_public_bytes(bytes.fromhex(retired)).verify(signature, digest)
         except (InvalidSignature, ValueError):
             continue
-    return None, None
-
-
-def _check_signature(receipt: dict) -> tuple[bool, str]:
-    if not receipt.get("signature"):
-        return False, "receipt carries no signature"
-    raw, label = _signature_key(receipt)
-    if raw is None:
-        return False, "Ed25519 signature does not verify against the current or retained RAMIFY signer keys"
-    fp = keys.fingerprint(raw)
-    if label == "retired":
-        return True, f"Ed25519 signature verifies against retained RAMIFY signer key {fp}"
-    return True, f"Ed25519 signature verifies against current RAMIFY signer key {fp}"
+        return True, (
+            "Ed25519 signature verifies against a retired RAMIFY signer key "
+            f"{keys.fingerprint(retired)}, not the current one"
+        )
+    return False, "Ed25519 signature does not verify against the RAMIFY signer key"
 
 
 def _check_issuer_refs_known(receipt: dict) -> tuple[bool, str]:
@@ -153,25 +149,35 @@ def _check_order_lines(record: dict) -> tuple[bool, str]:
     if not lines:
         return False, "order record has no lines"
 
-    problems: list[str] = []
-    seen_receipts: set[str] = set()
+    # A signed order used to verify whenever each line matched some intact
+    # receipt, so two copies of one line, or a line for a receipt that only
+    # permitted `halt`, passed. The authorisation invariants checkout enforces
+    # are now checked again for historical records.
     permitted_for_record = RECORD_ACTIONS.get(record.get("record_type"), frozenset())
+    first_use: dict[str, int] = {}
+
+    problems: list[str] = []
     for index, line in enumerate(lines, start=1):
         if not isinstance(line, dict):
             problems.append(f"line {index} is not an object")
             continue
         ref = line.get("receipt_ref", "")
-        if ref in seen_receipts:
-            problems.append(f"line {index} reuses one-time receipt authority {ref}")
+        if ref in first_use:
+            problems.append(
+                f"line {index} reuses the receipt already used by line {first_use[ref]}; "
+                "one receipt authorises one line"
+            )
             continue
-        seen_receipts.add(ref)
+        first_use[ref] = index
         receipt = store.get(ref)
         if receipt is None:
             problems.append(f"line {index} names a receipt not in the ledger")
             continue
         granted = set(receipt.get("permitted_actions", [])) | set(receipt.get("human_authorised_actions", []))
         if not granted & permitted_for_record:
-            problems.append(f"line {index} links to a receipt whose decision did not permit this transaction")
+            problems.append(
+                f"line {index} links to a receipt whose decision did not permit this transaction"
+            )
             continue
         report = verify_receipt(receipt)
         if not report.get("integrity_verified"):
@@ -211,6 +217,33 @@ def _safe_check(name: str, check, *args) -> tuple[bool, str]:
         return check(*args)
     except Exception as exc:  # verifier is an input boundary; failure is the result
         return False, f"{name} could not be evaluated: {type(exc).__name__}"
+
+
+PURCHASE_ACTIONS = frozenset({"add_to_mock_cart", "purchase_autonomously", "create_mock_requisition"})
+
+
+def permits_purchase(receipt: dict) -> bool:
+    """Whether the signed decision, or a sealed human successor, allows buying."""
+    permitted = set(receipt.get("permitted_actions") or [])
+    permitted.update(receipt.get("human_authorised_actions") or [])
+    return bool(permitted & PURCHASE_ACTIONS)
+
+
+def authority_status(report: dict) -> str:
+    """One plain answer for the interface, derived from the separate checks."""
+    if not report.get("integrity_verified"):
+        return "integrity_failed"
+    if report.get("time_window_valid") is None:
+        return "not_applicable"
+    if not report["time_window_valid"]:
+        return "window_closed"
+    if not report.get("permits_purchase"):
+        return "no_purchase_permitted"
+    if report.get("transaction_authority_unused") is False:
+        return "already_used"
+    if report.get("transaction_authority_unused") is None:
+        return "current_unchecked_use"
+    return "current"
 
 
 def verify_receipt(receipt: dict, now: datetime | None = None) -> dict:
@@ -256,15 +289,32 @@ def verify_receipt(receipt: dict, now: datetime | None = None) -> dict:
     ]
     report["integrity_verified"] = all(results[name][0] for name in integrity_names)
     if authority_names:
-        report["purchase_authority_valid"] = report["integrity_verified"] and all(
+        # Four separate questions (David, 1 Oct, item 5). A blocked receipt is
+        # authentic and inside its window but permits no purchase, so it must
+        # not read as current purchase authority. Whether the authority has
+        # already been spent needs the ledger, which this function does not
+        # read; the API fills `transaction_authority_unused` in, and an offline
+        # verifier leaves it null rather than guessing.
+        report["time_window_valid"] = report["integrity_verified"] and all(
             results[name][0] for name in authority_names
         )
-        report["verified"] = report["purchase_authority_valid"]
+        report["permits_purchase"] = permits_purchase(receipt)
+        report["transaction_authority_unused"] = None
+        report["purchase_authority_valid"] = report["time_window_valid"] and report["permits_purchase"]
+        report["verified"] = report["time_window_valid"]
     else:
+        report["time_window_valid"] = None
+        report["permits_purchase"] = None
+        report["transaction_authority_unused"] = None
         report["purchase_authority_valid"] = None
         report["verified"] = report["integrity_verified"]
+    report["authority_status"] = authority_status(report)
     report["verified_at"] = rfc3339_nano(now)
-    raw, _ = _signature_key(receipt)
-    report["signer_key_fingerprint"] = keys.fingerprint(raw) if raw else None
+    # Which key "signature valid" was measured against. Without it a pass says
+    # nothing about who signed, only that the receipt matches some key.
+    try:
+        report["signer_key_fingerprint"] = keys.signer_fingerprint()
+    except Exception:  # an unreadable key store must not turn a result into a crash
+        report["signer_key_fingerprint"] = None
     return report
 

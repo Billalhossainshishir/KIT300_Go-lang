@@ -1,10 +1,7 @@
-"""Portable RAMIFY proof-pack verifier v2.
+"""Portable verifier embedded in RAMIFY proof packs.
 
-Requires only Python and ``cryptography``. A manifest declares the expected
-receipts, raw file digests, build/data/policy identity, verifier version and
-signer-key fingerprint. Successful verification proves historical sealed-record
-integrity against the included public demo keys; it does not confer current
-purchase authority or rerun RATIFY against current evidence.
+Requires only Python and ``cryptography``. It does not import the RAMIFY
+application or require access to the local receipt ledger.
 """
 from __future__ import annotations
 
@@ -13,15 +10,83 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 RAMIFY_SIGNER = "ramify:demo:signer:receipt"
 UNSIGNED_FIELDS = {"payload_hash", "signature"}
 ROOT = Path(__file__).resolve().parent
-VERIFIER_VERSION = "portable-verify-v2"
-MANIFEST_SCHEMA = "ramify-proof-pack-manifest-v1"
-MANIFEST_SIGNATURE_FIELD = "manifest_signature"
+MANIFEST_NAME = "MANIFEST.json"
+# Must match VERIFIER_VERSION in ramify/receipt/proof_pack.py.
+VERIFIER_VERSION = "2"
+
+
+def _trust_file_problem(public_keys) -> str | None:
+    """None if the trust file maps names to 32-byte hex public keys."""
+    if not isinstance(public_keys, dict) or not public_keys:
+        return "trust/public_keys.json is not a non-empty JSON object"
+    for name, value in public_keys.items():
+        if not isinstance(name, str) or not isinstance(value, str) or len(value) != 64:
+            return f"trust/public_keys.json entry {name!r} is not a 64-character hex key"
+        try:
+            bytes.fromhex(value)
+        except ValueError:
+            return f"trust/public_keys.json entry {name!r} is not hex"
+    return None
+
+
+def verify_manifest(root: Path, public_keys: dict[str, str]) -> list[str]:
+    """Problems with the pack as a whole: missing, changed, extra or unlisted files.
+
+    Checking only whichever receipts were present let a pack with a receipt
+    removed pass. The manifest is signed with the receipts' key, so removing
+    a receipt together with its manifest line is caught too.
+    """
+    path = root / MANIFEST_NAME
+    if not path.is_file():
+        return [f"{MANIFEST_NAME} is missing, so the pack's completeness cannot be checked"]
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return [f"{MANIFEST_NAME} is not valid JSON"]
+    if (not isinstance(manifest, dict) or not isinstance(manifest.get("files"), dict)
+            or not isinstance(manifest.get("expected_receipts"), list)):
+        return [f"{MANIFEST_NAME} does not have the expected structure"]
+
+    problems: list[str] = []
+    body = {k: v for k, v in manifest.items() if k != "signature"}
+    try:
+        key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_keys[RAMIFY_SIGNER]))
+        canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        key.verify(base64.b64decode(manifest.get("signature", ""), validate=True),
+                   hashlib.sha256(canonical).digest())
+    except (KeyError, ValueError, TypeError, InvalidSignature):
+        problems.append(f"{MANIFEST_NAME} signature does not verify against the pack's signer key")
+
+    if manifest.get("verifier_version") != VERIFIER_VERSION:
+        problems.append(f"{MANIFEST_NAME} expects verifier version {manifest.get('verifier_version')!r}, "
+                        f"this is {VERIFIER_VERSION!r}")
+
+    files = manifest["files"]
+    for name, digest in sorted(files.items()):
+        target = (root / name).resolve()
+        if ".." in Path(name).parts or Path(name).is_absolute() or root.resolve() not in target.parents:
+            problems.append(f"{MANIFEST_NAME} lists an unsafe path {name!r}")
+            continue
+        if not target.is_file():
+            problems.append(f"{name} is listed in the manifest but missing")
+            continue
+        if "sha256:" + hashlib.sha256(target.read_bytes()).hexdigest() != digest:
+            problems.append(f"{name} does not match its manifest digest")
+
+    expected = set(manifest["expected_receipts"])
+    for name in sorted(expected - set(files)):
+        problems.append(f"{MANIFEST_NAME} expects {name} but does not list its digest")
+    present = {p.relative_to(root).as_posix() for p in (root / "receipts").glob("*.json")}
+    for name in sorted(present - expected):
+        problems.append(f"{name} is in the pack but not in the manifest")
+    return problems
 
 
 def _reject_floats(value, path="receipt"):
@@ -36,59 +101,28 @@ def _reject_floats(value, path="receipt"):
 
 
 def canonical_bytes(receipt: dict) -> bytes:
-    if not isinstance(receipt, dict):
-        raise ValueError("receipt must be a JSON object")
     payload = {k: v for k, v in receipt.items() if k not in UNSIGNED_FIELDS}
     _reject_floats(payload)
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
 
 
-def _fingerprint(public_hex: str) -> str:
-    return "sha256:" + hashlib.sha256(bytes.fromhex(public_hex)).hexdigest()
-
-
-def _manifest_bytes(manifest: dict) -> bytes:
-    body = {key: value for key, value in manifest.items() if key != MANIFEST_SIGNATURE_FIELD}
-    return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
-
-
-def _verify_manifest_signature(manifest: dict, signer_hex: str) -> None:
-    encoded = manifest.get(MANIFEST_SIGNATURE_FIELD)
-    if not isinstance(encoded, str) or not encoded:
-        raise ValueError("manifest signature is missing")
+def verify(path: Path, public_keys: dict[str, str]) -> tuple[bool, str]:
     try:
-        signature = base64.b64decode(encoded, validate=True)
-        digest = hashlib.sha256(_manifest_bytes(manifest)).digest()
-        Ed25519PublicKey.from_public_bytes(bytes.fromhex(signer_hex)).verify(signature, digest)
-    except (ValueError, TypeError, InvalidSignature) as exc:
-        raise ValueError("manifest signature does not verify") from exc
-
-
-def _load_json_object(path: Path, label: str) -> dict:
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"{label}: {type(exc).__name__}") from exc
-    if not isinstance(value, dict):
-        raise ValueError(f"{label} must be a JSON object")
-    return value
-
-
-def verify_receipt_file(path: Path, public_keys: dict[str, str], expected_sha256: str | None = None) -> tuple[bool, str]:
-    try:
-        raw = path.read_bytes()
-        if expected_sha256:
-            actual_file = "sha256:" + hashlib.sha256(raw).hexdigest()
-            if actual_file != expected_sha256:
-                return False, "raw file digest does not match manifest"
-        receipt = json.loads(raw.decode("utf-8"))
+        receipt = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(receipt, dict):
-            return False, "receipt must be a JSON object"
+            return False, "receipt is not a JSON object"
         digest = hashlib.sha256(canonical_bytes(receipt)).digest()
-        if receipt.get("payload_hash") != "sha256:" + digest.hex():
+        expected_hash = "sha256:" + digest.hex()
+        if receipt.get("payload_hash") != expected_hash:
             return False, "payload hash mismatch"
         raw_key = public_keys.get(RAMIFY_SIGNER)
-        if not isinstance(raw_key, str) or not raw_key:
+        if not raw_key:
             return False, "RAMIFY signer public key missing"
         key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(raw_key))
         signature = base64.b64decode(receipt.get("signature", ""), validate=True)
@@ -96,92 +130,70 @@ def verify_receipt_file(path: Path, public_keys: dict[str, str], expected_sha256
         unknown = [ref for ref in receipt.get("issuer_refs", []) if ref not in public_keys]
         if unknown:
             return False, "unknown issuer reference(s): " + ", ".join(unknown)
-        return True, "raw digest, canonical hash and Ed25519 signature valid"
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError, TypeError, InvalidSignature) as exc:
-        return False, type(exc).__name__ + (f": {exc}" if str(exc) else "")
+        return True, "hash and Ed25519 signature valid"
+    except (OSError, json.JSONDecodeError, ValueError, TypeError, InvalidSignature) as exc:
+        return False, type(exc).__name__
 
 
-def _declared_receipts(manifest: dict) -> list[dict]:
-    rows = manifest.get("expected_receipts")
-    if not isinstance(rows, list) or not rows:
-        raise ValueError("manifest expected_receipts must be a non-empty list")
-    out = []
-    for row in rows:
-        if not isinstance(row, dict) or not isinstance(row.get("filename"), str) or not isinstance(row.get("sha256"), str):
-            raise ValueError("each manifest receipt entry needs filename and sha256")
-        out.append(row)
-    return out
+def _paths(args: list[str]) -> list[Path]:
+    if not args:
+        return sorted((ROOT / "receipts").glob("*.json"))
+    found: list[Path] = []
+    for arg in args:
+        path = Path(arg)
+        if path.is_dir():
+            found.extend(sorted(path.glob("*.json")))
+        else:
+            found.append(path)
+    return found
 
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    trust_path = ROOT / "trust" / "public_keys.json"
     try:
-        manifest = _load_json_object(ROOT / "manifest.json", "manifest.json")
-        if manifest.get("schema") != MANIFEST_SCHEMA:
-            raise ValueError("unsupported manifest schema")
-        if manifest.get("verifier_version") != VERIFIER_VERSION:
-            raise ValueError("manifest verifier_version does not match this verifier")
-        public_keys = _load_json_object(ROOT / "trust" / "public_keys.json", "trust/public_keys.json")
-        signer = public_keys.get(RAMIFY_SIGNER)
-        if not isinstance(signer, str) or not signer:
-            raise ValueError("RAMIFY signer public key missing")
-        signer_fingerprint = _fingerprint(signer)
-        if manifest.get("signer_key_fingerprint") != signer_fingerprint:
-            raise ValueError("signer-key fingerprint does not match trust/public_keys.json")
-        _verify_manifest_signature(manifest, signer)
-        declared = _declared_receipts(manifest)
-    except ValueError as exc:
-        print(f"FAIL package metadata: {exc}")
+        public_keys = json.loads(trust_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"FAIL trust/public_keys.json: {type(exc).__name__}")
+        return 2
+    problem = _trust_file_problem(public_keys)
+    if problem:
+        print(f"FAIL {problem}")
+        return 2
+    paths = _paths(argv)
+    if not paths and argv:
+        print("No receipt JSON files found.")
         return 2
 
-    print(f"Signer key {signer_fingerprint}")
-    print("This key came from the pack itself. Compare it with the fingerprint published")
-    print("by the issuing RAMIFY instance before treating PASS as proof of who signed.")
-    print()
-
-    declared_by_name = {row["filename"]: row for row in declared}
-    if argv:
-        requested: list[Path] = []
-        for arg in argv:
-            path = Path(arg)
-            if not path.is_absolute():
-                path = (Path.cwd() / path).resolve()
-            if path.is_dir():
-                requested.extend(sorted(path.glob("*.json")))
-            else:
-                requested.append(path)
-        targets = []
-        for path in requested:
-            try:
-                rel = path.resolve().relative_to(ROOT.resolve()).as_posix()
-            except ValueError:
-                print(f"FAIL {path}: file is outside the proof pack")
-                return 2
-            row = declared_by_name.get(rel)
-            if row is None:
-                print(f"FAIL {rel}: not declared by manifest")
-                return 2
-            targets.append((path, row))
-    else:
-        actual = {p.relative_to(ROOT).as_posix() for p in (ROOT / "receipts").glob("*.json")}
-        expected = set(declared_by_name)
-        missing = sorted(expected - actual)
-        unexpected = sorted(actual - expected)
-        if missing:
-            print("FAIL package completeness: missing expected receipt(s): " + ", ".join(missing))
-            return 2
-        if unexpected:
-            print("FAIL package completeness: unexpected receipt(s): " + ", ".join(unexpected))
-            return 2
-        targets = [(ROOT / name, row) for name, row in declared_by_name.items()]
-
+    # The key below came from this pack, so a PASS proves only that the
+    # receipts match the key they arrived with. Who signed them is settled by
+    # comparing this fingerprint with the one the issuer publishes.
+    signer_hex = public_keys.get(RAMIFY_SIGNER) if isinstance(public_keys, dict) else None
+    if isinstance(signer_hex, str):
+        try:
+            fingerprint = "sha256:" + hashlib.sha256(bytes.fromhex(signer_hex)).hexdigest()
+        except ValueError:
+            fingerprint = "unreadable"
+        print(f"Signer key {fingerprint}")
+        print("This key came from the pack itself. Compare its fingerprint with the one the")
+        print("issuing RAMIFY instance publishes before treating a PASS as proof of who signed.")
+        print()
     all_ok = True
-    for path, row in targets:
-        ok, detail = verify_receipt_file(path, public_keys, row.get("sha256"))
-        print(f"{'PASS' if ok else 'FAIL'} {path.relative_to(ROOT)}: {detail}")
+    # Verifying the pack as delivered (no arguments) also checks it is complete.
+    if not argv:
+        problems = verify_manifest(ROOT, public_keys)
+        for problem in problems:
+            print(f"FAIL {problem}")
+        if not problems:
+            print(f"PASS {MANIFEST_NAME}: every listed file present and unchanged, nothing extra")
+        all_ok = not problems
+        if not paths:
+            print("FAIL no receipt JSON files found")
+            return 2
+    for path in paths:
+        ok, detail = verify(path, public_keys)
+        print(f"{'PASS' if ok else 'FAIL'} {path}: {detail}")
         all_ok &= ok
-    if all_ok:
-        print("PASS scope: historical sealed-record integrity verified; this does not establish current purchase authority or rerun evidence validity.")
     return 0 if all_ok else 2
 
 

@@ -142,7 +142,7 @@ class TestDefensiveInputs(unittest.TestCase):
         self.assertIn("Choose", reading["note"])
 
     def test_health_reports_the_release_version(self):
-        self.assertEqual(VERSION, "11.0.7")
+        self.assertEqual(VERSION, "11.0.6")
         self.assertEqual(client.get("/healthz").json()["version"], VERSION)
 
     def test_release_version_is_consistent_across_root_metadata(self):

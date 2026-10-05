@@ -1,0 +1,63 @@
+{
+  "captured_at": "2026-10-02T12:41:35.228860+00:00",
+  "boundary": "assess + receipt build/sign/store + basket add + checkout; in-process; no model, no HTTP",
+  "subject": "ramify:demo:supp:apex-mg-glyc-120",
+  "actor": "consumer_v1",
+  "host": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "processor": "arm",
+    "cpu_count": 10,
+    "python": "3.14.4"
+  },
+  "cold_first_journey_ms": {
+    "assess_and_seal": 4.416,
+    "basket_add": 1.324,
+    "checkout": 1.215,
+    "journey": 6.956
+  },
+  "warm": {
+    "assess_and_seal": {
+      "runs": 200,
+      "median_ms": 3.498,
+      "p95_ms": 3.722,
+      "p99_ms": 3.918,
+      "max_ms": 4.088
+    },
+    "basket_add": {
+      "runs": 200,
+      "median_ms": 5.13,
+      "p95_ms": 8.821,
+      "p99_ms": 9.331,
+      "max_ms": 9.476
+    },
+    "checkout": {
+      "runs": 200,
+      "median_ms": 6.561,
+      "p95_ms": 11.889,
+      "p99_ms": 12.868,
+      "max_ms": 21.731
+    },
+    "journey": {
+      "runs": 200,
+      "median_ms": 15.292,
+      "p95_ms": 24.275,
+      "p99_ms": 25.72,
+      "max_ms": 34.02
+    }
+  },
+  "concurrent_assessment": {
+    "threads": 8,
+    "runs": 200,
+    "median_ms": 37.385,
+    "p95_ms": 40.719,
+    "p99_ms": 43.555,
+    "max_ms": 45.239,
+    "throughput_per_second": 213.9
+  },
+  "target": {
+    "journey_p95_under_ms": 200.0,
+    "met": true,
+    "note": "Local measurement on the host above; not a production capacity claim."
+  }
+}

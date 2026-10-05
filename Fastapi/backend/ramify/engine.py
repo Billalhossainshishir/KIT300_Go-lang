@@ -12,12 +12,12 @@ verdict, so a hallucinated answer cannot become one. `test_import_boundary.py`
 enforces that rather than leaving it as a promise.
 """
 
-import time
+import copy
 
 from ramify.action import gate
 from ramify.data import seed
 from ramify.policy import actor as actor_policy, profiles, vocabulary
-from ramify.ratify import precedence, verify as ratify_verify
+from ramify.ratify import checks as ratify_checks, precedence, verify as ratify_verify
 from ramify.receipt import builder, store
 from ramify.resolve import primitives
 from ramify.timing import Stopwatch, to_display_ms
@@ -147,22 +147,12 @@ ESCALATION_KINDS = (
         },
     ),
     (
-        "price_unavailable",
-        ("line_total_unavailable_for_agent_budget",),
-        {
-            "headline": "Price unavailable for the spending rule",
-            "body": "The product assessment is separate from price. This listing has no usable price, so the agent cannot evaluate its spending ceiling and asks for review instead of pretending it is over budget.",
-            "decided_by": "You",
-            "tone": "commercial",
-            "icon": "◎",
-        },
-    ),
-    (
         "budget",
-        ("line_total_exceeds_agent_budget",),
+        ("line_total_exceeds_agent_budget", "line_total_unavailable_for_agent_budget"),
         {
             "headline": "Over your agent's spending limit",
-            "body": "The product passed every check. The known line total exceeds the agent's configured spending ceiling.",
+            "body": "The product passed every check. Your agent simply is not allowed to spend "
+            "this much without being asked.",
             "decided_by": "You",
             "tone": "commercial",
             "icon": "◎",
@@ -204,13 +194,12 @@ GENERIC_ESCALATION = {
 # nobody is being asked anything.
 REJECTION_WORDING = {
     "safety": "Rejected on a safety finding",
-    "identity": "Rejected — could not tell what this is",
-    "integrity": "Rejected — evidence integrity could not be established",
+    "identity": "Rejected: the product could not be identified",
+    "integrity": "Rejected: evidence integrity could not be established",
     "evidence": "Rejected on the evidence",
-    "authority": "Rejected — the seller is not established",
-    "price_unavailable": "Rejected because the price needed by the spending rule is unavailable",
+    "authority": "Rejected: the seller is not established",
     "budget": "Rejected on your agent's spending limit",
-    "arrangement": "Rejected — outside what your agent may do",
+    "arrangement": "Rejected: outside what your agent may do",
     "unspecified": "Rejected, without a classified reason",
 }
 
@@ -235,7 +224,7 @@ def escalation_for(reason_codes: list[str], decision: str) -> dict:
         found = dict(
             found,
             headline=REJECTION_WORDING[found["kind"]],
-            decided_by="Nobody — this one is not open to a decision",
+            decided_by="Nobody. This case is not open to a decision.",
             body=found["body"] + " Nothing further will happen automatically.",
         )
     found["requires_human"] = requires_human
@@ -260,7 +249,6 @@ def assess(
     context: str = "decision",
     *,
     persist_receipt: bool = True,
-    evidence_overrides: dict[str, bytes] | None = None,
 ) -> dict:
     """Run the full five-primitive cycle and return a sealed receipt.
 
@@ -285,7 +273,6 @@ def assess(
     if quantity < 1 or quantity > MAX_TRANSACTION_QUANTITY:
         raise ValueError(f"quantity must be between 1 and {MAX_TRANSACTION_QUANTITY}")
 
-    full_started_ns = time.perf_counter_ns()
     watch = Stopwatch()
     trace: list[dict] = []
 
@@ -325,8 +312,7 @@ def assess(
 
     with watch.stage("verify"):
         verify_result = ratify_verify.verify(
-            subject_ref, policy_ref, identify_result, status_result,
-            artefact_overrides=evidence_overrides,
+            subject_ref, policy_ref, identify_result, status_result
         )
     reviewed = sum(1 for c in verify_result["check_results"] if c["outcome"] != "pass")
     trace.append(
@@ -347,13 +333,22 @@ def assess(
         "line_total_cents": None if unit_price is None else unit_price * quantity,
     }
 
+    # One copy of the agent's policy for the whole assessment (review R-01).
+    # Policy, action selection and the receipt each read the profile, and
+    # reading it afresh at each stage let an edit between them seal the old
+    # agent's label beside the new agent's unattended purchase.
+    profile = copy.deepcopy(profiles.profile(actor_ref))
+    if profile is None:
+        raise KeyError(f"unknown actor profile: {actor_ref}")
+    profile_digest = seed._content_digest(profile)
+
     with watch.stage("assess"):
         check_objects = _rehydrate(verify_result["check_results"])
         outcome = precedence.evaluate(
-            check_objects, status_result["standing"], require_complete=True
+            check_objects, status_result["standing"], expected=ratify_checks.CHECK_IDS
         )
-        decision = actor_policy.apply(outcome.posture, actor_ref, subject, order)
-        action_result = gate.select(decision.decision, actor_ref, subject)
+        decision = actor_policy.apply(outcome.posture, actor_ref, subject, order, profile=profile)
+        action_result = gate.select(decision.decision, actor_ref, subject, profile=profile)
     trace.append(
         _trace_entry(
             "assess",
@@ -376,7 +371,6 @@ def assess(
     latencies = dict(watch.latencies_us)
     latencies["total"] = watch.total()
 
-    signing_started_ns = time.perf_counter_ns()
     receipt = builder.build(
         subject_ref=subject_ref,
         product_name=resolve_record.get("product_name") or identify_result.get("product_name"),
@@ -391,15 +385,11 @@ def assess(
         call_trace=trace,
         order=order,
         context=context,
-        purchase_style=(profiles.profile(actor_ref) or {}).get("purchase_style", "cart"),
+        purchase_style=profile.get("purchase_style", "cart"),
+        actor_profile_digest=profile_digest,
     )
-    signing_us = max(0, (time.perf_counter_ns() - signing_started_ns) // 1000)
-    persistence_us = 0
     if persist_receipt:
-        persistence_started_ns = time.perf_counter_ns()
         store.append(receipt)
-        persistence_us = max(0, (time.perf_counter_ns() - persistence_started_ns) // 1000)
-    full_engine_us = max(0, (time.perf_counter_ns() - full_started_ns) // 1000)
 
     return {
         "subject_ref": subject_ref,
@@ -436,13 +426,6 @@ def assess(
         "receipt_ref": receipt["receipt_id"],
         "receipt": receipt,
         "call_trace": trace,
-        "runtime_timing_ms": {
-            "deterministic_evaluation": to_display_ms(latencies["total"]),
-            "receipt_build_and_sign": to_display_ms(signing_us),
-            "receipt_persistence": to_display_ms(persistence_us),
-            "full_engine_call": to_display_ms(full_engine_us),
-            "scope_note": "Full HTTP/network/browser time is outside this engine measurement.",
-        },
         "display_latency_ms": {
             name: to_display_ms(value) for name, value in latencies.items()
         },

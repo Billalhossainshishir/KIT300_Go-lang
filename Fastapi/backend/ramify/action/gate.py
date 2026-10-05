@@ -37,10 +37,10 @@ DESCRIPTIONS = {
 ESCALATING = ("hold", "escalate")
 
 
-def select(decision: str, actor_ref: str, subject: dict | None) -> dict:
+def select(decision: str, actor_ref: str, subject: dict | None, profile: dict | None = None) -> dict:
     """Choose one action and record what else was available."""
-    permitted = actor_policy.permitted_actions(actor_ref, decision)
-    unattended = actor_policy.will_purchase_unattended(actor_ref, decision)
+    permitted = actor_policy.permitted_actions(actor_ref, decision, profile)
+    unattended = actor_policy.will_purchase_unattended(actor_ref, decision, profile)
 
     if unattended and "purchase_autonomously" in permitted:
         selected = "purchase_autonomously"

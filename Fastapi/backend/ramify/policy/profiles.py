@@ -326,13 +326,15 @@ def _validate(fields: dict) -> dict:
         clean["autonomy_level"] = "none"
 
     budget = fields.get("budget_limit_cents")
-    if budget is None:
+    if budget in (None, ""):
         clean["budget_limit_cents"] = None
     else:
+        # Same contract as the HTTP model: a whole number, not a string, float
+        # or boolean that happens to convert to one (David's I1).
         if isinstance(budget, bool) or not isinstance(budget, int):
-            raise InvalidProfile("The spend ceiling must be a whole number of cents, not a coerced value.")
-        if budget < 0 or budget > 100_000_000:
-            raise InvalidProfile("A spend ceiling must be between 0 and 100000000 cents.")
+            raise InvalidProfile("The spend ceiling must be a whole number of cents.")
+        if budget < 0:
+            raise InvalidProfile("A spend ceiling cannot be negative.")
         clean["budget_limit_cents"] = budget
 
     brands = fields.get("brand_allowlist") or None
@@ -361,7 +363,13 @@ def _validate(fields: dict) -> dict:
 
 
 def _assert_name_not_borrowed(label: str, own_ref: str | None) -> None:
-    """Refuse a custom/display name that belongs to a different built-in agent."""
+    """Refuse a name that belongs to a different shipped agent.
+
+    The label is what a person reads in a sealed receipt. A custom agent
+    named exactly like a shipped one produced receipts that could not be told
+    apart without reading ``actor_ref``, even when it bought unattended and
+    the shipped agent never would.
+    """
     wanted = str(label).strip().casefold()
     for ref, shipped in _seed_profiles().items():
         if ref != own_ref and shipped["label"].strip().casefold() == wanted:
@@ -386,7 +394,7 @@ def create(fields: dict) -> dict:
     if not label:
         raise InvalidProfile("An agent needs a name.")
     _assert_name_not_borrowed(label, None)
-    slug = "".join(c if c.isalnum() else "_" for c in label.lower()).strip("_")[:40]
+    slug ="".join(c if c.isalnum() else "_" for c in label.lower()).strip("_")[:40]
     if not slug:
         raise InvalidProfile("That name has no letters or numbers in it.")
 

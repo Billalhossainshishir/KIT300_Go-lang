@@ -1,11 +1,13 @@
-# Keep text stable across Windows/macOS/Linux checkouts.
+# Normalise line endings in the repository. The team works across Windows and
+# macOS, and the demo has been run on both; without this, a file saved on one
+# machine shows as wholly rewritten when opened on the other.
 * text=auto eol=lf
 
-# Windows entry points keep native CRLF.
+# Windows-only entry points keep CRLF so they run when double-clicked.
 *.bat text eol=crlf
 *.ps1 text eol=crlf
 
-# Binary files are never transformed.
+# Binary. Never diff or normalise these.
 *.png  binary
 *.jpg  binary
 *.jpeg binary
@@ -16,7 +18,12 @@
 *.zip  binary
 *.exe  binary
 
-# These files are hashed/signed byte-for-byte. Never rewrite their line endings.
+# Signed evidence artefacts and the signatures over them. These are hashed
+# byte for byte and the hash is sealed into a receipt, so a line-ending
+# conversion silently breaks verification. On a Windows checkout with
+# core.autocrlf=true this turned seven tests red and would have failed a live
+# demonstration. Never transform them.
 backend/ramify/data/generated/artefacts/** -text
 backend/ramify/data/generated/evidence_signatures.json -text
 backend/ramify/data/generated/record_signatures.json -text
+demo_runtime_seed/** -text

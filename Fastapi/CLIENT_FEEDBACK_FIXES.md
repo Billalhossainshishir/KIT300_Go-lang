@@ -1,4 +1,4 @@
-# RAMIFY OS v11.0.7 - FastAPI Client Feedback + Deep Audit Hardening
+# RAMIFY OS v11.0.6 - FastAPI Client Feedback + Deep Audit Hardening
 
 This build applies the actionable FastAPI/Python feedback from David Male dated 26, 27 and 28 August 2026 and a second source-level coding/logic audit. The separate Go feedback was not used as the basis for these changes.
 
@@ -54,48 +54,42 @@ The optional local LLM remains outside the trusted decision path. Exact/guided d
 
 A dedicated `scripts/david_live_verification_demo.py` now demonstrates the distinction David asked the team to make between **evidence integrity** and **receipt integrity**. It runs a clean purchase chain, proves receipt tamper rejection, temporarily changes a signed evidence artefact and shows RATIFY returning `evidence_hash_mismatch`, restores the file byte-for-byte, and confirms a clean assessment again. During this work a real error-path defect was found and fixed: evidence-integrity hard stops classified as `integrity` did not have block/rejection presentation wording, which could raise a `KeyError` when tampered evidence correctly forced a block.
 
-## 21 September P1 authority/evidence patch (23 September 2026)
+## October 2026: David Male's feedback of 1 October and the 2 October review
 
-This patch addresses the six P1 items selected from David Male's 21 September consolidated feedback without adding new product features.
+Each item below has a regression in `backend/tests/test_client_feedback_1_oct_2026.py` unless stated otherwise. Several 1 October findings had already been fixed by the 21 September work (merged from `nomaan/security-fixes`), which David's review of the uploaded copies may not have included; those are marked as such and were re-verified on `main`.
 
-- **Checkout authority revalidation:** checkout now re-checks that every sealed decision receipt still permits a consumer-basket action; a locally inserted blocked/held/requisition-only line cannot pass merely because its signature is valid.
-- **Duplicate / consumed authority:** the complete basket is checked for duplicate receipt references, prior order/requisition consumption, and line-to-receipt binding before an order is sealed. Historical order verification also rejects duplicate one-time receipt authority.
-- **Human successor terminality:** only the original machine review receipt may receive a human successor. A human successor cannot be reviewed again before or after its one-time transaction authority is consumed.
-- **Evidence metadata + claim binding:** all structured evidence metadata (excluding generated hash/signature/storage fields) plus the exact supported claim assertions are embedded in the signed synthetic artefact as a canonical v2 binding. RATIFY rejects disagreement between the signed binding and current claim/status/validity/scope metadata.
-- **Hard-stop preservation:** evidence integrity and validity findings are now combined rather than returning early on integrity incompleteness. A proven revocation or other hard stop therefore cannot be weakened to `incomplete`/`escalate` merely because signature metadata is missing.
-- **Signer identity loss:** normal runtime signing fails closed when private signer material is missing but receipt/transaction history exists. `--reset` clears mutable demo data while preserving the installed signer identity; explicit recovery/rekey remains a deliberate operator action.
+### Priority fixes, in David's order
 
-### Verification for this patch
+| # | Finding | Status on `main` |
+|---|---|---|
+| 1 | Facts bound to signed evidence (Apex 400 to 4,000 mg; Brightway `valid_from`) | Fixed under 21 Sep E1; both edits are rejected (`block`, `artefact_binding_mismatch`). |
+| 2 | Expired evidence plus missing signature gave `allow_with_warning` | Fixed. Outcomes are now ranked by the posture they produce, so the integrity stop survives; combination tests cover expired, not-yet-valid, revoked and clean evidence with a missing signature. |
+| 3 | Product recalled after staging still checked out | Fixed. Staging, requisition and checkout compare the sealed dataset digest; if it changed, the product is reassessed locally and refused when its own facts changed (posture, recall standing, check outcomes, price). Unrelated changes do not void the basket. No network call. |
+| 4 | Editing a cart line's `unattended` produced a false signed autonomy claim | Fixed. The flag is checked against the receipt's selected action, and the signed summary counts autonomy from the receipts. |
+| 5 | `purchase_authority_valid: true` for blocked and consumed receipts | Fixed. Verification reports `integrity_verified`, `time_window_valid`, `permits_purchase` and `transaction_authority_unused` separately; only all four make authority current. The offline verifier leaves "unused" null rather than guessing. All four pages use one shared label. |
+| 6 | Malformed model output (`[]`, list identifier, `"NaN"` confidence) | `[]` and list identifiers were already handled; non-finite confidence now reads as 0.0 in both adapters. |
 
-- Targeted 21 September P1 regression coverage: **11 passed**.
-- Full backend regression after the patch: **390 passed, 4 optional skipped, 1,316 subtests passed, 0 failures**.
-- All **20/20** shipped synthetic evidence artefacts passed hash, issuer Ed25519 signature and v2 signed metadata/claim binding verification.
-- All **17/17** shipped seed scenarios retained their expected objective and actor decisions.
-- `python -m compileall -q backend scripts` passed.
-- The distributable project tree contains no `seed_private` directory and no runtime `signer_key.json`.
+### Other corrections
 
-The four skipped tests remain optional environment-dependent browser/live-model tests; their skip is not presented as proof of live model execution.
+- **Every policy reason retained.** Choosing the final posture and recording its causes are separate; every applicable restricting rule is recorded, with `determines_outcome` marking the decisive one.
+- **Claim checks consistent.** The aggregate claims check evaluates every rule and reports the strictest outcome with all reasons, so a missing claim cannot hide a broken binding. Per-claim "no evidence" verdicts were fixed under 21 Sep E3.
+- **Procurement alternatives.** Alternatives qualify on the agent's own transaction path and state it (`basket` or `requisition`).
+- **Human-review wording.** `allow_with_warning` has its own explanation; the warning is stated and the agent's rule is described as an extra restriction.
+- **Release checks.** Already fixed under 21 Sep R1/T3 (key scan anywhere in the tree, clean tree recorded as `true`, demo exits non-zero on failure). A regression now uses David's `runtime_data/signer_key.json` fixture.
 
+### 2 October review findings
 
-## 21 September remaining-feedback hardening (24 September 2026)
+- **R-01 (confirmed defect), one profile per assessment:** fixed. The engine takes one copy of the agent profile, uses it for policy, action selection and the receipt, and seals its digest as `actor_profile_digest`. A regression swaps the profile mid-assessment.
+- **R-05, independent model runs:** demonstrated. `scripts/run_model_comparison.py` ran llama3.1 (autonomous buyer) and mistral (procurement) through five requests each; the record with model digests, interpretations, RAMIFY results and actions is `docs/evidence/model_comparison.json`. It shows checkouts with verified orders, a requisition, human-review requests, blocked stops, and one request mistral could not match. Both agents use the LangGraph adapter; PydanticAI was not installed for this run.
+- **R-06, decision-to-checkout timing:** measured. `scripts/benchmark_decision_path.py` on an Apple-silicon Mac (10 cores, Python 3.14): cold first journey 7.0 ms; 200 warm journeys median 15.3 ms, P95 24.3 ms; 8-thread assessment P95 40.7 ms at 214 assessments/s. Warm journeys are slower than the cold one because the JSONL ledger is re-read and grows with every run (see R-04). Local measurement, not a production capacity claim.
+- **R-07, asset caching:** versioned static assets (`?v=`) are now cacheable as immutable; pages and API responses stay `no-store`. Splitting the stylesheet was not attempted.
 
-The v11.0.7 pass closes the remaining implementation-level findings from David Male's 21 September consolidated review while keeping client acceptance separate from implementation completion.
+### Stated limits, not changed in this build
 
-- **E3/E4:** individual claim verdicts now reject missing evidence references; RATIFY validates the complete seven-check set and fails closed on missing/duplicate/unknown check IDs or outcomes. Omega-3 comparisons normalise EPA/DHA values on compatible serving bases and refuse incompatible/missing denominators.
-- **POL1/I1:** receipts record the exact supported policy reference plus policy/dataset digests. Unknown policy refs fail explicitly. API and domain quantity inputs use strict integer semantics; missing price is reported as unavailable rather than over-budget.
-- **L1/L2:** the optional PydanticAI comparison explicitly passes the validated loopback endpoint to its provider and fails safely on malformed/non-object responses. Generated explanations are checked against a deterministic receipt-derived summary; contradictory model prose is discarded.
-- **M1:** engine timing now names deterministic evaluation, receipt build/sign, persistence and full engine-call boundaries. Complete per-receipt action history has no 1,000-event cut-off, and action-ledger verification reads receipt history once per run.
-- **T2/T3:** browser acceptance tests exercise visible Shop, journey, review, basket and checkout controls; release capture standardises on pytest and preserves an empty successful Git status as `working_tree_clean: true`. Git metadata stays explicit/null outside a Git checkout.
-- **U1/U2:** receipt integrity and purchase-authority validity are displayed separately. Meeting-mode evidence tampering uses an isolated byte copy, checkout uses a dedicated demo cart, and an absent-status probe is separated from Ridgeway's incomplete-evidence example.
-- **R1/R2:** required demo proofs contribute to a non-zero exit code on failure; live LLM smoke checks require expected catalogue IDs, not mere participation. Quick/Extended Proof Packs include manifests, expected-file digests, build/policy/data identity, verifier version and signer-key fingerprint; missing, malformed or tampered files fail clearly.
+- **R-02, reviewer identity.** Reviews record a supplied name and role with `identity_verified: false`. A signed review proves a review was recorded, not who approved it. Real approvals need authenticated reviewers, roles and transaction scope.
+- **R-03, snapshot versus current truth.** Evidence is evaluated against the fixed 24 July 2026 snapshot; a fresh receipt timestamp does not make the evidence or recall feed current. Production would need a live evaluation date, feed validity windows and a stale-data refusal sealed into the receipt.
+- **R-04, single process.** The JSONL ledger and in-process locks coordinate one Python process. Several workers would need transactional storage with uniqueness on review successors and receipt/action pairs.
 
-### Current verification
+### Interface
 
-- Remaining-feedback acceptance regression module: **32 passed**.
-- Full project regression: **422 passed, 7 skipped, 1,316 subtests passed, 0 failures**.
-- Skip scope: 2 optional live-model tests; 4 visible-browser journeys blocked by this runner's local-browser policy; 1 live-model browser test. These skips are not presented as execution evidence.
-- Frontend syntax: **11/11 JavaScript files** passed `node --check`.
-- Client verification script: all required clean-chain, receipt-tamper, isolated evidence-tamper and recovery proofs passed.
-- Extended Proof Pack: **6/6 receipts** verified with the standalone verifier; the manifest records app version **11.0.7** and signer-key fingerprint.
-
-Client acceptance remains **pending David's review**. Optional live Ollama and visible-browser runs should be captured on the presentation machine against the final Git checkout.
+The supplied RAMIFY OS logo is now used throughout: the symbol in the header, the welcome dialog and the guided demo, the full ocean logo on the About page and in the README, and the symbol as every page's favicon (`frontend/brand/`).
